@@ -174,15 +174,31 @@
     <button id="btn">Ingresar</button>
     <div id="errorMsg"></div>
     <div class="footer-accessone">
-      &copy; <span>AccessOne</span> 2024. Todos los derechos reservados.
+      &copy; <span>Accessone</span> 2025. Todos los derechos reservados.
     </div>
   </div>
+  <!-- Sonidos -->
+  <audio id="keySound" src="key.mp3" preload="auto"></audio>
+  <audio id="okSound" src="https://cdn.pixabay.com/audio/2022/03/15/audio_115b9b7bfa.mp3" preload="auto"></audio>
   <script type="module">
     import { auth } from "./js/firebase-config.js";
     import { signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
 
     const btn = document.getElementById("btn");
     const err = document.getElementById("errorMsg");
+    const keySound = document.getElementById("keySound");
+    const okSound = document.getElementById("okSound");
+
+    // Sonido por tecla presionada en los campos de login
+    ["email", "password"].forEach(id => {
+      document.getElementById(id).addEventListener("keydown", e => {
+        // Solo reproducir para teclas de entrada (no Shift, Tab, etc)
+        if (e.key.length === 1 || e.key === "Backspace" || e.key === "Delete") {
+          keySound.currentTime = 0;
+          keySound.play();
+        }
+      });
+    });
 
     btn.addEventListener("click", async () => {
       err.style.display = "none";
@@ -195,7 +211,11 @@
       }
       try {
         await signInWithEmailAndPassword(auth, email, pass);
-        window.location.href = "checklist.html";
+        okSound.currentTime = 0;
+        okSound.play();
+        setTimeout(() => {
+          window.location.href = "checklist.html";
+        }, 350); // deja sonar el sonido satisfactorio
       } catch(e) {
         err.textContent = e.code==="auth/wrong-password"
           ? "Contraseña incorrecta."
@@ -213,5 +233,6 @@
   </script>
 </body>
 </html>
+
 
 
