@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Prueba Firebase</title>
+</head>
+<body>
+  <h2>Probando Firebase</h2>
+  <p id="status">Inicializando…</p>
+
+  <script type="module">
+    // 1) Importamos “auth” y “db” desde nuestro módulo firebase-config.js
+    import { auth, db } from "./js/firebase-config.js";
+
+    // 2) Creamos un pequeño chequeo:  
+    //    - Si “auth” y “db” están definidos, escribimos “OK” en el párrafo.
+    //    - Si ocurre un error, lo mostramos en consola y en pantalla.
+    try {
+      console.log("Auth y DB importados:", auth, db);
+      document.getElementById("status").textContent = "✅ Firebase inicializado correctamente.";
+    } catch (error) {
+      console.error("Error al inicializar Firebase:", error);
+      document.getElementById("status").textContent = "❌ Error al inicializar Firebase. Revisa la consola.";
+    }
+  </script>
+</body>
+</html>
