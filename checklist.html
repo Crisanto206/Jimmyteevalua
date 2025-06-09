@@ -380,9 +380,9 @@ textarea, input[type="text"], input[type="date"] {
         <div class="signature-line">Gerente del Proyecto</div>
       </div>
     </div>
-  
-
-
+    <!-- Agrega el audio para el sonido de tecla/click -->
+<audio id="keySound" src="key.mp3" preload="auto"></audio>
+  </div>
   <script type="module">
   // 1) Firebase core (auth y base de datos)
   import { auth, db } from "./js/firebase-config.js";
@@ -1036,6 +1036,49 @@ window.addEventListener('DOMContentLoaded', () => {
 });
 
 
+  // Sonido por tecla presionada en todos los inputs y textarea
+  const keySound = document.getElementById("keySound");
+
+  function playKeySound() {
+    keySound.currentTime = 0;
+    keySound.play();
+  }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    // Sonido al escribir en cualquier input o textarea
+    document.querySelectorAll('input, textarea').forEach(el => {
+      el.addEventListener("keydown", e => {
+        if (e.key.length === 1 || e.key === "Backspace" || e.key === "Delete") {
+          playKeySound();
+        }
+      });
+    });
+    // Sonido por click en cualquier botón
+    document.querySelectorAll('button').forEach(btn => {
+      btn.addEventListener("click", playKeySound);
+    });
+
+    // Sonido por click en radios de Sí, No, No Aplica (incluye los generados dinámicamente)
+    document.body.addEventListener("change", function(e) {
+      if (
+        e.target.matches('input[type="radio"][name^="ok"]')
+      ) {
+        playKeySound();
+      }
+    });
+
+    // Sonido al escribir en comentarios dinámicos (textarea dentro de la tabla)
+    document.body.addEventListener("keydown", function(e) {
+      if (
+        e.target.matches('textarea[name^="coment"], textarea[name^="tickets"]') &&
+        (e.key.length === 1 || e.key === "Backspace" || e.key === "Delete")
+      ) {
+        playKeySound();
+      }
+    });
+  });
+
   </script>
 </body>
 </html>
+
