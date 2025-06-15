@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Indicadores de Proyectos</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- Chart.js para velocímetro -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script type="module">
+    import { doc, getDoc } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
+    import { db } from './js/firebase-config.js';
+
+    const COLORS = {
+      primary: "#2E0060",
+      secondary: "#FFD400",
+      accent: "#00B2A9",
+      green: "#00C48C",
+      yellow: "#FFD400",
+      red: "#FF4D4F",
+      gray: "#e0e3e8"
+    };
+    const MESES = ['enero', 'febrero', 'marzo', 'abril'];
+    let selectedMes = "todos";
+    let proyectos = {};
+    let proyectosArray = [];
+    let ordenar = "desc";
+    let chartInstances = {};
+
+    document.addEventListener("DOMContentLoaded", async () => {
+      // Filtro de mes
+      const mesSelect = document.getElementById("filtro-mes");
+      mesSelect.innerHTML = `<option value="todos" selected>Todos</option>` +
+        MESES.map(m => `<option value="${m}">${m.charAt(0).toUpperCase() + m.slice(1)}</option>`).join('');
+      mesSelect.addEventListener("change", e => {
+        selectedMes = e.target.value;
+        renderCards();
+      });
+
+      // Filtro de orden
+      const ordenSelect = document.getElementById("filtro-orden");
+      ordenSelect.addEventListener("change", e => {
+        ordenar = e.target.value;
+        renderCards();
+      });
+
+      await cargarDatos();
+      renderCards();
+    });
+
+    async function cargarDatos() {
+      const docSnap = await getDoc(doc(db, "estacionamientos", "datos_actuales"));
+      if (!docSnap.exists()) {
+        alert("No hay datos guardados en la base de datos.");
+        return;
+      }
+      proyectos = docSnap.data().proyectos || {};
+      proyectosArray = Object.entries(proyectos).map(([nombre, datos]) => ({ nombre, ...datos }));
+    }
+
+    function calcularScore(p, mes) {
+      function getValue(obj, m) {
+        if (!obj) return 0;
+        if (m === "todos") return obj.total || 0;
+        return obj[m] || 0;
+      }
+      const utilidad = getValue(p.ingresoEjercido, mes) - getValue(p.egresoEjercido, mes);
+      const ingresoEjercido = getValue(p.ingresoEjercido, mes);
+      const ingresoPresupuesto = getValue(p.ingresoPresupuesto, mes);
+      const egresoEjercido = getValue(p.egresoEjercido, mes);
+      const egresoPresupuesto = getValue(p.egresoPresupuesto, mes);
+      let score = 0;
+      if (utilidad > 0) score += 3;
+      if (ingresoPresupuesto > 0 && ingresoEjercido / ingresoPresupuesto >= 0.95) score += 3;
+      if (egresoPresupuesto > 0 && egresoEjercido <= egresoPresupuesto) score += 3;
+      if (ingresoEjercido > 0 && utilidad / ingresoEjercido > 0.1) score += 1;
+      return {
+        score,
+        utilidad,
+        ingresoEjercido,
+        ingresoPresupuesto,
+        egresoEjercido,
+        egresoPresupuesto
+      };
+    }
+
+    function getColor(score) {
+      if (score >= 8) return COLORS.green;
+      if (score >= 5) return COLORS.yellow;
+      return COLORS.red;
+    }
+
+    function renderCards() {
+      // Limpiar instancias previas de Chart.js
+      Object.values(chartInstances).forEach(inst => { if (inst) inst.destroy(); });
+      chartInstances = {};
+
+      const cont = document.getElementById("cards-container");
+      cont.innerHTML = "";
+
+      // Calcular y ordenar
+      let arr = proyectosArray.map(p => {
+        const r = calcularScore(p, selectedMes);
+        return { ...p, ...r };
+      });
+      arr.sort((a, b) => ordenar === "desc" ? b.score - a.score : a.score - b.score);
+
+      arr.forEach((p, idx) => {
+        const card = document.createElement("div");
+        card.className = "proyecto-card";
+        card.innerHTML = `
+          <div class="card-header">
+            <span class="nombre">${p.nombre}</span>
+            <div class="gauge-wrap">
+              <canvas id="gauge-${idx}" width="120" height="70"></canvas>
+              <div class="gauge-tooltip" id="gauge-tooltip-${idx}"></div>
+            </div>
+            <span class="score-label" style="color:${getColor(p.score)}">${p.score} / 10</span>
+          </div>
+        `;
+        card.onclick = () => mostrarDesglose(p.nombre, p);
+        cont.appendChild(card);
+
+        // Render gauge SIN aguja
+        setTimeout(() => renderGauge(`gauge-${idx}`, p.score, idx), 0);
+      });
+    }
+
+    function renderGauge(canvasId, score, idx) {
+      const canvas = document.getElementById(canvasId);
+      const ctx = canvas.getContext("2d");
+      // Destruir instancia previa si existe
+      if (chartInstances[canvasId]) chartInstances[canvasId].destroy();
+      // Gauge tipo semicircular SIN aguja
+      chartInstances[canvasId] = new Chart(ctx, {
+        type: "doughnut",
+        data: {
+          datasets: [{
+            data: [score, 10-score],
+            backgroundColor: [
+              getColor(score),
+              "rgba(224,227,232,0.22)"
+            ],
+            borderWidth: 0,
+            circumference: 180,
+            rotation: 270,
+            cutout: "70%"
+          }]
+        },
+        options: {
+          responsive: false,
+          animation: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: { enabled: false }
+          }
+        }
+      });
+
+      // Tooltip interactivo
+      const tooltip = document.getElementById(`gauge-tooltip-${idx}`);
+      canvas.onmousemove = e => {
+        tooltip.style.display = "block";
+        tooltip.textContent = `Calificación: ${score} / 10`;
+        tooltip.style.left = (e.offsetX + 30) + "px";
+        tooltip.style.top = (e.offsetY - 10) + "px";
+      };
+      canvas.onmouseleave = () => { tooltip.style.display = "none"; };
+    }
+
+    function mostrarDesglose(nombre, datos) {
+      const panel = document.getElementById("desglose-panel");
+      panel.innerHTML = `
+        <div class="desglose-content">
+          <button class="close-btn" onclick="document.getElementById('desglose-panel').style.display='none'">&times;</button>
+          <h3>${nombre}</h3>
+          <table>
+            <tr><th>Utilidad</th><td>$ ${datos.utilidad.toLocaleString("es-MX", {minimumFractionDigits:2})}</td></tr>
+            <tr><th>Ingreso Ejercido</th><td>$ ${datos.ingresoEjercido.toLocaleString("es-MX", {minimumFractionDigits:2})}</td></tr>
+            <tr><th>Ingreso Presupuestado</th><td>$ ${datos.ingresoPresupuesto.toLocaleString("es-MX", {minimumFractionDigits:2})}</td></tr>
+            <tr><th>Egreso Ejercido</th><td>$ ${datos.egresoEjercido.toLocaleString("es-MX", {minimumFractionDigits:2})}</td></tr>
+            <tr><th>Egreso Presupuestado</th><td>$ ${datos.egresoPresupuesto.toLocaleString("es-MX", {minimumFractionDigits:2})}</td></tr>
+            <tr><th>Calificación</th><td>${datos.score} / 10</td></tr>
+          </table>
+        </div>
+      `;
+      panel.style.display = "flex";
+    }
+
+    // Cerrar panel al hacer click fuera
+    window.onclick = function(event) {
+      const panel = document.getElementById('desglose-panel');
+      if (event.target === panel) {
+        panel.style.display = "none";
+      }
+    }
+  </script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;900&display=swap');
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      min-height: 100vh;
+      font-family: 'Montserrat', 'Segoe UI', Arial, sans-serif;
+      color: #22223b;
+      /* Fondo institucional AccessOne: degradado, patrón sutil y acentos */
+      background: linear-gradient(135deg, #2E0060 0%, #00B2A9 100%);
+      background-attachment: fixed;
+      position: relative;
+    }
+    body::before {
+      content: "";
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: 
+        repeating-linear-gradient(135deg, #FFD40022 0 2px, transparent 2px 40px),
+        radial-gradient(circle at 80% 20%, #FFD40018 0%, transparent 70%),
+        radial-gradient(circle at 20% 80%, #00B2A918 0%, transparent 70%);
+      opacity: 0.18;
+      z-index: 0;
+      pointer-events: none;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 48px auto 0 auto;
+      background: rgba(255,255,255,0.97);
+      border-radius: 32px;
+      box-shadow: 0 8px 32px 0 rgba(46,0,96,0.10), 0 1.5px 0 #FFD400;
+      padding: 0 0 32px 0;
+      border: none;
+      backdrop-filter: blur(6px);
+      position: relative;
+      overflow: visible;
+      z-index: 1;
+    }
+    .header-accessone {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 38px 0 18px 0;
+      border-radius: 32px 32px 0 0;
+      background: linear-gradient(90deg, #2E0060 60%, #00B2A9 100%);
+      box-shadow: 0 4px 24px #2E006022;
+      position: relative;
+    }
+    .header-accessone img {
+      width: 82px;
+      height: 82px;
+      object-fit: contain;
+      border-radius: 50%;
+      background: #fff;
+      box-shadow: 0 2px 16px #FFD40033;
+      margin-bottom: 12px;
+      border: 3px solid #FFD400;
+      transition: box-shadow 0.2s;
+    }
+    .header-accessone h1 {
+      font-size: 2.2em;
+      color: #FFD400;
+      font-weight: 900;
+      letter-spacing: 2px;
+      margin: 0;
+      text-align: center;
+      text-shadow: 0 4px 16px #2E006022;
+      background: none;
+      -webkit-background-clip: unset;
+      -webkit-text-fill-color: unset;
+    }
+    .controls {
+      display: flex;
+      gap: 18px;
+      align-items: center;
+      margin: 18px 0 24px 0;
+      justify-content: flex-end;
+      position: relative;
+      flex-wrap: wrap;
+    }
+    .controls label {
+      font-weight: 700;
+      color: #2E0060;
+      margin-right: 8px;
+      font-size: 1.08em;
+      letter-spacing: 0.5px;
+      display: flex;
+      align-items: center;
+    }
+    .controls label:before {
+      content: "📅";
+      margin-right: 7px;
+      font-size: 1.1em;
+      opacity: 0.7;
+    }
+    .controls .orden-label:before {
+      content: "↕️";
+      margin-right: 7px;
+      font-size: 1.1em;
+      opacity: 0.7;
+    }
+    .controls select {
+      font-size: 1em;
+      padding: 8px 14px;
+      border-radius: 10px;
+      border: 2px solid #FFD400;
+      background: #fffbe7;
+      color: #2E0060;
+      outline: none;
+      font-weight: 700;
+      margin-right: 8px;
+      box-shadow: 0 1px 6px #FFD40011;
+      transition: border 0.2s, box-shadow 0.2s;
+      cursor: pointer;
+      min-width: 110px;
+    }
+    .controls select:focus {
+      border: 2px solid #00B2A9;
+      box-shadow: 0 2px 8px #00B2A922;
+    }
+    #cards-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 28px;
+      justify-content: center;
+      margin-top: 12px;
+    }
+    .proyecto-card {
+      background: rgba(255,255,255,0.96);
+      border-radius: 18px;
+      box-shadow: 0 4px 18px 0 #00B2A911, 0 1.5px 0 #FFD400;
+      padding: 22px 12px 16px 12px;
+      min-width: 220px;
+      max-width: 260px;
+      width: 100%;
+      cursor: pointer;
+      transition: box-shadow 0.18s, transform 0.10s, background 0.18s;
+      border: 2px solid #e0e3e8;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      position: relative;
+      backdrop-filter: blur(1.5px);
+      overflow: visible;
+      animation: popIn 0.5s;
+    }
+    @keyframes popIn {
+      from { opacity: 0; transform: scale(0.96);}
+      to { opacity: 1; transform: scale(1);}
+    }
+    .proyecto-card:hover {
+      box-shadow: 0 10px 32px #FFD40033, 0 2px 0 #00B2A9;
+      border-color: #FFD400;
+      transform: translateY(-2px) scale(1.025);
+      background: rgba(255,255,255,0.99);
+    }
+    .card-header {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+    .nombre {
+      font-size: 1.13em;
+      font-weight: 800;
+      color: #2E0060;
+      margin-bottom: 2px;
+      text-align: center;
+      letter-spacing: 0.5px;
+      text-shadow: 0 2px 8px #FFD40011;
+      background: linear-gradient(90deg, #FFD400 10%, #2E0060 90%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .gauge-wrap {
+      position: relative;
+      width: 120px;
+      height: 70px;
+      margin-bottom: 2px;
+      margin-top: 2px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      filter: drop-shadow(0 2px 8px #FFD40011);
+      background: transparent;
+    }
+    .gauge-tooltip {
+      display: none;
+      position: absolute;
+      left: 60px; top: 10px;
+      background: #fffbe7;
+      color: #2E0060;
+      border: 1.5px solid #FFD400;
+      border-radius: 8px;
+      padding: 7px 14px;
+      font-size: 1em;
+      font-weight: 700;
+      pointer-events: none;
+      z-index: 10;
+      box-shadow: 0 2px 8px #FFD40011;
+      white-space: nowrap;
+      transition: opacity 0.18s;
+    }
+    .score-label {
+      font-size: 1.18em;
+      font-weight: 900;
+      margin-top: 2px;
+      margin-bottom: 0;
+      text-align: center;
+      letter-spacing: 1.2px;
+      text-shadow: 0 2px 8px #FFD40011;
+      background: linear-gradient(90deg, #FFD400 10%, #2E0060 90%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    #desglose-panel {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(46,0,96,0.10);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+      backdrop-filter: blur(3px);
+      animation: fadeIn 0.5s;
+    }
+    .desglose-content {
+      background: rgba(255,255,255,0.99);
+      border-radius: 18px;
+      box-shadow: 0 8px 32px #FFD40033, 0 2px 0 #00B2A9;
+      padding: 28px 18px 18px 18px;
+      margin: 40px auto;
+      max-width: 340px;
+      min-width: 220px;
+      animation: popIn 0.4s;
+      position: relative;
+      backdrop-filter: blur(1.5px);
+    }
+    .close-btn {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: #FFD400;
+      color: #2E0060;
+      border: none;
+      border-radius: 50%;
+      width: 32px;
+      height: 32px;
+      font-size: 1.3em;
+      font-weight: 900;
+      cursor: pointer;
+      box-shadow: 0 2px 8px #FFD40011;
+      transition: background 0.2s, color 0.2s, transform 0.1s;
+      outline: none;
+      z-index: 2;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .close-btn:hover {
+      background: #2E0060;
+      color: #FFD400;
+      transform: scale(1.08);
+    }
+    .desglose-content h3 {
+      color: #2E0060;
+      margin-top: 0;
+      margin-bottom: 14px;
+      text-align: center;
+      font-size: 1.18em;
+      font-weight: 900;
+      letter-spacing: 1px;
+      text-shadow: 0 2px 8px #FFD40011;
+      background: linear-gradient(90deg, #FFD400 10%, #2E0060 90%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .desglose-content table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      margin-bottom: 10px;
+      background: transparent;
+    }
+    .desglose-content th, .desglose-content td {
+      border: none;
+      padding: 8px 4px;
+      text-align: right;
+      font-size: 1em;
+      font-weight: 700;
+    }
+    .desglose-content th {
+      background: #FFD400;
+      color: #2E0060;
+      text-align: left;
+      font-weight: 900;
+      border-radius: 7px 0 0 7px;
+      width: 60%;
+      padding-left: 12px;
+    }
+    .desglose-content td {
+      background: #f4f6fa;
+      color: #2E0060;
+      border-radius: 0 7px 7px 0;
+      padding-right: 12px;
+    }
+    .footer-accessone {
+      margin-top: 32px;
+      text-align: center;
+      font-size: 1em;
+      color: #fff;
+      letter-spacing: 0.5px;
+      background: none;
+      padding-bottom: 18px;
+      z-index: 2;
+      position: relative;
+      opacity: 0.85;
+    }
+    .footer-accessone span {
+      color: #FFD400;
+      font-weight: 700;
+    }
+    @media (max-width: 900px) {
+      .container { padding: 0; }
+      .header-accessone { padding: 18px 0 10px 0; }
+      .header-accessone img { width: 54px; height: 54px; }
+      .header-accessone h1 { font-size: 1.2em; }
+      .controls { flex-direction: column; gap: 8px; }
+      #cards-container { gap: 12px; }
+      .proyecto-card { min-width: 100px; max-width: 98vw; }
+      .desglose-content { min-width: 0; width: 98vw; }
+    }
+    @media (max-width: 600px) {
+      .container { padding: 2vw; }
+      .proyecto-card { padding: 8px 2vw; }
+      .desglose-content { padding: 10px 2vw; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header-accessone">
+      <img src="logo.jpg" alt="AccessOne Logo">
+      <h1>Indicadores de Proyectos</h1>
+    </div>
+    <div class="controls">
+      <label for="filtro-mes">Mes:</label>
+      <select id="filtro-mes"></select>
+      <label for="filtro-orden" class="orden-label">Ordenar:</label>
+      <select id="filtro-orden">
+        <option value="desc" selected>Mayor a menor</option>
+        <option value="asc">Menor a mayor</option>
+      </select>
+    </div>
+    <div id="cards-container"></div>
+    <div class="footer-accessone">
+      &copy; <span>AccessOne</span> 2025. Todos los derechos reservados.
+    </div>
+  </div>
+  <div id="desglose-panel"></div>
+</body>
+</html>

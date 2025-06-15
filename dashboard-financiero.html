@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Dashboard Financiero - AccessOne</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- Chart.js for visualizations -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Firebase -->
+  <script type="module">
+    import { doc, getDoc } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
+    import { db } from './js/firebase-config.js';
+
+    // Colores AccessOne
+    const COLORS = {
+      primary: "#2E0060",
+      secondary: "#FFD400",
+      accent: "#00B2A9",
+      green: "#00C48C",
+      red: "#FF4D4F",
+      gray: "#e0e3e8"
+    };
+
+    // Utilidad, Ingreso Ejercido vs Presupuestado, Egreso Ejercido vs Presupuestado
+    let proyectos = {};
+    let proyectosArray = [];
+    let currentView = "utilidad"; // utilidad | ingreso | egreso | todos
+
+    // Meses disponibles
+    const MESES = ['enero', 'febrero', 'marzo', 'abril'];
+    let selectedMes = "todos";
+
+    // DOM Ready
+    document.addEventListener("DOMContentLoaded", async () => {
+      // Agrega filtro de mes dinámicamente
+      const controls = document.querySelector('.dashboard-controls');
+      const mesLabel = document.createElement('label');
+      mesLabel.textContent = "Mes:";
+      const mesSelect = document.createElement('select');
+      mesSelect.id = "filtro-mes";
+      mesSelect.innerHTML = `<option value="todos" selected>Todos</option>` +
+        MESES.map(m => `<option value="${m}">${m.charAt(0).toUpperCase() + m.slice(1)}</option>`).join('');
+      mesLabel.appendChild(mesSelect);
+      controls.insertBefore(mesLabel, controls.children[2]);
+
+      mesSelect.addEventListener("change", e => {
+        selectedMes = e.target.value;
+        renderDashboard();
+      });
+
+      await cargarDatos();
+      renderDashboard();
+      document.getElementById("selector-rubro").addEventListener("change", e => {
+        currentView = e.target.value;
+        renderDashboard();
+      });
+      document.getElementById("ordenar").addEventListener("change", renderDashboard);
+    });
+
+    async function cargarDatos() {
+      const docSnap = await getDoc(doc(db, "estacionamientos", "datos_actuales"));
+      if (!docSnap.exists()) {
+        alert("No hay datos guardados en la base de datos.");
+        return;
+      }
+      proyectos = docSnap.data().proyectos || {};
+      proyectosArray = Object.entries(proyectos).map(([nombre, datos]) => {
+        // Calcula utilidad y calificaciones
+        const utilidad = (datos.ingresoEjercido.total || 0) - (datos.egresoEjercido.total || 0);
+        const ingresoEjercido = datos.ingresoEjercido.total || 0;
+        const ingresoPresupuesto = datos.ingresoPresupuesto.total || 0;
+        const egresoEjercido = datos.egresoEjercido.total || 0;
+        const egresoPresupuesto = datos.egresoPresupuesto.total || 0;
+        // Calificación simple: 1-10
+        let score = 0;
+        // Utilidad: mayor utilidad, mejor score
+        if (utilidad > 0) score += 3;
+        // Ingreso ejercido >= 95% del presupuestado
+        if (ingresoPresupuesto > 0 && ingresoEjercido / ingresoPresupuesto >= 0.95) score += 3;
+        // Egreso ejercido <= egreso presupuestado
+        if (egresoPresupuesto > 0 && egresoEjercido <= egresoPresupuesto) score += 3;
+        // Bonus si utilidad > 10% de ingreso ejercido
+        if (ingresoEjercido > 0 && utilidad / ingresoEjercido > 0.1) score += 1;
+        return {
+          nombre,
+          utilidad,
+          ingresoEjercido,
+          ingresoPresupuesto,
+          egresoEjercido,
+          egresoPresupuesto,
+          score
+        };
+      });
+    }
+
+    function renderDashboard() {
+      let arr = [...proyectosArray];
+      const ordenar = document.getElementById("ordenar").value;
+      let chartData = [];
+      let chartLabels = [];
+      let chartTitle = "";
+      let chartColors = [];
+      let tableHeaders = [];
+      let tableRows = [];
+
+      // Filtrado por mes
+      function getValueByMes(obj, mes) {
+        if (!obj) return 0;
+        if (mes === "todos") return obj.total || 0;
+        return obj[mes] || 0;
+      }
+
+      // Selección de rubro
+      if (currentView === "utilidad") {
+        arr = arr.map(p => {
+          const utilidad = getValueByMes(proyectos[p.nombre].ingresoEjercido, selectedMes) -
+                           getValueByMes(proyectos[p.nombre].egresoEjercido, selectedMes);
+          return { ...p, utilidad };
+        });
+        // Ordenar correctamente: mayor utilidad arriba, luego menor, luego pérdidas
+        arr.sort((a, b) => b.utilidad - a.utilidad);
+        chartData = arr.map(p => p.utilidad);
+        chartLabels = arr.map(p => p.nombre);
+        chartTitle = selectedMes === "todos" ? "Utilidad por Proyecto (Total)" : `Utilidad por Proyecto (${selectedMes.charAt(0).toUpperCase() + selectedMes.slice(1)})`;
+        chartColors = arr.map(p => p.utilidad >= 0 ? COLORS.green : COLORS.red);
+        tableHeaders = ["Proyecto", "Utilidad"];
+        tableRows = arr.map(p => [p.nombre, "$ " + p.utilidad.toLocaleString("es-MX", {minimumFractionDigits:2})]);
+      } else if (currentView === "ingreso") {
+        arr = arr.map(p => {
+          const ejercido = getValueByMes(proyectos[p.nombre].ingresoEjercido, selectedMes);
+          const presup = getValueByMes(proyectos[p.nombre].ingresoPresupuesto, selectedMes);
+          return { ...p, ingresoEjercido: ejercido, ingresoPresupuesto: presup };
+        });
+        arr.sort((a, b) => ((b.ingresoEjercido / (b.ingresoPresupuesto || 1)) - (a.ingresoEjercido / (a.ingresoPresupuesto || 1))));
+        chartData = arr.map(p => p.ingresoEjercido / (p.ingresoPresupuesto || 1));
+        chartLabels = arr.map(p => p.nombre);
+        chartTitle = selectedMes === "todos" ? "Ingreso Ejercido vs Presupuestado (Total)" : `Ingreso Ejercido vs Presupuestado (${selectedMes.charAt(0).toUpperCase() + selectedMes.slice(1)})`;
+        chartColors = arr.map(p => (p.ingresoEjercido / (p.ingresoPresupuesto || 1)) >= 1 ? COLORS.green : COLORS.secondary);
+        tableHeaders = ["Proyecto", "Ingreso Ejercido", "Ingreso Presupuestado", "% Cumplimiento"];
+        tableRows = arr.map(p => [
+          p.nombre,
+          "$ " + p.ingresoEjercido.toLocaleString("es-MX", {minimumFractionDigits:2}),
+          "$ " + p.ingresoPresupuesto.toLocaleString("es-MX", {minimumFractionDigits:2}),
+          (p.ingresoPresupuesto ? ((p.ingresoEjercido / p.ingresoPresupuesto) * 100).toFixed(1) : "0") + "%"
+        ]);
+      } else if (currentView === "egreso") {
+        arr = arr.map(p => {
+          const ejercido = getValueByMes(proyectos[p.nombre].egresoEjercido, selectedMes);
+          const presup = getValueByMes(proyectos[p.nombre].egresoPresupuesto, selectedMes);
+          return { ...p, egresoEjercido: ejercido, egresoPresupuesto: presup };
+        });
+        arr.sort((a, b) => ((a.egresoEjercido / (a.egresoPresupuesto || 1)) - (b.egresoEjercido / (b.egresoPresupuesto || 1))));
+        chartData = arr.map(p => p.egresoEjercido / (p.egresoPresupuesto || 1));
+        chartLabels = arr.map(p => p.nombre);
+        chartTitle = selectedMes === "todos" ? "Egreso Ejercido vs Presupuestado (Total)" : `Egreso Ejercido vs Presupuestado (${selectedMes.charAt(0).toUpperCase() + selectedMes.slice(1)})`;
+        chartColors = arr.map(p => (p.egresoEjercido / (p.egresoPresupuesto || 1)) <= 1 ? COLORS.green : COLORS.red);
+        tableHeaders = ["Proyecto", "Egreso Ejercido", "Egreso Presupuestado", "% Gastado"];
+        tableRows = arr.map(p => [
+          p.nombre,
+          "$ " + p.egresoEjercido.toLocaleString("es-MX", {minimumFractionDigits:2}),
+          "$ " + p.egresoPresupuesto.toLocaleString("es-MX", {minimumFractionDigits:2}),
+          (p.egresoPresupuesto ? ((p.egresoEjercido / p.egresoPresupuesto) * 100).toFixed(1) : "0") + "%"
+        ]);
+      } else { // todos
+        arr = arr.map(p => {
+          // Score se calcula sobre el total
+          const utilidad = getValueByMes(proyectos[p.nombre].ingresoEjercido, "total") -
+                           getValueByMes(proyectos[p.nombre].egresoEjercido, "total");
+          const ingresoEjercido = getValueByMes(proyectos[p.nombre].ingresoEjercido, "total");
+          const ingresoPresupuesto = getValueByMes(proyectos[p.nombre].ingresoPresupuesto, "total");
+          const egresoEjercido = getValueByMes(proyectos[p.nombre].egresoEjercido, "total");
+          const egresoPresupuesto = getValueByMes(proyectos[p.nombre].egresoPresupuesto, "total");
+          let score = 0;
+          if (utilidad > 0) score += 3;
+          if (ingresoPresupuesto > 0 && ingresoEjercido / ingresoPresupuesto >= 0.95) score += 3;
+          if (egresoPresupuesto > 0 && egresoEjercido <= egresoPresupuesto) score += 3;
+          if (ingresoEjercido > 0 && utilidad / ingresoEjercido > 0.1) score += 1;
+          return { ...p, utilidad, ingresoEjercido, ingresoPresupuesto, egresoEjercido, egresoPresupuesto, score };
+        });
+        arr.sort((a, b) => b.score - a.score);
+        chartData = arr.map(p => p.score);
+        chartLabels = arr.map(p => p.nombre);
+        chartTitle = "Calificación Global por Proyecto";
+        chartColors = arr.map(p => {
+          if (p.score >= 8) return COLORS.green;
+          if (p.score >= 5) return COLORS.secondary;
+          return COLORS.red;
+        });
+        tableHeaders = ["Proyecto", "Utilidad", "Ingreso Ejercido", "Ingreso Presupuestado", "Egreso Ejercido", "Egreso Presupuestado", "Calificación"];
+        tableRows = arr.map(p => [
+          p.nombre,
+          "$ " + p.utilidad.toLocaleString("es-MX", {minimumFractionDigits:2}),
+          "$ " + p.ingresoEjercido.toLocaleString("es-MX", {minimumFractionDigits:2}),
+          "$ " + p.ingresoPresupuesto.toLocaleString("es-MX", {minimumFractionDigits:2}),
+          "$ " + p.egresoEjercido.toLocaleString("es-MX", {minimumFractionDigits:2}),
+          "$ " + p.egresoPresupuesto.toLocaleString("es-MX", {minimumFractionDigits:2}),
+          p.score + " / 10"
+        ]);
+      }
+
+      // Ordenar asc/desc
+      if (ordenar === "asc") {
+        chartData.reverse();
+        chartLabels.reverse();
+        chartColors.reverse();
+        tableRows.reverse();
+      }
+
+      // Renderiza tabla
+      const table = document.getElementById("tabla-proyectos");
+      table.innerHTML = `
+        <thead>
+          <tr>${tableHeaders.map(h => `<th>${h}</th>`).join("")}</tr>
+        </thead>
+        <tbody>
+          ${tableRows.map(row => `<tr>${row.map(cell => `<td>${cell}</td>`).join("")}</tr>`).join("")}
+        </tbody>
+      `;
+
+      // Renderiza gráfico
+      renderChart(chartLabels, chartData, chartTitle, chartColors);
+    }
+
+    let chartInstance = null;
+    function renderChart(labels, data, title, colors) {
+      const ctx = document.getElementById("chart").getContext("2d");
+      if (chartInstance) chartInstance.destroy();
+      chartInstance = new Chart(ctx, {
+        type: "bar",
+        data: {
+          labels,
+          datasets: [{
+            label: title,
+            data,
+            backgroundColor: colors,
+            borderRadius: 8,
+            borderSkipped: false
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: { display: false },
+            title: {
+              display: true,
+              text: title,
+              color: "#2E0060",
+              font: { size: 22, weight: "bold" }
+            },
+            tooltip: {
+              callbacks: {
+                label: ctx => {
+                  if (typeof ctx.raw === "number") {
+                    if (title.includes("Utilidad") || title.includes("Ingreso") || title.includes("Egreso")) {
+                      return "$ " + ctx.raw.toLocaleString("es-MX", {minimumFractionDigits:2});
+                    }
+                    return ctx.raw;
+                  }
+                  return ctx.raw;
+                }
+              }
+            }
+          },
+          animation: {
+            duration: 1200,
+            easing: "easeOutBounce"
+          },
+          scales: {
+            x: {
+              ticks: { color: "#2E0060", font: { weight: "bold" } },
+              grid: { color: "#e0e3e8" }
+            },
+            y: {
+              beginAtZero: true,
+              ticks: { color: "#2E0060", font: { weight: "bold" } },
+              grid: { color: "#e0e3e8" }
+            }
+          }
+        }
+      });
+    }
+  </script>
+  <style>
+    :root {
+      --primary: #2E0060;
+      --secondary: #FFD400;
+      --accent: #00B2A9;
+      --bg-light: #f4f6fa;
+      --bg-white: #fff;
+      --gray: #e0e3e8;
+      --text: #22223b;
+      --shadow: 0 4px 24px rgba(46,0,96,0.08);
+    }
+    body {
+      background: linear-gradient(135deg, #f4f6fa 0%, #e0e3e8 100%);
+      font-family: 'Montserrat', 'Segoe UI', Arial, sans-serif;
+      color: var(--text);
+      margin: 0;
+      min-height: 100vh;
+      background-image: url('pattern.svg'), linear-gradient(135deg, #f4f6fa 0%, #e0e3e8 100%);
+      background-repeat: repeat, no-repeat;
+      padding: 0;
+    }
+    .dashboard-container {
+      max-width: 1400px;
+      margin: 40px auto 0 auto;
+      background: var(--bg-white);
+      border-radius: 24px;
+      box-shadow: 0 8px 32px rgba(46,0,96,0.12);
+      padding: 36px 28px 28px 28px;
+      border: none;
+      animation: fadeIn 1.2s;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(40px);}
+      to { opacity: 1; transform: none;}
+    }
+    .dashboard-header {
+      display: flex;
+      align-items: center;
+      background: linear-gradient(90deg, #2E0060 60%, #00B2A9 100%);
+      color: #fff;
+      padding: 28px 36px;
+      border-radius: 24px 24px 0 0;
+      margin-bottom: 0;
+      border-bottom: 8px solid var(--secondary);
+      box-shadow: 0 4px 24px rgba(46,0,96,0.15);
+      animation: slideDown 1s;
+    }
+    @keyframes slideDown {
+      from { opacity: 0; transform: translateY(-40px);}
+      to { opacity: 1; transform: none;}
+    }
+    .dashboard-header img {
+      height: 64px;
+      margin-right: 28px;
+      filter: none;
+    }
+    .dashboard-header h1 {
+      font-size: 2.1em;
+      letter-spacing: 1.5px;
+      margin: 0;
+      font-weight: 800;
+      color: #FFD400;
+      text-shadow: 0 4px 16px rgba(46,0,96,0.10);
+    }
+    .dashboard-controls {
+      display: flex;
+      gap: 24px;
+      align-items: center;
+      margin: 32px 0 18px 0;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+    .dashboard-controls label {
+      font-weight: 600;
+      color: var(--primary);
+      margin-right: 8px;
+    }
+    .dashboard-controls select {
+      font-size: 1em;
+      padding: 7px 12px;
+      border-radius: 8px;
+      border: 1.5px solid var(--primary);
+      background: #f9f9fb;
+      color: var(--primary);
+      outline: none;
+      font-weight: 600;
+      margin-right: 12px;
+      transition: border 0.2s;
+    }
+    .dashboard-controls select:focus {
+      border: 2px solid var(--accent);
+    }
+    .dashboard-main {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 32px;
+      margin-top: 18px;
+      align-items: flex-start;
+      justify-content: space-between;
+    }
+    .dashboard-chart {
+      flex: 1 1 600px;
+      min-width: 350px;
+      background: #fff;
+      border-radius: 18px;
+      box-shadow: 0 2px 12px rgba(46,0,96,0.06);
+      padding: 24px 18px 18px 18px;
+      margin-bottom: 18px;
+      animation: fadeIn 1.2s;
+    }
+    .dashboard-table {
+      flex: 1 1 500px;
+      min-width: 350px;
+      background: #fff;
+      border-radius: 18px;
+      box-shadow: 0 2px 12px rgba(46,0,96,0.06);
+      padding: 24px 18px 18px 18px;
+      margin-bottom: 18px;
+      animation: fadeIn 1.2s;
+      overflow-x: auto;
+    }
+    table {
+      border-collapse: separate;
+      border-spacing: 0;
+      width: 100%;
+      margin: 0;
+      table-layout: auto;
+      background: #fff;
+      border-radius: 18px;
+      box-shadow: 0 2px 12px rgba(46,0,96,0.06);
+      overflow: hidden;
+    }
+    th, td {
+      border: 1px solid var(--gray);
+      padding: 10px 6px;
+      vertical-align: top;
+      font-size: 0.97em;
+      text-align: right;
+      min-width: 90px;
+      max-width: 180px;
+      word-break: break-word;
+      transition: background 0.2s;
+    }
+    th {
+      background: var(--primary);
+      color: #fff;
+      font-size: 1em;
+      border: none;
+      text-align: center;
+      font-weight: 700;
+      position: sticky;
+      top: 0;
+      z-index: 2;
+    }
+    td:first-child, th:first-child {
+      text-align: left;
+      font-weight: 600;
+      background: #f4f6fa;
+      color: var(--primary);
+      min-width: 180px;
+      max-width: 260px;
+      font-size: 0.98em;
+    }
+    tr:nth-child(even) td {
+      background: #f9f9fb;
+    }
+    tr:hover td {
+      background: #ffe;
+      transition: background 0.2s;
+    }
+    @media (max-width: 1200px) {
+      .dashboard-main { flex-direction: column; }
+      .dashboard-chart, .dashboard-table { min-width: 0; width: 100%; }
+    }
+    @media (max-width: 900px) {
+      .dashboard-container { padding: 8px; }
+      .dashboard-header { flex-direction: column; align-items: flex-start; padding: 12px 6px; }
+      .dashboard-header img { height: 38px; margin-bottom: 10px; }
+      .dashboard-header h1 { font-size: 1em; }
+      .dashboard-controls { flex-direction: column; gap: 10px; }
+      th, td { font-size: 0.90em; padding: 5px 2px; }
+      td:first-child, th:first-child { min-width: 80px; max-width: 120px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="dashboard-container">
+    <div class="dashboard-header">
+      <img src="logo.png" alt="AccessOne Logo">
+      <h1>Dashboard Financiero de Proyectos</h1>
+    </div>
+    <div class="dashboard-controls">
+      <label>Indicador:</label>
+      <select id="selector-rubro">
+        <option value="utilidad">Utilidad</option>
+        <option value="ingreso">Ingreso Ejercido vs Presupuestado</option>
+        <option value="egreso">Egreso Ejercido vs Presupuestado</option>
+        <option value="todos">Todos / Calificación</option>
+      </select>
+      <label>Ordenar:</label>
+      <select id="ordenar">
+        <option value="desc">Mayor a menor</option>
+        <option value="asc">Menor a mayor</option>
+      </select>
+    </div>
+    <div class="dashboard-main">
+      <div class="dashboard-chart">
+        <canvas id="chart" height="320"></canvas>
+      </div>
+      <div class="dashboard-table">
+        <table id="tabla-proyectos"></table>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

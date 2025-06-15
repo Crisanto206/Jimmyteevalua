@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Diagrama de Gauss - Proyectos</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Firebase -->
+  <script type="module">
+    import { doc, getDoc } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
+    import { db } from './js/firebase-config.js';
+
+    const COLORS = {
+      primary: "#2E0060",
+      secondary: "#FFD400",
+      accent: "#00B2A9",
+      green: "#00C48C",
+      red: "#FF4D4F",
+      gray: "#e0e3e8"
+    };
+    const MESES = ['enero', 'febrero', 'marzo', 'abril'];
+    let selectedMes = "todos";
+    let proyectos = {};
+    let proyectosArray = [];
+
+    document.addEventListener("DOMContentLoaded", async () => {
+      // Filtro de mes
+      const mesSelect = document.getElementById("filtro-mes");
+      mesSelect.innerHTML = `<option value="todos" selected>Todos</option>` +
+        MESES.map(m => `<option value="${m}">${m.charAt(0).toUpperCase() + m.slice(1)}</option>`).join('');
+      mesSelect.addEventListener("change", e => {
+        selectedMes = e.target.value;
+        renderGauss();
+      });
+
+      await cargarDatos();
+      renderGauss();
+    });
+
+    async function cargarDatos() {
+      const docSnap = await getDoc(doc(db, "estacionamientos", "datos_actuales"));
+      if (!docSnap.exists()) {
+        alert("No hay datos guardados en la base de datos.");
+        return;
+      }
+      proyectos = docSnap.data().proyectos || {};
+      proyectosArray = Object.entries(proyectos).map(([nombre, datos]) => ({ nombre, ...datos }));
+    }
+
+    function calcularScore(p, mes) {
+      function getValue(obj, m) {
+        if (!obj) return 0;
+        if (m === "todos") return obj.total || 0;
+        return obj[m] || 0;
+      }
+      const utilidad = getValue(p.ingresoEjercido, mes) - getValue(p.egresoEjercido, mes);
+      const ingresoEjercido = getValue(p.ingresoEjercido, mes);
+      const ingresoPresupuesto = getValue(p.ingresoPresupuesto, mes);
+      const egresoEjercido = getValue(p.egresoEjercido, mes);
+      const egresoPresupuesto = getValue(p.egresoPresupuesto, mes);
+      let score = 0;
+      if (utilidad > 0) score += 3;
+      if (ingresoPresupuesto > 0 && ingresoEjercido / ingresoPresupuesto >= 0.95) score += 3;
+      if (egresoPresupuesto > 0 && egresoEjercido <= egresoPresupuesto) score += 3;
+      if (ingresoEjercido > 0 && utilidad / ingresoEjercido > 0.1) score += 1;
+      return {
+        score,
+        utilidad,
+        ingresoEjercido,
+        ingresoPresupuesto,
+        egresoEjercido,
+        egresoPresupuesto
+      };
+    }
+
+    let chartInstance = null;
+    function renderGauss() {
+      // Calcular scores y preparar datos
+      const datos = proyectosArray.map(p => {
+        const r = calcularScore(p, selectedMes);
+        return { nombre: p.nombre, ...r };
+      });
+
+      // Ordenar por score
+      datos.sort((a, b) => a.score - b.score);
+
+      // Para el diagrama de Gauss, agrupamos por score
+      const scoreCounts = {};
+      datos.forEach(d => {
+        scoreCounts[d.score] = (scoreCounts[d.score] || 0) + 1;
+      });
+      const uniqueScores = Object.keys(scoreCounts).map(Number).sort((a, b) => a - b);
+
+      // Simular curva de Gauss (normalizar y suavizar)
+      // Para cada score, la altura es la cantidad de proyectos con ese score
+      const gaussData = uniqueScores.map(s => scoreCounts[s]);
+      const gaussLabels = uniqueScores.map(s => s + " / 10");
+
+      // Render Chart
+      const ctx = document.getElementById("gauss-chart").getContext("2d");
+      if (chartInstance) chartInstance.destroy();
+      chartInstance = new Chart(ctx, {
+        type: "line",
+        data: {
+          labels: gaussLabels,
+          datasets: [{
+            label: "Cantidad de Proyectos",
+            data: gaussData,
+            fill: true,
+            backgroundColor: "rgba(0,178,169,0.12)",
+            borderColor: COLORS.accent,
+            pointBackgroundColor: COLORS.primary,
+            pointRadius: 7,
+            tension: 0.4
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: { display: false },
+            title: {
+              display: true,
+              text: selectedMes === "todos" ? "Distribución de Calificaciones (Todos los meses)" : `Distribución de Calificaciones (${selectedMes.charAt(0).toUpperCase() + selectedMes.slice(1)})`,
+              color: COLORS.primary,
+              font: { size: 22, weight: "bold" }
+            },
+            tooltip: {
+              callbacks: {
+                title: ctx => "Score: " + ctx[0].label,
+                label: ctx => "Proyectos: " + ctx.raw
+              }
+            }
+          },
+          onClick: (evt, elements) => {
+            if (elements.length > 0) {
+              const idx = elements[0].index;
+              const score = uniqueScores[idx];
+              mostrarDesglose(score, datos.filter(d => d.score === score));
+            }
+          },
+          scales: {
+            x: {
+              title: { display: true, text: "Calificación", color: COLORS.primary, font: { weight: "bold" } },
+              ticks: { color: COLORS.primary, font: { weight: "bold" } },
+              grid: { color: COLORS.gray }
+            },
+            y: {
+              beginAtZero: true,
+              title: { display: true, text: "Cantidad de Proyectos", color: COLORS.primary, font: { weight: "bold" } },
+              ticks: { color: COLORS.primary, font: { weight: "bold" } },
+              grid: { color: COLORS.gray }
+            }
+          }
+        }
+      });
+    }
+
+    function mostrarDesglose(score, proyectos) {
+      const panel = document.getElementById("desglose-panel");
+      if (!proyectos.length) {
+        panel.innerHTML = "<em>No hay proyectos con esa calificación.</em>";
+        panel.style.display = "block";
+        return;
+      }
+      panel.innerHTML = `
+        <h3>Proyectos con calificación ${score} / 10</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Proyecto</th>
+              <th>Utilidad</th>
+              <th>Ingreso Ejercido</th>
+              <th>Ingreso Presupuestado</th>
+              <th>Egreso Ejercido</th>
+              <th>Egreso Presupuestado</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${proyectos.map(p => `
+              <tr>
+                <td>${p.nombre}</td>
+                <td>$ ${p.utilidad.toLocaleString("es-MX", {minimumFractionDigits:2})}</td>
+                <td>$ ${p.ingresoEjercido.toLocaleString("es-MX", {minimumFractionDigits:2})}</td>
+                <td>$ ${p.ingresoPresupuesto.toLocaleString("es-MX", {minimumFractionDigits:2})}</td>
+                <td>$ ${p.egresoEjercido.toLocaleString("es-MX", {minimumFractionDigits:2})}</td>
+                <td>$ ${p.egresoPresupuesto.toLocaleString("es-MX", {minimumFractionDigits:2})}</td>
+              </tr>
+            `).join("")}
+          </tbody>
+        </table>
+        <button onclick="document.getElementById('desglose-panel').style.display='none'">Cerrar</button>
+      `;
+      panel.style.display = "block";
+    }
+
+    // Permitir cerrar el panel al hacer click fuera
+    window.onclick = function(event) {
+      const panel = document.getElementById('desglose-panel');
+      if (event.target === panel) {
+        panel.style.display = "none";
+      }
+    }
+  </script>
+  <style>
+    body {
+      background: #f4f6fa;
+      font-family: 'Montserrat', 'Segoe UI', Arial, sans-serif;
+      color: #22223b;
+      margin: 0;
+      min-height: 100vh;
+    }
+    .container {
+      max-width: 900px;
+      margin: 40px auto 0 auto;
+      background: #fff;
+      border-radius: 18px;
+      box-shadow: 0 8px 32px rgba(46,0,96,0.12);
+      padding: 36px 28px 28px 28px;
+      border: none;
+    }
+    h1 {
+      font-size: 2em;
+      color: #2E0060;
+      margin-bottom: 16px;
+      font-weight: 800;
+      text-align: center;
+    }
+    .controls {
+      display: flex;
+      gap: 18px;
+      align-items: center;
+      margin: 18px 0 24px 0;
+      justify-content: flex-end;
+    }
+    .controls label {
+      font-weight: 600;
+      color: #2E0060;
+      margin-right: 8px;
+    }
+    .controls select {
+      font-size: 1em;
+      padding: 7px 12px;
+      border-radius: 8px;
+      border: 1.5px solid #2E0060;
+      background: #f9f9fb;
+      color: #2E0060;
+      outline: none;
+      font-weight: 600;
+      margin-right: 12px;
+      transition: border 0.2s;
+    }
+    .controls select:focus {
+      border: 2px solid #00B2A9;
+    }
+    .chart-container {
+      background: #fff;
+      border-radius: 18px;
+      box-shadow: 0 2px 12px rgba(46,0,96,0.06);
+      padding: 24px 18px 18px 18px;
+      margin-bottom: 18px;
+    }
+    #desglose-panel {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.18);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+    #desglose-panel > * {
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: 0 8px 32px rgba(46,0,96,0.18);
+      padding: 28px 18px 18px 18px;
+      margin: 60px auto;
+      max-width: 700px;
+      min-width: 320px;
+      animation: fadeIn 0.5s;
+    }
+    #desglose-panel h3 {
+      color: #2E0060;
+      margin-top: 0;
+      margin-bottom: 18px;
+      text-align: center;
+    }
+    #desglose-panel table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 18px;
+    }
+    #desglose-panel th, #desglose-panel td {
+      border: 1px solid #e0e3e8;
+      padding: 8px 4px;
+      text-align: right;
+      font-size: 0.97em;
+    }
+    #desglose-panel th {
+      background: #2E0060;
+      color: #fff;
+      text-align: center;
+      font-weight: 700;
+    }
+    #desglose-panel td:first-child, #desglose-panel th:first-child {
+      text-align: left;
+      color: #2E0060;
+      background: #f4f6fa;
+    }
+    #desglose-panel button {
+      background: #FFD400;
+      color: #2E0060;
+      border: none;
+      border-radius: 8px;
+      padding: 8px 18px;
+      font-weight: 700;
+      font-size: 1em;
+      cursor: pointer;
+      margin: 0 auto;
+      display: block;
+    }
+    @media (max-width: 700px) {
+      .container { padding: 8px; }
+      h1 { font-size: 1.2em; }
+      .controls { flex-direction: column; gap: 10px; }
+      #desglose-panel > * { min-width: 0; width: 98vw; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Diagrama de Gauss de Calificaciones de Proyectos</h1>
+    <div class="controls">
+      <label for="filtro-mes">Mes:</label>
+      <select id="filtro-mes"></select>
+    </div>
+    <div class="chart-container">
+      <canvas id="gauss-chart" height="320"></canvas>
+    </div>
+  </div>
+  <div id="desglose-panel"></div>
+</body>
+</html>

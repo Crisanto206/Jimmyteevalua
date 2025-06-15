@@ -2,1085 +2,296 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Check List de Estacionamientos</title>
-  <style>
-    :root {
-  --primary: #2E0060;
-  --secondary: #FFD400;
-  --accent: #00B2A9;
-  --bg-light: #f4f6fa;
-  --bg-white: #fff;
-  --gray: #e0e3e8;
-  --text: #22223b;
-  --shadow: 0 4px 24px rgba(46,0,96,0.08);
-}
-body {
-  background: linear-gradient(135deg, #f4f6fa 0%, #e0e3e8 100%);
-  font-family: 'Montserrat', 'Segoe UI', Arial, sans-serif;
-  color: var(--text);
-  margin: 0;
-  min-height: 100vh;
-  /* Fondo con patrón sutil */
-  background-image: url('pattern.svg'), linear-gradient(135deg, #f4f6fa 0%, #e0e3e8 100%);
-  background-repeat: repeat, no-repeat;
-}
-header {
-  display: flex;
-  align-items: center;
-  background: linear-gradient(90deg, #2E0060 60%, #00B2A9 100%);
-  color: #fff;
-  padding: 32px 48px;
-  border-radius: 24px 24px 0 0;
-  margin-bottom: 0;
-  border-bottom: 8px solid var(--secondary);
-  box-shadow: 0 4px 24px rgba(46,0,96,0.15);
-}
-header img {
-  height: 80px;
-  margin-right: 36px;
-  filter: none;
-}
-header h1 {
-  font-size: 2.6em;
-  letter-spacing: 2px;
-  margin: 0;
-  font-weight: 800;
-  color: #FFD400;
-  text-shadow: 0 4px 16px rgba(46,0,96,0.10);
-}
-.card {
-  background: #fff;
-  border-radius: 24px;
-  box-shadow: 0 8px 32px rgba(46,0,96,0.12);
-  padding: 48px 36px 36px 36px;
-  margin-top: -32px;
-  border: none;
-}
-.form-header {
-  display: flex;
-  gap: 16px; /* menos espacio entre elementos */
-  flex-wrap: wrap;
-  margin-bottom: 18px;
-  align-items: flex-end;
-  justify-content: center;
-  padding: 0 0 0 0;
-}
-.form-header label {
-  flex: 0 1 180px; /* menos ancho */
-  min-width: 120px;
-  font-weight: 600;
-  color: var(--primary);
-  letter-spacing: 0.5px;
-  margin-bottom: 0;
-  font-size: 1em;
-}
-.form-header label[for="manager"], .form-header label:has(#manager) {
-  flex: 0 1 230px; /* un poco más largo solo el gerente */
-  min-width: 170px;
-}
-.form-header input[type="text"],
-.form-header input[type="date"] {
-  width: 100%;
-  border: 1.2px solid var(--primary);
-  border-radius: 5px;
-  padding: 6px 10px; /* menos alto */
-  margin-top: 4px;
-  font-size: 0.98em;
-  background: #f9f9fb;
-  transition: border 0.2s;
-  height: 32px; /* menos alto */
-  box-sizing: border-box;
-}
-#manager {
-  width: 110%; /* solo el gerente un poco más largo */
-  min-width: 170px;
-  max-width: 260px;
-}
-.form-header input[readonly], .form-header input[disabled] {
-  background: #f4f6fa;
-  color: #888;
-  cursor: not-allowed;
-}
-.form-header button {
-  min-width: 90px;
-  margin-top: 18px;
-  padding: 7px 18px;
-  font-size: 1em;
-  border-radius: 8px;
-  border: none;
-  font-weight: 600;
-  background: linear-gradient(90deg, var(--primary) 60%, var(--accent) 100%);
-  color: #fff;
-  box-shadow: 0 2px 8px rgba(46,0,96,0.10);
-  cursor: pointer;
-  transition: background 0.2s, box-shadow 0.2s, transform 0.1s;
-  outline: none;
-}
-.form-header button#logoutBtn {
-  background: linear-gradient(90deg, #ff4d4d 60%, #FFD400 100%);
-  color: #fff;
-  margin-left: 8px;
-}
-.form-header button:hover, .form-header button:focus {
-  filter: brightness(1.08);
-  box-shadow: 0 4px 16px rgba(0,178,169,0.13);
-  transform: translateY(-2px) scale(1.03);
-}
-#date {
-  pointer-events: none;
-  background: #f4f6fa;
-  color: #888;
-  cursor: not-allowed;
-}
-#progressContainer {
-  height: 28px;
-  width: 220px;
-  margin-bottom: 0;
-}
-#progressBar {
-  border-radius: 12px;
-  background: linear-gradient(90deg, #FFD400 60%, #00B2A9 100%);
-  height: 100%;
-}
-.sticky-score {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  flex-direction: column;
-  background: var(--bg-white);
-  padding: 24px 0 24px 0;
-  z-index: 100;
-  border-bottom: 1.5px solid var(--gray);
-  margin-bottom: 18px;
-  position: sticky;
-  top: 0;
-  box-shadow: 0 2px 12px rgba(46,0,96,0.07);
-}
-#totalCalif {
-  font-size: 1.5em;
-  margin-bottom: 0;
-  display: flex;
-  align-items: center;
-  gap: 36px;
-  justify-content: center;
-}
-#totalValue {
-  font-weight: bold;
-  font-size: 2.5em;
-  min-width: 90px;
-  text-align: right;
-  color: var(--primary);
-  letter-spacing: 1px;
-}
-#gaugeContainer {
-  width: 140px;
-  height: 70px;
-}
-#gauge {
-  width: 140px;
-  height: 70px;
-}
-#mascotaContainer img {
-  height: 90px;
-  width: auto;
-  border-radius: 50%;
-  border: 3px solid #FFD400;
-}
-.section-details {
-  border-radius: 18px;
-  box-shadow: 0 2px 12px rgba(46,0,96,0.06);
-  margin-bottom: 28px;
-  border: none;
-}
-.section-details summary {
-  background: linear-gradient(90deg, #00B2A9 60%, #2E0060 100%);
-  color: #fff;
-  padding: 18px 24px;
-  font-size: 1.25em;
-  border-bottom: none;
-  border-radius: 18px 18px 0 0;
-  font-weight: 700;
-  letter-spacing: 1px;
-}
-table {
-  width: 100%;
-  border-collapse: separate;
-  border-spacing: 0;
-  margin: 0;
-  table-layout: fixed;
-  background: #fff;
-}
-th, td {
-  border: 1px solid var(--gray);
-  padding: 12px 10px;
-  vertical-align: top;
-  font-size: 1em;
-}
-th {
-  background: var(--primary);
-  color: #fff;
-  font-size: 1.1em;
-  border: none;
-}
-tbody tr {
-  transition: background 0.2s;
-  height: 120px; /* Más alto para comentarios y botones */
-}
-.comment-col {
-  width: 40%;
-  vertical-align: top;
-  overflow: hidden;
-  padding: 0 12px;
-  box-sizing: border-box;
-}
-.ok-col {
-  width: 380px;
-  text-align: center;
-  white-space: normal;
-  vertical-align: middle;
-  padding-top: 0;
-  padding-bottom: 0;
-  height: 100%;
-}
-textarea, input[type="text"], input[type="date"] {
-  border-radius: 10px;
-  border: 2px solid #e0e3e8;
-  box-shadow: 0 1px 4px rgba(46,0,96,0.06);
-  padding: 16px;
-  font-size: 1.1em;
-  transition: border 0.2s, box-shadow 0.2s;
-  min-height: 60px;
-  max-width: 100%;
-  width: 100%;
-  resize: vertical;
-}
-.char-count {
-  font-size: .8em;
-  color: var(--primary);
-  text-align: right;
-  margin-top: 4px;
-  letter-spacing: 0.5px;
-}
-.ok-options {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 24px;
-  height: 100%;
-  min-height: 64px;
-}
-.ok-options label {
-  flex: 1 1 0;
-  min-width: 0;
-  margin: 0;
-  padding: 0;
-}
-.ok-options span {
-  font-size: 1.2em;
-  padding: 18px 0;
-  border-radius: 14px;
-  box-shadow: 0 2px 8px rgba(46,0,96,0.08);
-  transition: background 0.2s, color 0.2s, border 0.2s, box-shadow 0.2s;
-  position: relative;
-  width: 100%;
-  display: block;
-}
-.ok-options input[type="radio"] {
-  display: none;
-}
-.ok-options input[type="radio"]:checked + span {
-  background: linear-gradient(90deg, #2E0060 60%, #00B2A9 100%);
-  color: #FFD400;
-  border-color: #FFD400;
-  box-shadow: 0 4px 16px rgba(0,178,169,0.10);
-}
-@media print {
-  body { padding: 0; }
-  header { display: none; }
-  .card {
-    box-shadow: none;
-    margin: 0;
-    border-radius: 0;
-    border: none;
-  }
-}
-@media (max-width: 900px) {
-  .container { padding: 12px; }
-  .card { padding: 18px 6px; }
-  header { flex-direction: column; align-items: flex-start; padding: 18px 12px; }
-  #totalCalif { flex-direction: column; gap: 12px; }
-  .signatures { flex-direction: column; gap: 24px; }
-  .form-header label { min-width: 90px; font-size: 0.97em; }
-  .form-header label[for="manager"], .form-header label:has(#manager) {
-    min-width: 120px;
-    flex: 0 1 140px;
-  }
-  .form-header input[type="text"],
-  .form-header input[type="date"] { font-size: 0.95em; height: 28px; padding: 5px 8px; }
-  #manager {
-    min-width: 120px;
-    max-width: 180px;
-    width: 105%;
-  }
-  .form-header button { font-size: 0.97em; padding: 6px 10px; }
-}
-
-  </style>
-</head>
-<body>
-  <div class="container">
-    <header>
-      <img src="logo.png" alt="AccessOne Logo">
-      <h1>Check List de Estacionamientos</h1>
-    </header>
-    <div class="card">
-      <div class="form-header">
-        <label>
-          Proyecto:
-          <input type="text" id="project" list="projectList" placeholder="Escribe para filtrar..." autocomplete="off" required readonly onfocus="this.removeAttribute('readonly');" onblur="this.setAttribute('readonly','readonly');">
-        </label>
-        <button id="searchBtn" type="button">Buscar</button>
-        <label>
-          Fecha:
-          <input type="date" id="date" readonly disabled>
-        </label>
-        <label>
-          Gerente:
-          <input type="text" id="manager" readonly>
-        </label>
-        <datalist id="projectList"></datalist>
-        <button id="logoutBtn" type="button">Cerrar Sesión</button>
-      </div>
-      <!-- Calificación + gauge + mascota -->
-      <div class="sticky-score">
-        <div id="totalCalif">
-          <span>Calificación:</span>
-          <span id="totalValue">0%</span>
-          <div id="progressContainer">
-            <div id="progressBar"></div>
-          </div>
-          <div id="gaugeContainer">
-            <canvas id="gauge" width="140" height="70"></canvas>
-          </div>
-          <div id="mascotaContainer">
-            <img id="mascotaImg" src="mascota_rojo.png" alt="Mascota">
-          </div>
-        </div>
-      </div>
-
-      <!-- Checklist dinámico -->
-      <div id="sections"></div>
-
-      <!-- Historial de calificaciones -->
-      <div id="lastScores"></div>
-
-      <!-- Firmas -->
-      <div class="signatures">
-        <div class="signature-line">Responsable de CheckList</div>
-        <div class="signature-line">Gerente del Proyecto</div>
-      </div>
-    </div>
-    <!-- Agrega el audio para el sonido de tecla/click -->
-<audio id="keySound" src="key.mp3" preload="auto"></audio>
-  </div>
+  <title>AccessOne - Inicio</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
   <script type="module">
-  // 1) Firebase core (auth y base de datos)
-  import { auth, db } from "./js/firebase-config.js";
+    import { auth, db } from './js/firebase-config.js';
+    import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
+    import { doc, getDoc } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
 
-  // 2) Auth: onAuthStateChanged + signOut en una sola línea
-  import { onAuthStateChanged, signOut }
-    from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
+    let userIsAdmin = false;
+    let userEmail = "";
 
-  // 3) Firestore (documentos y timestamps)
-  import { doc, getDoc, setDoc, updateDoc, arrayUnion, Timestamp }
-    from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
+    function showUser(email) {
+      document.getElementById("user-email").textContent = email;
+    }
 
+    function showAdminButtons(isAdmin) {
+      document.querySelectorAll(".admin-only").forEach(btn => {
+        btn.style.display = isAdmin ? "" : "none";
+      });
+    }
 
-    // Lista completa de proyectos
-    const ALL_PROJECTS = [
-      "Adagio","Boulevard 5 de mayo","Buenavista","Centenario","Combo Aeropuerto",
-      "Combo Azcapotzalco","Combo Carrizal","Combo Cuautitlán","Combo Satélite",
-      "Comitán","Cuautitlán 1ero de mayo","Dorada I Dorada II","Galerías VHS",
-      "Hermosillo","Insurgentes Nte.","Kómplex","La Raza","León","Tijuana",
-      "Macroplaza Insurgentes Tijuana","Moroleon","Paroli","Patio Pedregal",
-      "Portal Churubusco","San Manuel","Símbolos Patrios","Suburbia","Tacámbaro",
-      "Tapachula","Tepeyac","Tlalpan","Tlaxcala","Uruapan","Vía San Ángel",
-      "Zitácuaro","Playa del Carmen","Paseo Akia","WE Periferico","Pirules",
-      "La Mangana","WE Horacio","Tacubaya","Mariano Escobedo","Ferrocarril Hidalgo",
-      "Sam´s Oaxaca","Plaza Alamos","San Pedrito"
-    ];
-    // Mapeo proyecto -> gerente
-    const projectManagerMap = {
-      "Adagio": "CARLOS BRUNO VALENCIA RAMÍREZ",
-      "Boulevard 5 de mayo": "CÁNDIDO FCO. RUBÉN BECERRIL MARAVILLAS",
-      "Buenavista": "DORIAN GUADALUPE NIETO VÁZQUEZ",
-      "Centenario": "ÁNGEL ELOY TRUJILLO SARABIA",
-      "Combo Aeropuerto": "DAVID BARRIOS PIÑA",
-      "Combo Azcapotzalco": "ISMAEL VENTURA",
-      "Combo Carrizal": "CALEB JAFHET MALDONADO MENDEZ",
-      "Combo Cuautitlán": "ESTEFABIA RUBIO",
-      "Combo Satélite": "JAQUELIN ALVARADO ALVARADO",
-      "Comitán": "GLADIS DEL ROSARIO MALDONADO RAMÍREZ",
-      "Cuautitlán 1ero de mayo": "EDWIN ISSAC HERNANDEZ RODRIGUEZ",
-      "Dorada I Dorada II": "RICARDO FABRE JUAREZ",
-      "Galerías VHS": "SIN ASIGNACION",
-      "Hermosillo": "HECTOR ISAAC COTA MEDINA",
-      "Insurgentes Nte.": "ZULEYMA GONZAGA CUEVAS",
-      "Kómplex": "SELENE ARIZBETH BONILLA HERNANDEZ",
-      "La Raza": "MARÍA ELENA HERNÁNDEZ GARCÍA",
-      "León": "LAURA PATRICIA MUJICA HERNANDEZ",
-      "Tijuana": "ELIAS RAMIREZ VARGAS",
-      "Macroplaza Insurgentes Tijuana": "JUAN JOSÉ LOPEZ CASTELLANOS",
-      "Moroleon": "MARIA ALEJANDRA NAVA OSORIO",
-      "Paroli": "FRANCISCO JAVIER RUBIO ISLAS",
-      "Patio Pedregal": "SIN ASIGNACION",
-      "Portal Churubusco": "MAYRA DELGADO PEÑA",
-      "San Manuel": "JACQUELINE RAMÍREZ SANDOVAL",
-      "Símbolos Patrios": "JESÚS MANUEL ZURITA PALACIOS",
-      "Suburbia": "JOSE EDUARDO GUTIERREZ ABURTO",
-      "Tacámbaro": "KISAI PALOMA BALLESTEROS VILLALOBOS",
-      "Tapachula": "RODRIGO VILLEGAS MOLINA",
-      "Tepeyac": "LESLIE MICHELLE AYALA RODRIGUEZ",
-      "Tlalpan": "IVÁN IBÁÑEZ RODRIGUEZ",
-      "Tlaxcala": "ANGÉLICA PLAZA HERNÁNDEZ",
-      "Uruapan": "GIANFRANCO VALLADAREZ VALENCIA",
-      "Vía San Ángel": "RAUL MARTINEZ RUGERIO",
-      "Zitácuaro": "JULIO CESAR OROZCO ESQUIVEL",
-      "Playa del Carmen": "SIN ASIGNACION",
-      "Paseo Akia": "JOSE MANUEL PARDO ESQUIVEL",
-      "WE Periferico": "ALBERTO GONZALEZ CAMPUZANO",
-      "Pirules": "CRUZ GABRIELA HERNANDEZ AVILEZ",
-      "La Mangana": "MANUELA MORENO RAMIREZ",
-      "WE Horacio": "RICARDO DANIEL DIAZ URAGA",
-      "Tacubaya": "ALBERTO MARTIN LOPEZ DEL RAZO",
-      "Mariano Escobedo": "SIN ASIGNACION",
-      "Ferrocarril Hidalgo": "LESLIE MICHELLE AYALA RODRIGUEZ",
-      "Sam´s Oaxaca": "JULIO CÉSAR ZURITA PALACIOS",
-      "Plaza Alamos": "JUAN LOPEZ GARCIA",
-      "San Pedrito": "YARENI EMILY AHUMADA RUELAS"
-    };
+    function setChecklistLink(isAdmin) {
+      const btn = document.getElementById("btn-checklist");
+      btn.href = isAdmin ? "checklist.html?all=1" : "checklist.html";
+    }
 
-    // Patrones de preguntas negativas (responder "Sí" penaliza)
-    const negativeLabels = [
-      /robo total/i,
-      /robo parcial/i,
-      /quejas recibidas/i,
-      /presenta baches/i,
-      /lámparas fundidas/i,
-      /diferencias.*boletaje/i,
-      /diferencias.*dep[oó]sito/i,
-      /faltan plantas/i,
-      /tiene alguna falla/i
-    ];
+    // Cerrar sesión
+    document.addEventListener("DOMContentLoaded", () => {
+      document.getElementById("logout-btn").onclick = async () => {
+        await signOut(auth);
+        window.location.href = "login.html";
+      };
+    });
 
-    // Lista completa de ítems del checklist (con los cambios que pediste)
-    const items = [
-      "Cuenta con (Licencia, Permiso Funcionamiento)",
-      "Cuenta con Póliza de Seguro Vigente? (Vehículos, Motocicletas)",
-      "Cuenta con hologramas de PROFECO vigentes en cada equipo? (Emisoras, Receptora, Cajeros de pago, TPV/Reloj Checador)",
-      "¿Ha tenido algún robo total? (auto, camioneta, motocicleta)",
-      "¿Ha tenido algún robo parcial? (auto, camioneta, motocicleta)",
-      "-- OPERACIÓN: Personal de Operación --",
-      "El Supervisor de zona realiza el checklist una vez al mes?",
-      "El estacionamiento cuenta con encargado(s) o responsable? (Por turno, Por estaciónamiento)",
-      "La plantilla de cajeros y/o auxiliares completa? (Matutino, Vespertino, Nocturno)",
-      "Número de quejas recibidas en estos 30 días?",
-      "Desglosar quejas",
-      "El personal cuenta con las siguientes características (Uniforme Completo y en buen estado, Gafete de Identificación)",
-      "El personal conoce y aplica el plan de contingencia?",
-      "Cuenta con directorio de servicio de emergencia actualizado?",
-      "-- Operación: Equipos --",
-      "Todas las entradas y salidas abiertas? (Automático, Push Botón, Por Sensor)",
-      "Emisor de boletos por cada entrada y funcionando?",
-      "Funcionan todos los cajeros de pago?",
-      "Validadora (receptora) y TPV en cada salida y funcionando?",
-      "Se cuenta con interfonía en el estacionamiento?",
-      "Cuenta con CCTV y funciona correctamente?",
-      "Se realiza mantenimiento de UPS / ¿tiene alguna falla?",
-      "Visita de técnico",
-      "Las casetas se encuentran en servicio dentro del horario de la tienda?",
-      "Las casetas se encuentran en buenas condiciones? (Vidrios, Pintura, Cerrajería, Rótulos/Señalización, Iluminación, Mobiliario, Limpieza/Sanitización)",
-      "Imagen de los equipos (Hojalatería, Pintura, Limpieza, Anclaje correcto, Cerrados en general)",
-      "Cuentan con radios de comunicación y funcionando?",
-      "Cuenta con relojes checadores y funcionando?",
-      "-- Operación: Oficina Administrativa --",
-      "Oficina Administrativa en buenas condiciones? (Vidrios, Pintura, Cerrajería, Rótulos/Señalización, Iluminación, Mobiliario)",
-      "Cuenta con bitácora de novedades del concesionario?",
-      "Bitácora actualizada",
-      "Cuenta con catálogo de firmas actualizado de gerencias?",
-      "Cuenta con Kit de auxilio vial? (Gato hidráulico, Llave de cruz, Arrancador/batería, Herramienta básica) y el arrancador funciona?",
-      "Los tótems y señalamientos cuentan con la información completa, actualizada y en buenas condiciones?",
-      "Requisiciones / Pendientes",
-      "-- MANTENIMIENTO: Equipos --",
-      "Preventivo al mes",
-      "Equipos con buena imagen ?",
-      "-- Mantenimiento: Bacheo Menor --",
-      "El estacionamiento presenta baches?",
-      "-- Mantenimiento: Pintura --",
-      "Se ejecuta el plan de pintura de acuerdo al calendario?",
-      "Pintura (si no, ¿por qué?)",
-      "Guarniciones",
-      "La pintura en cajones se encuentra en buenas condiciones? (Normal, discapacitados, Rosas)",
-      "La pintura en flechas de circulación se encuentran en buenas condiciones?",
-      "La pintura en puntos de reunión, guarniciones y topes se encuentran en buenas condiciones?",
-      "-- Mantenimiento: Jardinería --",
-      "Se realiza poda de pasto y setos?",
-      "Faltan plantas y árboles en jardineras?",
-      "Los troncos de los árboles están encalados?",
-      "Se realiza el riego periódicamente?",
-      "-- Mantenimiento: Iluminación --",
-      "Existen lámparas fundidas?",
-      "Lámparas porcentaje",
-      "-- VIGILANCIA: Personal de Seguridad --",
-      "Se encuentra completa la plantilla de Vigilancia de acuerdo a la necesidad de la operación?",
-      "Están uniformados los vigilantes del estacionamiento?",
-      "Se diferencia el personal de vigilancia del personal operativo?",
-      "El personal cuenta con gafete de identificación a la vista?",
-      "El personal de vigilancia realiza los rondines en el estacionamiento?",
-      "Cuentan con radios de intercomunicación?",
-      "Cuentan con bitácora de novedades y se encuentra al día?",
-      "-- LIMPIEZA: Personal de Limpieza --",
-      "Cuenta con personal de limpieza suficiente para la operación? (Matutino, Vespertino, Total por día)",
-      "El personal de limpieza cuenta con uniforme completo y gafete a la vista?",
-      "Estacionamiento limpio en general?",
-      "Se realiza desengrasado de cajones de estacionamiento?",
-      "Cuenta con el material para realizar la limpieza y sanitización en oficina, equipos de estacionamiento?",
-      "Cuenta con líquido desengrasante para la limpieza de cajones?",
-      "-- PROTECCIÓN CIVIL --",
-      "El estacionamiento cuenta con extintores?",
-      "Los extintores están vigentes? (Fecha de vigencia: Concesionario/PV, Extintores Tienda)",
-      "Gabinetes de Extintores en buenas condiciones? (Casco/Botas/Guantes, Chamarra/Pantalón, Palas/Rótulos/Megáfono)",
-      "El estacionamiento cuenta con botes areneros en buenas condiciones? (Bolsas, Palas, Nº de botes areneros)",
-      "Cuenta con señalización de ubicación de equipo de protección civil y rutas de evacuación en buen estado?",
-      "Cuentan con botiquín de primeros auxilios con el material necesario y completo?",
-      "-- ÁREA ADMINISTRATIVA --",
-      "Los boletos se encuentran ordenados por día?",
-      "Existen diferencias del boletaje físico vs reporte?",
-      "¿Existe control de ingreso diario?",
-      "Existen diferencias entre el depósito realizado vs reportes de ingresos?",
-      "Se lleva un control del total de pensiones? (Número de pensiones, Costo de pensión)",
-      "Se lleva un control de tarjetas de proximidad y/o cortesías? (Promedio diario de Cortesías)",
-      "¿Los tickets están bien llenados?",
-      "-- PENSIONES --",
-      "Cuentas con pensiones?",
-      "Contratos completos?",
-      "Se utilizan los candados adecuadamente?",
-      "Tienes inventario?"
-    ];
-    // --- Variables globales ---
-    let currentUser = null;
-    let userProjects = [];
-    let selectedProject = "";
-
-    // Inicializa la app una vez autenticado
+    // Verifica login y permisos
     onAuthStateChanged(auth, async user => {
       if (!user) {
         window.location.href = "login.html";
         return;
       }
-      currentUser = user;
-      // Obtener proyectos asignados al usuario
-      const snap = await getDoc(doc(db, "users", user.uid));
-      if (!snap.exists()) {
-        alert("No tienes permisos configurados. Contacta al administrador.");
-        window.location.href = "login.html";
-        return;
-      }
-      userProjects = snap.data().assignedProjects || [];
-      if (!Array.isArray(userProjects) || userProjects.length === 0) {
-        alert("No tienes proyectos asignados. Contacta al administrador.");
-        window.location.href = "login.html";
-        return;
-      }
-      buildProjectList();
-      // ⬇️ Inserta aquí este bloque
-if (userProjects.length === 1) {
-  document.getElementById('project').value = userProjects[0];
-  assignManager(); // Esto dispara el render de las secciones y el gauge
-}
+      userEmail = user.email;
+      showUser(userEmail);
 
-    });
-
-    // Genera el datalist SOLO con los proyectos permitidos del usuario
-function buildProjectList() {
-  const datalist = document.getElementById('projectList');
-  datalist.innerHTML = "";
-  userProjects.forEach(p => {
-    const option = document.createElement("option");
-    option.value = p;
-    datalist.appendChild(option);
-  });
-}
-    
-
-
-    // --- UI dinámico, igual que siempre pero sin cortes ni elipsis ---
-    function createSections() {
-      const container = document.getElementById('sections');
-       container.innerHTML = "";    // ← limpia todo antes de volver a renderizar
-      let sections = [], current = { title: 'General', items: [] };
-
-      items.forEach((label, idx) => {
-        if (label.startsWith('--')) {
-          if (current.items.length) sections.push(current);
-          current = { title: label.replace(/^--\s*/, ''), items: [] };
-        } else {
-          current.items.push({ label, idx: idx + 1 });
-        }
-      });
-      sections.push(current);
-
-      sections.forEach(sec => {
-        const d = document.createElement('details');
-        d.open = true;
-        d.className = 'section-details';
-
-        const s = document.createElement('summary');
-        s.textContent = sec.title;
-        d.appendChild(s);
-
-        const t = document.createElement('table');
-        t.innerHTML = `
-          <thead>
-            <tr>
-              <th class="item-col">Ítem</th>
-              <th class="comment-col">Comentario / Datos</th>
-              <th class="ok-col">Resultado</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${sec.items.map(it => {
-              // Desglosar quejas (ítem 11) ahora igual que "Requisiciones / Pendientes"
-              if (it.label === 'Desglosar quejas') {
-                return `
-                  <tr>
-                    <td class="item-col">${it.idx}. ${it.label}</td>
-                    <td class="comment-col">
-                      <div>
-                        <label><input type="checkbox" name="dept${it.idx}" value="Obras"> Obras</label>
-                        <label><input type="checkbox" name="dept${it.idx}" value="Soporte"> Soporte</label>
-                        <label><input type="checkbox" name="dept${it.idx}" value="RH"> RH</label>
-                        <label><input type="checkbox" name="dept${it.idx}" value="Compras"> Compras</label>
-                      </div>
-                      <textarea name="tickets${it.idx}" maxlength="200" placeholder="Números de ticket..."></textarea>
-                      <div class="char-count">0/200</div>
-                    </td>
-                    <td class="ok-col ok-options">
-                      ${['Sí', 'No', 'No Aplica'].map(v => `
-                        <label>
-                          <input type="radio" name="ok${it.idx}" value="${v}" onchange="updateTotal()" />
-                          <span>${v}</span>
-                        </label>
-                      `).join('')}
-                    </td>
-                  </tr>
-                `;
-              }
-              // Lámparas porcentaje
-              else if (it.label === 'Lámparas porcentaje') {
-                return `
-                  <tr class="lamp-row">
-                    <td class="item-col">${it.idx}. ${it.label}</td>
-                    <td class="comment-col">
-                      <label class="lamp-label">Cuántas se tienen:</label>
-                      <input type="number" min="0" id="lamps-total" placeholder="0">
-                      <label class="lamp-label">Cuántas fundidas:</label>
-                      <input type="number" min="0" id="lamps-fundidas" placeholder="0">
-                    </td>
-                    <td class="ok-col">
-                      <span id="lamps-percentage" class="lamp-percentage">0%</span>
-                    </td>
-                  </tr>
-                `;
-              }
-              // Requisiciones / Pendientes (ítem 36)
-              else if (it.label === 'Requisiciones / Pendientes') {
-                return `
-                  <tr>
-                    <td class="item-col">${it.idx}. ${it.label}</td>
-                    <td class="comment-col">
-                      <div>
-                        <label><input type="checkbox" name="dept${it.idx}" value="Obras"> Obras</label>
-                        <label><input type="checkbox" name="dept${it.idx}" value="Soporte"> Soporte</label>
-                        <label><input type="checkbox" name="dept${it.idx}" value="RH"> RH</label>
-                        <label><input type="checkbox" name="dept${it.idx}" value="Compras"> Compras</label>
-                      </div>
-                      <textarea name="tickets${it.idx}" maxlength="200" placeholder="Números de ticket..."></textarea>
-                      <div class="char-count">0/200</div>
-                    </td>
-                    <td class="ok-col ok-options">
-                      ${['Sí', 'No', 'No Aplica'].map(v => `
-                        <label>
-                          <input type="radio" name="ok${it.idx}" value="${v}" onchange="updateTotal()" />
-                          <span>${v}</span>
-                        </label>
-                      `).join('')}
-                    </td>
-                  </tr>
-                `;
-              }
-              // Casos por defecto
-              else {
-                return `
-                  <tr>
-                    <td class="item-col">${it.idx}. ${it.label}</td>
-                    <td class="comment-col">
-                      <textarea name="coment${it.idx}" maxlength="200"></textarea>
-                      <div class="char-count">0/200</div>
-                    </td>
-                    <td class="ok-col ok-options">
-                      ${['Sí', 'No', 'No Aplica'].map(v => `
-                        <label>
-                          <input type="radio" name="ok${it.idx}" value="${v}" onchange="updateTotal()" />
-                          <span>${v}</span>
-                        </label>
-                      `).join('')}
-                    </td>
-                  </tr>
-                `;
-              }
-            }).join('')}
-          </tbody>
-        `;
-        d.appendChild(t);
-        container.appendChild(d);
-      });
-
-      // Contador de caracteres
-      document.querySelectorAll('textarea').forEach(ta => {
-        ta.addEventListener('input', e => {
-          e.target.nextElementSibling.textContent = `${e.target.value.length}/200`;
-        });
-      });
-
-      // Eventos para lámparas
-      const totalInput = document.getElementById('lamps-total');
-      const fundidasInput = document.getElementById('lamps-fundidas');
-      if (totalInput && fundidasInput) {
-        totalInput.addEventListener('input', calculateLampPercentage);
-        fundidasInput.addEventListener('input', calculateLampPercentage);
-      }
-    }
-
-
- 
-    // --- Cálculo y UI: porcentaje de lámparas fundidas
-    function calculateLampPercentage() {
-      const total = parseInt(document.getElementById('lamps-total').value, 10) || 0;
-      const fundidas = parseInt(document.getElementById('lamps-fundidas').value, 10) || 0;
-      let porcentaje = 0;
-      if (total > 0) porcentaje = Math.round((fundidas / total) * 100);
-      document.getElementById('lamps-percentage').textContent = porcentaje + '%';
-    }
-
-    // Actualiza calificación total y barra de progreso
-    function updateTotal() {
-      let sum = 0;
-      const evaluableCount = items.filter(l => !l.startsWith('--') && l !== 'Lámparas porcentaje').length;
-      const weight = 100 / evaluableCount;
-
-      items.forEach((l, i) => {
-        if (!l.startsWith('--') && l !== 'Lámparas porcentaje') {
-          const num = i + 1;
-          const sel = document.querySelector(`input[name="ok${num}"]:checked`);
-          const val = sel ? sel.value : null;
-          const isNegative = negativeLabels.some(rx => rx.test(l));
-
-          if (isNegative) {
-            if (val === 'Sí') sum -= weight;
-            else if (val === 'No' || val === 'No Aplica') sum += weight;
-          } else {
-            if (val === 'Sí' || val === 'No Aplica') sum += weight;
-          }
-        }
-      });
-
-      const total = Math.max(0, Math.min(100, sum));
-      document.getElementById('totalValue').textContent = total.toFixed(2) + '%';
-      document.getElementById('progressBar').style.width = `${total}%`;
-      drawGauge(total);
-      const mascotaImg = document.getElementById('mascotaImg');
-if (mascotaImg) {
-  if (total <= 40) {
-    mascotaImg.src = "mascota_rojo.png";       // ENOJADO
-  } else if (total <= 75) {
-    mascotaImg.src = "mascota_amarillo.png";   // TRISTE
-  } else {
-    mascotaImg.src = "mascota_verde.png";      // CONTENTO
-  }
-}
-    }
-    window.updateTotal = updateTotal; 
-
-    // Dibuja el semicírculo y aguja en el gauge
-    function drawGauge(value) {
-      if (!window.ctx) return;
-      const ctx = window.ctx;
-      const centerX = 70; // la mitad de 140
-      const centerY = 70; // la base del semicírculo
-      const radius = 68;  // un poco menos que 70 para no salir del canvas
-
-      // Limpiar TODO el canvas
-      ctx.clearRect(0, 0, 140, 70);
-
-      // Rojo (180°→120°)
-      ctx.beginPath();
-      ctx.moveTo(centerX, centerY);
-      ctx.arc(centerX, centerY, radius, Math.PI, Math.PI + Math.PI/3, false);
-      ctx.fillStyle = '#ff4d4d';
-      ctx.fill();
-
-      // Amarillo (120°→60°)
-      ctx.beginPath();
-      ctx.moveTo(centerX, centerY);
-      ctx.arc(centerX, centerY, radius, Math.PI + Math.PI/3, Math.PI + 2*Math.PI/3, false);
-      ctx.fillStyle = '#ffcc00';
-      ctx.fill();
-
-      // Verde (60°→0°)
-      ctx.beginPath();
-      ctx.moveTo(centerX, centerY);
-      ctx.arc(centerX, centerY, radius, Math.PI + 2*Math.PI/3, 2*Math.PI, false);
-      ctx.fillStyle = '#00cc44';
-      ctx.fill();
-
-      // Aguja (0% a la izquierda, 100% a la derecha)
-      const angle = Math.PI + (value / 100) * Math.PI;
-      ctx.beginPath();
-      ctx.moveTo(centerX, centerY);
-      ctx.lineTo(
-        centerX + (radius - 10) * Math.cos(angle),
-        centerY + (radius - 10) * Math.sin(angle)
-      );
-      ctx.lineWidth = 4;
-      ctx.strokeStyle = '#000';
-      ctx.stroke();
-
-      // Círculo central
-      ctx.beginPath();
-      ctx.arc(centerX, centerY, 5, 0, 2*Math.PI);
-      ctx.fillStyle = '#000';
-      ctx.fill();
-    }
-
-    // Asignar gerente y bloquear edición del campo Proyecto
-function assignManager() {
-  const projectInput = document.getElementById('project');
-  const managerInput = document.getElementById('manager');
-  const val = projectInput.value;
-
-  if (userProjects.includes(val)) {
-    selectedProject = val;
-    managerInput.value = projectManagerMap[val] || '';
-    projectInput.readOnly = true; // Bloquea edición después de seleccionar
-
- 
-
-    loadLastScores();
-    createSections();
-    window.ctx = document.getElementById('gauge').getContext('2d');
-    
-    updateTotal();
-    document.getElementById('date').value = getTodayMx();
-  } else {
-    managerInput.value = '';
-    selectedProject = '';
-  }
-}
-
-
-    // Obtener fecha de hoy en zona América/Mexico_City (sin usar librerías externas)
-    function getTodayMx() {
-      // Offset UTC-6, pero maneja horario de verano (aprox 1er domingo de abril a último de octubre)
-      const now = new Date();
-      // Forzar uso horario "America/Mexico_City"
-      const mx = new Date(now.toLocaleString('en-US', { timeZone: 'America/Mexico_City' }));
-      return mx.toISOString().slice(0, 10);
-    }
-
- 
-
-    // --- Manejo de calificaciones ---
-    async function saveScore() {
-      if (!selectedProject) return alert("Selecciona primero un proyecto válido.");
-      const fecha = document.getElementById('date').value;
-      if (!fecha) return alert("Selecciona una fecha válida.");
-      // Recolecta respuestas
-      const scoreObj = { date: fecha, user: currentUser.email, at: Timestamp.now() };
-      // Por cada ítem que no es sección, guarda el radio y comentario
-      let calif = {};
-      items.forEach((l, i) => {
-        if (!l.startsWith('--')) {
-          const num = i + 1;
-          const ok = document.querySelector(`input[name="ok${num}"]:checked`);
-          const coment = document.querySelector(`[name="coment${num}"], [name="tickets${num}"]`);
-          calif[num] = {
-            label: l,
-            result: ok ? ok.value : "",
-            comment: coment ? coment.value.trim() : ""
-          };
-        }
-      });
-      // Guarda el resumen
-      scoreObj.answers = calif;
-      // Calificación numérica final
-      scoreObj.total = parseFloat(document.getElementById("totalValue").textContent) || 0;
-
-      // Escribe en Firestore (guarda las últimas 12)
-      const ref = doc(db, "project_scores", selectedProject);
-      const snap = await getDoc(ref);
-      let arr = [];
-      if (snap.exists() && Array.isArray(snap.data().scores)) {
-        arr = snap.data().scores;
-      }
-      arr.unshift(scoreObj); // agrega al inicio
-      if (arr.length > 12) arr = arr.slice(0, 12);
-      await setDoc(ref, { scores: arr }, { merge: true });
-      alert("Calificación guardada.");
-      loadLastScores(); // refresca últimas
-    }
-
-    // Mostrar las últimas 12 calificaciones guardadas (por proyecto)
-    async function loadLastScores() {
-      const box = document.getElementById("lastScores");
-      box.innerHTML = '<b>Últimas 12 calificaciones de este proyecto:</b>';
-      if (!selectedProject) return;
-      const ref = doc(db, "project_scores", selectedProject);
-      const snap = await getDoc(ref);
-      if (!snap.exists() || !Array.isArray(snap.data().scores)) {
-        box.innerHTML += "<br><i>No hay registros previos.</i>";
-        return;
-      }
-      const arr = snap.data().scores;
-      box.innerHTML += `
-        <table style="margin-top:10px;width:100%;font-size:.95em">
-          <thead>
-            <tr>
-              <th>Fecha</th>
-              <th>Usuario</th>
-              <th>Calificación</th>
-              <th>Detalle</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${arr.map(s => `
-              <tr>
-                <td>${(s.date||"").toString().slice(0,10)}</td>
-                <td>${s.user||""}</td>
-                <td>${(s.total||0).toFixed(2)}%</td>
-                <td>
-                  <button onclick='window.showScoreDetail(${JSON.stringify(s)})'>Ver</button>
-                </td>
-              </tr>
-            `).join("")}
-          </tbody>
-        </table>
-      `;
-    }
-    // Ventana detalle para ver calificación completa
-    window.showScoreDetail = function(scoreObj) {
-      let w = window.open("", "_blank", "width=800,height=600");
-      w.document.write("<h2>Detalle de calificación</h2>");
-      w.document.write(`<b>Fecha:</b> ${scoreObj.date || ""}<br><b>Usuario:</b> ${scoreObj.user || ""}<br><b>Calificación:</b> ${(scoreObj.total||0).toFixed(2)}%<hr>`);
-      for (let n in scoreObj.answers) {
-        let ans = scoreObj.answers[n];
-        w.document.write(`<b>${ans.label}:</b> ${ans.result || "-"}<br><i>${ans.comment || ""}</i><hr>`);
-      }
-    }
-
-window.addEventListener('DOMContentLoaded', () => {
-  // Inicializa la fecha de México Central
-  document.getElementById('date').value = getTodayMx();
-
-  // Listener para seleccionar proyecto y buscar
-  document.getElementById('project').addEventListener('change', assignManager);
-  document.getElementById('searchBtn').addEventListener('click', (e) => {
-    e.preventDefault();
-    assignManager();
- 
-
-  });
-    // Listener para Cerrar Sesión
-  document.getElementById('logoutBtn')
-    .addEventListener('click', async () => {
+      // Busca si es admin (en users collection)
+      let admin = false;
       try {
-        await signOut(auth);
-        window.location.href = "login.html";
-      } catch (err) {
-        console.error("Error cerrando sesión:", err);
-        alert("No se pudo cerrar sesión. Intenta de nuevo.");
-      }
+        const snap = await getDoc(doc(db, "users", user.uid));
+        admin = snap.exists() && snap.data().admin === true;
+      } catch {}
+      userIsAdmin = admin;
+      showAdminButtons(userIsAdmin);
+      setChecklistLink(userIsAdmin);
     });
-
-  // SOLO CREA el botón de guardar si no existe
-  if (!document.getElementById('btn-guardar-calif')) {
-    const btn = document.createElement("button");
-    btn.id = 'btn-guardar-calif';
-    btn.textContent = "Guardar calificación";
-    btn.style.marginTop = "30px";
-    btn.style.background = "var(--primary)";
-    btn.style.color = "#fff";
-    btn.style.fontWeight = "bold";
-    btn.onclick = saveScore;
-    document.querySelector(".card").appendChild(btn);
-  }
-
-  // === INICIALIZA EL CONTEXTO DEL GAUGE SOLO UNA VEZ ===
-  const gaugeCanvas = document.getElementById('gauge');
-  if (gaugeCanvas && gaugeCanvas.getContext && !window.ctx) {
-    window.ctx = gaugeCanvas.getContext('2d');
-  }
-
-  // ✅ CORREGIDO: Inicializar gauge con valor 0 sin dependencias
-  drawGauge(0);
-});
-
-
-  // Sonido por tecla presionada en todos los inputs y textarea
-  const keySound = document.getElementById("keySound");
-
-  function playKeySound() {
-    keySound.currentTime = 0;
-    keySound.play();
-  }
-
-  document.addEventListener("DOMContentLoaded", () => {
-    // Sonido al escribir en cualquier input o textarea
-    document.querySelectorAll('input, textarea').forEach(el => {
-      el.addEventListener("keydown", e => {
-        if (e.key.length === 1 || e.key === "Backspace" || e.key === "Delete") {
-          playKeySound();
-        }
-      });
-    });
-    // Sonido por click en cualquier botón
-    document.querySelectorAll('button').forEach(btn => {
-      btn.addEventListener("click", playKeySound);
-    });
-
-    // Sonido por click en radios de Sí, No, No Aplica (incluye los generados dinámicamente)
-    document.body.addEventListener("change", function(e) {
-      if (
-        e.target.matches('input[type="radio"][name^="ok"]')
-      ) {
-        playKeySound();
-      }
-    });
-
-    // Sonido al escribir en comentarios dinámicos (textarea dentro de la tabla)
-    document.body.addEventListener("keydown", function(e) {
-      if (
-        e.target.matches('textarea[name^="coment"], textarea[name^="tickets"]') &&
-        (e.key.length === 1 || e.key === "Backspace" || e.key === "Delete")
-      ) {
-        playKeySound();
-      }
-    });
-  });
-
   </script>
-</body>
-</html>
-
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;900&display=swap');
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      min-height: 100vh;
+      font-family: 'Montserrat', 'Segoe UI', Arial, sans-serif;
+      color: #22223b;
+      background: linear-gradient(135deg, #2E0060 0%, #00B2A9 100%);
+      background-attachment: fixed;
+      position: relative;
+    }
+    body::before {
+      content: "";
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: 
+        repeating-linear-gradient(135deg, #FFD40022 0 2px, transparent 2px 40px),
+        radial-gradient(circle at 80% 20%, #FFD40018 0%, transparent 70%),
+        radial-gradient(circle at 20% 80%, #00B2A918 0%, transparent 70%);
+      opacity: 0.18;
+      z-index: 0;
+      pointer-events: none;
+    }
+    .container {
+      max-width: 600px;
+      margin: 48px auto 0 auto;
+      background: rgba(255,255,255,0.97);
+      border-radius: 32px;
+      box-shadow: 0 8px 32px 0 rgba(46,0,96,0.10), 0 1.5px 0 #FFD400;
+      padding: 0 0 32px 0;
+      border: none;
+      backdrop-filter: blur(6px);
+      position: relative;
+      overflow: visible;
+      z-index: 1;
+    }
+    .header-accessone {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 38px 0 18px 0;
+      border-radius: 32px 32px 0 0;
+      background: linear-gradient(90deg, #2E0060 60%, #00B2A9 100%);
+      box-shadow: 0 4px 24px #2E006022;
+      position: relative;
+    }
+    .header-accessone img {
+      width: 82px;
+      height: 82px;
+      object-fit: contain;
+      border-radius: 50%;
+      background: #fff;
+      box-shadow: 0 2px 16px #FFD40033;
+      margin-bottom: 12px;
+      border: 3px solid #FFD400;
+      transition: box-shadow 0.2s;
+    }
+    .header-accessone h1 {
+      font-size: 2.2em;
+      color: #FFD400;
+      font-weight: 900;
+      letter-spacing: 2px;
+      margin: 0;
+      text-align: center;
+      text-shadow: 0 4px 16px #2E006022;
+      background: none;
+      -webkit-background-clip: unset;
+      -webkit-text-fill-color: unset;
+    }
+    .user-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #fffbe7;
+      border-radius: 0 0 18px 18px;
+      padding: 12px 24px;
+      font-size: 1.08em;
+      font-weight: 700;
+      color: #2E0060;
+      box-shadow: 0 2px 8px #FFD40011;
+      margin-bottom: 18px;
+    }
+    .user-bar .user-info {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .user-bar .user-info span {
+      font-weight: 900;
+      color: #00B2A9;
+      font-size: 1.08em;
+    }
+    .logout-btn {
+      background: linear-gradient(90deg, #FFD400 60%, #00B2A9 100%);
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      padding: 8px 18px;
+      font-weight: 800;
+      font-size: 1em;
+      cursor: pointer;
+      box-shadow: 0 2px 12px #FFD40033;
+      transition: background 0.2s, color 0.2s, transform 0.1s;
+      outline: none;
+      letter-spacing: 1px;
+    }
+    .logout-btn:hover {
+      background: linear-gradient(90deg, #2E0060 60%, #FFD400 100%);
+      color: #FFD400;
+      transform: scale(1.04);
+    }
+    .menu-buttons {
+      display: flex;
+      flex-direction: column;
+      gap: 22px;
+      margin: 38px 0 0 0;
+      align-items: stretch;
+      width: 80%;
+      max-width: 400px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    .menu-btn {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      background: linear-gradient(90deg, #fffbe7 60%, #e0e3e8 100%);
+      color: #2E0060;
+      border: 2.5px solid #FFD400;
+      border-radius: 16px;
+      padding: 18px 28px;
+      font-size: 1.18em;
+      font-weight: 800;
+      cursor: pointer;
+      box-shadow: 0 2px 12px #FFD40022;
+      transition: background 0.2s, color 0.2s, border 0.2s, transform 0.1s;
+      outline: none;
+      text-decoration: none;
+      justify-content: flex-start;
+      min-height: 54px;
+      letter-spacing: 1px;
+    }
+    .menu-btn:hover {
+      background: linear-gradient(90deg, #FFD400 60%, #00B2A9 100%);
+      color: #fff;
+      border-color: #2E0060;
+      transform: scale(1.03);
+    }
+    .menu-btn .icon {
+      font-size: 1.5em;
+      margin-right: 8px;
+      color: #00B2A9;
+      transition: color 0.2s;
+    }
+    .menu-btn:hover .icon {
+      color: #FFD400;
+    }
+    .admin-only {
+      display: none;
+    }
+    .footer-accessone {
+      margin-top: 38px;
+      text-align: center;
+      font-size: 1em;
+      color: #fff;
+      letter-spacing: 0.5px;
+      background: none;
+      padding-bottom: 18px;
+      z-index: 2;
+      position: relative;
+      opacity: 0.85;
+    }
+    .footer-accessone span {
+      color: #FFD400;
+      font-weight: 700;
+    }
+    @media (max-width: 700px) {
+      .container { padding: 0; }
+      .header-accessone { padding: 18px 0 10px 0; }
+      .header-accessone img { width: 54px; height: 54px; }
+      .header-accessone h1 { font-size: 1.2em; }
+      .menu-buttons { width: 98%; max-width: 98vw; }
+      .menu-btn { font-size: 1em; padding: 12px 10px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header-accessone">
+      <img src="logo.jpg" alt="AccessOne Logo">
+      <h1>Bienvenido a AccessOne</h1>
+    </div>
+    <div class="user-bar">
+      <div class="user-info">
+        <span id="user-email">usuario@dominio.com</span>
+      </div>
+      <button id="logout-btn" class="logout-btn">Cerrar sesión</button>
+    </div>
+    <div class="menu-buttons">
+      <a id="btn-checklist" class="menu-btn" href="checklist.html">
+        <span class="icon">✅</span> Check List
+      </a>
+      <a class="menu-btn" href="https://accessone.alphaerpweb.mx/" target="_blank">
+        <span class="icon">🔗</span> SAI
+      </a>
+      <a class="menu-btn admin-only" href="usuarios.html">
+        <span class="icon">👤</span> Gestión de Usuarios
+      </a>
+      <a class="menu-btn admin-only" href="dashboard-calificaciones.html">
+        <span class="icon">📊</span> Dashboard Calificaciones
+      </a>
+      <a class="menu-btn admin-only" href="dashboard-financiero.html">
+        <span class="icon">💰</span> Dashboard Financiero
+      </a>
+      <a class="menu-btn admin-only" href="indicadores-proyectos.html">
+        <span class="icon">📈</span> Indicadores de Proyectos
+      </a>
+      <a class="menu-btn admin-only" href="ingresos-egresos.html">
+        <span class="icon">💼</span> Ingresos/Egresos Consulta
+      </a>
+      <!-- Permitir acceso a dashboard.html para todos -->
+      <a class="menu-btn" href="dashboard.html">
+        <span class="icon">📋</span> Dashboard KPIs
+      </a>
+    </div>
+    <div class="footer-accessone">
+      &copy; <span>AccessOne</span> 2025. Todos los derechos reservados.
+    </div>
+  </div>
 </body>
 </html>

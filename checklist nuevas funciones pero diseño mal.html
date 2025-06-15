@@ -5,474 +5,317 @@
   <title>Check List de Estacionamientos</title>
   <style>
     :root {
-  --primary: #2E0060;
-  --secondary: #FFD400;
-  --accent: #00B2A9;
-  --bg-light: #f4f6fa;
-  --bg-white: #fff;
-  --gray: #e0e3e8;
-  --text: #22223b;
-  --shadow: 0 4px 24px rgba(46,0,96,0.08);
-}
-body {
-  background: linear-gradient(135deg, #f4f6fa 0%, #e0e3e8 100%);
-  font-family: 'Montserrat', 'Segoe UI', Arial, sans-serif;
-  color: var(--text);
-  margin: 0;
-  min-height: 100vh;
-  /* Fondo con patrón sutil */
-  background-image: url('pattern.svg'), linear-gradient(135deg, #f4f6fa 0%, #e0e3e8 100%);
-  background-repeat: repeat, no-repeat;
-}
-header {
+      --primary: #2E0060;
+      --secondary: #FFD400;
+      --bg-light: #f9f9f9;
+      --bg-white: #ffffff;
+      --gray: #e0e0e0;
+      --text: #333333;
+    }
+    * { box-sizing: border-box; }
+    body {
+      background: var(--bg-light);
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      color: var(--text);
+    }
+    .container {
+      max-width: 1400px;
+      margin: auto;
+      padding: 20px;
+    }
+    header {
+      display: flex;
+      align-items: center;
+      background: var(--bg-white);
+      color: var(--primary);
+      padding: 15px 30px;
+      border-top-left-radius: 8px;
+      border-top-right-radius: 8px;
+      margin-bottom: 0;
+      border-bottom: 4px solid var(--secondary);
+    }
+    header img { height: 50px; margin-right: 20px; }
+    header h1 { font-size: 1.8em; letter-spacing: 1px; margin: 0; }
+    .card {
+      background: var(--bg-white);
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+      padding: 30px;
+    }
+    .form-header {
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+      align-items: flex-end;
+    }
+    .form-header label {
+      flex: 1;
+      min-width: 200px;
+      font-weight: bold;
+      color: var(--primary);
+    }
+    .form-header input {
+      width: 100%;
+      border: 1px solid var(--gray);
+      border-radius: 4px;
+      padding: 6px 10px;
+      margin-top: 5px;
+    }
+    .form-header button {
+      background: var(--primary);
+      color: var(--bg-white);
+      border: none;
+      border-radius: 4px;
+      padding: 8px 16px;
+      font-weight: bold;
+      cursor: pointer;
+      margin-top: 5px;
+    }
+    .form-header button:hover {
+      background: #3a0077;
+    }
+    #progressContainer {
+      background: var(--gray);
+      border-radius: 4px;
+      overflow: hidden;
+      margin-bottom: 15px;
+      height: 14px;
+    }
+    #progressBar {
+      height: 100%;
+      width: 0%;
+      background: var(--secondary);
+      transition: width 0.4s ease;
+    }
+    .sticky-score {
+      position: sticky;
+      top: 0;
+      background: var(--bg-white);
+      padding-top: 10px;
+      padding-bottom: 10px;
+      z-index: 100;
+    }
+   #totalCalif {
+  font-size: 1.2em;
+  margin-bottom: 10px;
   display: flex;
-  align-items: center;
-  background: linear-gradient(90deg, #2E0060 60%, #00B2A9 100%);
-  color: #fff;
-  padding: 32px 48px;
-  border-radius: 24px 24px 0 0;
-  margin-bottom: 0;
-  border-bottom: 8px solid var(--secondary);
-  box-shadow: 0 4px 24px rgba(46,0,96,0.15);
-}
-header img {
-  height: 80px;
-  margin-right: 36px;
-  filter: none;
-}
-header h1 {
-  font-size: 2.6em;
-  letter-spacing: 2px;
-  margin: 0;
-  font-weight: 800;
-  color: #FFD400;
-  text-shadow: 0 4px 16px rgba(46,0,96,0.10);
-}
-.card {
-  background: #fff;
-  border-radius: 24px;
-  box-shadow: 0 8px 32px rgba(46,0,96,0.12);
-  padding: 48px 36px 36px 36px;
-  margin-top: -32px;
-  border: none;
-}
-.form-header {
-  display: flex;
-  gap: 16px; /* menos espacio entre elementos */
-  flex-wrap: wrap;
-  margin-bottom: 18px;
   align-items: flex-end;
-  justify-content: center;
-  padding: 0 0 0 0;
+  gap: 12px;
 }
-.form-header label {
-  flex: 0 1 180px; /* menos ancho */
-  min-width: 120px;
-  font-weight: 600;
-  color: var(--primary);
-  letter-spacing: 0.5px;
-  margin-bottom: 0;
-  font-size: 1em;
-}
-.form-header label[for="manager"], .form-header label:has(#manager) {
-  flex: 0 1 230px; /* un poco más largo solo el gerente */
-  min-width: 170px;
-}
-.form-header input[type="text"],
-.form-header input[type="date"] {
-  width: 100%;
-  border: 1.2px solid var(--primary);
-  border-radius: 5px;
-  padding: 6px 10px; /* menos alto */
-  margin-top: 4px;
-  font-size: 0.98em;
-  background: #f9f9fb;
-  transition: border 0.2s;
-  height: 32px; /* menos alto */
-  box-sizing: border-box;
-}
-#manager {
-  width: 110%; /* solo el gerente un poco más largo */
-  min-width: 170px;
-  max-width: 260px;
-}
-.form-header input[readonly], .form-header input[disabled] {
-  background: #f4f6fa;
-  color: #888;
-  cursor: not-allowed;
-}
-.form-header button {
-  min-width: 90px;
-  margin-top: 18px;
-  padding: 7px 18px;
-  font-size: 1em;
-  border-radius: 8px;
-  border: none;
-  font-weight: 600;
-  background: linear-gradient(90deg, var(--primary) 60%, var(--accent) 100%);
-  color: #fff;
-  box-shadow: 0 2px 8px rgba(46,0,96,0.10);
-  cursor: pointer;
-  transition: background 0.2s, box-shadow 0.2s, transform 0.1s;
-  outline: none;
-}
-.form-header button#logoutBtn {
-  background: linear-gradient(90deg, #ff4d4d 60%, #FFD400 100%);
-  color: #fff;
-  margin-left: 8px;
-}
-.form-header button:hover, .form-header button:focus {
-  filter: brightness(1.08);
-  box-shadow: 0 4px 16px rgba(0,178,169,0.13);
-  transform: translateY(-2px) scale(1.03);
-}
-#date {
-  pointer-events: none;
-  background: #f4f6fa;
-  color: #888;
-  cursor: not-allowed;
-}
-#progressContainer {
-  height: 28px;
-  width: 220px;
-  margin-bottom: 0;
-}
-#progressBar {
-  border-radius: 12px;
-  background: linear-gradient(90deg, #FFD400 60%, #00B2A9 100%);
-  height: 100%;
-}
-.sticky-score {
+    #totalValue {
+      font-weight: bold;
+      font-size: 1.5em;
+      min-width: 60px;
+      text-align: right;
+    }
+    #gaugeContainer {
+      position: relative;
+      width: 120px;
+      height: 60px;
+    }
+    #gauge {
+      width: 120px;
+      height: 60px;
+    }
+    .section-details {
+      margin-bottom: 15px;
+      border: 1px solid var(--gray);
+      border-radius: 6px;
+      overflow: hidden;
+    }
+    .section-details summary {
+      background: var(--primary);
+      color: var(--bg-white);
+      padding: 10px 15px;
+      font-size: 1.1em;
+      cursor: pointer;
+    }
+    .section-details[open] summary {
+      background: #3a0077;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 0;
+      table-layout: fixed;
+    }
+    th, td {
+      border: 1px solid var(--gray);
+      padding: 10px;
+      vertical-align: top;
+      font-size: 0.95em;
+    }
+    th {
+      background: var(--gray);
+      text-align: left;
+    }
+    tbody tr:nth-child(even) {
+      background: #fbfbfb;
+    }
+    .item-col {
+      width: 25%;
+      font-weight: bold;
+      color: var(--primary);
+    }
+    .comment-col {
+      width: 55%;
+    }
+    .ok-col {
+      width: 240px;
+      text-align: center;
+      white-space: nowrap;
+    }
+    textarea {
+      width: 100%;
+      min-height: 3em;
+      border: 1px solid var(--gray);
+      border-radius: 4px;
+      padding: 8px;
+      resize: vertical;
+      font-family: inherit;
+      margin-top: 8px;
+    }
+    .char-count {
+      font-size: .75em;
+      color: var(--text);
+      text-align: right;
+      margin-top: 4px;
+    }
+ .ok-options {
   display: flex;
-  justify-content: center;
+  justify-content: space-between;
   align-items: center;
-  flex-direction: column;
-  background: var(--bg-white);
-  padding: 24px 0 24px 0;
-  z-index: 100;
-  border-bottom: 1.5px solid var(--gray);
-  margin-bottom: 18px;
-  position: sticky;
-  top: 0;
-  box-shadow: 0 2px 12px rgba(46,0,96,0.07);
-}
-#totalCalif {
-  font-size: 1.5em;
-  margin-bottom: 0;
-  display: flex;
-  align-items: center;
-  gap: 36px;
-  justify-content: center;
-}
-#totalValue {
-  font-weight: bold;
-  font-size: 2.5em;
-  min-width: 90px;
-  text-align: right;
-  color: var(--primary);
-  letter-spacing: 1px;
-}
-#gaugeContainer {
-  width: 140px;
-  height: 70px;
-}
-#gauge {
-  width: 140px;
-  height: 70px;
-}
-#mascotaContainer img {
-  height: 90px;
-  width: auto;
-  border-radius: 50%;
-  border: 3px solid #FFD400;
-}
-.section-details {
-  border-radius: 18px;
-  box-shadow: 0 2px 12px rgba(46,0,96,0.06);
-  margin-bottom: 28px;
-  border: none;
-}
-.section-details summary {
-  background: linear-gradient(90deg, #00B2A9 60%, #2E0060 100%);
-  color: #fff;
-  padding: 18px 24px;
-  font-size: 1.25em;
-  border-bottom: none;
-  border-radius: 18px 18px 0 0;
-  font-weight: 700;
-  letter-spacing: 1px;
-}
-table {
-  width: 100%;
-  border-collapse: separate;
-  border-spacing: 0;
-  margin: 0;
-  table-layout: fixed;
-  background: #fff;
-}
-th, td {
-  border: 1px solid var(--gray);
-  padding: 12px 10px;
-  vertical-align: top;
-  font-size: 1em;
-}
-th {
-  background: var(--primary);
-  color: #fff;
-  font-size: 1.1em;
-  border: none;
-}
-tbody tr {
-  transition: background 0.2s;
-  height: 120px; /* Más alto para comentarios y botones */
-}
-.comment-col {
-  width: 40%;
-  vertical-align: top;
-  overflow: hidden;
-  padding: 0 12px;
-  box-sizing: border-box;
-}
-.ok-col {
-  width: 380px;
-  text-align: center;
-  white-space: normal;
-  vertical-align: middle;
-  padding-top: 0;
-  padding-bottom: 0;
-  height: 100%;
-}
-textarea, input[type="text"], input[type="date"] {
-  border-radius: 10px;
-  border: 2px solid #e0e3e8;
-  box-shadow: 0 1px 4px rgba(46,0,96,0.06);
-  padding: 16px;
-  font-size: 1.1em;
-  transition: border 0.2s, box-shadow 0.2s;
-  min-height: 60px;
-  max-width: 100%;
-  width: 100%;
-  resize: vertical;
-}
-.char-count {
-  font-size: .8em;
-  color: var(--primary);
-  text-align: right;
-  margin-top: 4px;
-  letter-spacing: 0.5px;
-}
-.ok-options {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 24px;
-  height: 100%;
-  min-height: 64px;
-}
-.ok-options label {
-  flex: 1 1 0;
-  min-width: 0;
-  margin: 0;
-  padding: 0;
-}
-.ok-options span {
-  font-size: 1.2em;
-  padding: 18px 0;
-  border-radius: 14px;
-  box-shadow: 0 2px 8px rgba(46,0,96,0.08);
-  transition: background 0.2s, color 0.2s, border 0.2s, box-shadow 0.2s;
-  position: relative;
-  width: 100%;
-  display: block;
-}
-.ok-options input[type="radio"] {
-  display: none;
-}
-.ok-options input[type="radio"]:checked + span {
-  background: linear-gradient(90deg, #2E0060 60%, #00B2A9 100%);
-  color: #FFD400;
-  border-color: #FFD400;
-  box-shadow: 0 4px 16px rgba(0,178,169,0.10);
-}
-.staff-section,
-.metrics-section {
-  background: var(--bg-white);
-  border-radius: 16px;
-  padding: 24px;
-  margin: 24px 0;
-  box-shadow: var(--shadow);
-}
-
-.staff-section h3,
-.metrics-section h3 {
-  color: var(--primary);
-  margin: 0 0 16px 0;
-  font-size: 1.2em;
-}
-
-.staff-grid,
-.metrics-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 24px;
-}
-
-.staff-item,
-.metric-item {
-  display: flex;
-  flex-direction: column;
   gap: 8px;
 }
-
-.staff-item input {
-  width: 100%;
-  padding: 8px;
-  border: 1.5px solid var(--primary);
-  border-radius: 8px;
-  font-size: 1em;
+.ok-options label {
+  cursor: pointer;
 }
-
-.staff-item span,
-.metric-item span {
-  font-size: 1.5em;
-  font-weight: bold;
+.ok-options input {
+  display: none;
+}
+.ok-options span {
+  display: inline-block;
+  padding: 6px 10px;
+  border: 1px solid var(--primary);
+  border-radius: 4px;
+  transition: background 0.2s, color 0.2s;
   color: var(--primary);
+  font-size: 0.9em;
+  min-width: 60px;
+  text-align: center;
 }
-@media print {
-  body { padding: 0; }
-  header { display: none; }
-  .card {
-    box-shadow: none;
-    margin: 0;
-    border-radius: 0;
-    border: none;
-  }
+.ok-options input:checked + span {
+  background: var(--primary);
+  color: var(--bg-white);
 }
-@media (max-width: 900px) {
-  .container { padding: 12px; }
-  .card { padding: 18px 6px; }
-  header { flex-direction: column; align-items: flex-start; padding: 18px 12px; }
-  #totalCalif { flex-direction: column; gap: 12px; }
-  .signatures { flex-direction: column; gap: 24px; }
-  .form-header label { min-width: 90px; font-size: 0.97em; }
-  .form-header label[for="manager"], .form-header label:has(#manager) {
-    min-width: 120px;
-    flex: 0 1 140px;
-  }
-  .form-header input[type="text"],
-  .form-header input[type="date"] { font-size: 0.95em; height: 28px; padding: 5px 8px; }
-  #manager {
-    min-width: 120px;
-    max-width: 180px;
-    width: 105%;
-  }
-  .form-header button { font-size: 0.97em; padding: 6px 10px; }
-}
+
+
+    .lamp-row input {
+      width: 70px;
+      margin-right: 10px;
+      padding: 4px 6px;
+      border: 1px solid var(--gray);
+      border-radius: 4px;
+      font-size: 0.95em;
+    }
+    .lamp-label {
+      font-weight: bold;
+      margin-right: 6px;
+      font-size: 0.95em;
+    }
+    .lamp-percentage {
+      font-weight: bold;
+      font-size: 1em;
+      margin-left: 10px;
+      color: var(--primary);
+    }
+    .signatures {
+      margin-top: 60px;
+      display: flex;
+      justify-content: center;
+      gap: 60px;
+    }
+    .signature-line {
+      width: 40%;
+      border-top: 2px dashed var(--gray);
+      padding-top: 80px;
+      font-weight: bold;
+      color: var(--primary);
+      text-align: center;
+    }
+    @media print {
+      body { padding: 0; }
+      header { display: none; }
+      .card {
+        box-shadow: none;
+        margin: 0;
+        border-radius: 0;
+      }
+
+    }
 
   </style>
 </head>
 <body>
+  
   <div class="container">
     <header>
       <img src="logo.png" alt="AccessOne Logo">
       <h1>Check List de Estacionamientos</h1>
     </header>
-    <div class="card">
-      <div class="form-header">
-        <label>
-          Proyecto:
-          <input type="text" id="project" list="projectList" placeholder="Escribe para filtrar..." autocomplete="off" required readonly onfocus="this.removeAttribute('readonly');" onblur="this.setAttribute('readonly','readonly');">
-        </label>
-        <button id="searchBtn" type="button">Buscar</button>
-        <label>
-          Fecha:
-          <input type="date" id="date" readonly disabled>
-        </label>
-        <label>
-          Gerente:
-          <input type="text" id="manager" readonly>
-        </label>
-        <datalist id="projectList"></datalist>
-        <button id="logoutBtn" type="button">Cerrar Sesión</button>
+ <div class="card">
+  <div class="form-header">
+    <label>
+      Proyecto:
+      <input type="text" id="project" list="projectList" placeholder="Escribe para filtrar..." autocomplete="off" required readonly onfocus="this.removeAttribute('readonly');" onblur="this.setAttribute('readonly','readonly');">
+    </label>
+    <button id="searchBtn" type="button">Buscar</button>
+    <label>
+      Fecha:
+      <input type="date" id="date">
+    </label>
+    <label>
+      Gerente:
+      <input type="text" id="manager" readonly>
+    </label>
+    <datalist id="projectList"></datalist>
+    <button id="logoutBtn" type="button">Cerrar Sesión</button>
+  </div>
+
+  <!-- Calificación + gauge + mascota -->
+  <div class="sticky-score">
+    <div id="totalCalif" style="align-items:center;">
+      <span>Calificación:</span>
+      <span id="totalValue">0%</span>
+      <div id="progressContainer">
+  <div id="progressBar"></div>
+</div>
+      <div id="gaugeContainer" style="display:inline-block; vertical-align:middle;">
+        <canvas id="gauge" width="120" height="60"></canvas>
       </div>
-
-      <!-- Plantilla y Rotación -->
-      <div class="staff-section">
-        <h3>Control de Personal</h3>
-        <div class="staff-grid">
-          <div class="staff-item">
-            <label for="plantillaInicial">Plantilla Inicial:</label>
-            <input type="number" id="plantillaInicial" min="0" required>
-          </div>
-          <div class="staff-item">
-            <label for="altas">Altas:</label>
-            <input type="number" id="altas" min="0" required>
-          </div>
-          <div class="staff-item">
-            <label for="bajas">Bajas:</label>
-            <input type="number" id="bajas" min="0" required>
-          </div>
-          <div class="staff-item">
-            <label>Tasa de Rotación:</label>
-            <span id="rotacionValue">0%</span>
-          </div>
-        </div>
-      </div>
-
-      <div class="metrics-section">
-        <h3>Métricas de Desempeño</h3>
-        <div class="metrics-grid">
-          <div class="metric-item">
-            <label>Tasa de Cumplimiento:</label>
-            <span id="tasaCumplimiento">0%</span>
-          </div>
-          <div class="metric-item">
-            <label>Incidencias Críticas:</label>
-            <span id="incidenciasCriticas">0</span>
-          </div>
-          <div class="metric-item">
-            <label>Lámparas Fundidas:</label>
-            <span id="lamparasFundidas">0%</span>
-          </div>
-          <div class="metric-item">
-            <label>Total Quejas:</label>
-            <span id="totalQuejas">0</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Calificación + gauge + mascota -->
-      <div class="sticky-score">
-        <div id="totalCalif">
-          <span>Calificación:</span>
-          <span id="totalValue">0%</span>
-          <div id="progressContainer">
-            <div id="progressBar"></div>
-          </div>
-          <div id="gaugeContainer">
-            <canvas id="gauge" width="140" height="70"></canvas>
-          </div>
-          <div id="mascotaContainer">
-            <img id="mascotaImg" src="mascota_rojo.png" alt="Mascota">
-          </div>
-        </div>
-      </div>
-
-      <!-- Checklist dinámico -->
-      <div id="sections"></div>
-
-      <!-- Historial de calificaciones -->
-      <div id="lastScores"></div>
-
-      <!-- Firmas -->
-      <div class="signatures">
-        <div class="signature-line">Responsable de CheckList</div>
-        <div class="signature-line">Gerente del Proyecto</div>
+      <div id="mascotaContainer" style="display:inline-block; vertical-align:middle; margin-left:10px;">
+        <img id="mascotaImg" src="mascota_rojo.png" alt="Mascota" style="height:80px; width:auto; transition:filter .2s;">
       </div>
     </div>
-    <!-- Agrega el audio para el sonido de tecla/click -->
-<audio id="keySound" src="key.mp3" preload="auto"></audio>
   </div>
+
+  <!-- Checklist dinámico -->
+  <div id="sections"></div>
+
+  <!-- Historial de calificaciones -->
+  <div id="lastScores"></div>
+
+  <!-- Firmas -->
+  <div class="signatures">
+    <div class="signature-line">Responsable de CheckList</div>
+    <div class="signature-line">Gerente del Proyecto</div>
+  </div>
+</div>
+  
+
+
   <script type="module">
   // 1) Firebase core (auth y base de datos)
   import { auth, db } from "./js/firebase-config.js";
@@ -531,7 +374,7 @@ textarea, input[type="text"], input[type="date"] {
       "Tacámbaro": "KISAI PALOMA BALLESTEROS VILLALOBOS",
       "Tapachula": "RODRIGO VILLEGAS MOLINA",
       "Tepeyac": "LESLIE MICHELLE AYALA RODRIGUEZ",
-      "Tlalpan": "IVÁN IBÁÑEZ RODRIGUEZ",
+      "Tlalpan": "IVÁN IBÁÑEZ RODRÍGUEZ",
       "Tlaxcala": "ANGÉLICA PLAZA HERNÁNDEZ",
       "Uruapan": "GIANFRANCO VALLADAREZ VALENCIA",
       "Vía San Ángel": "RAUL MARTINEZ RUGERIO",
@@ -906,12 +749,12 @@ if (mascotaImg) {
     function drawGauge(value) {
       if (!window.ctx) return;
       const ctx = window.ctx;
-      const centerX = 70; // la mitad de 140
-      const centerY = 70; // la base del semicírculo
-      const radius = 68;  // un poco menos que 70 para no salir del canvas
+      const centerX = 60;
+      const centerY = 60;
+      const radius = 60;
 
-      // Limpiar TODO el canvas
-      ctx.clearRect(0, 0, 140, 70);
+      // Limpiar
+      ctx.clearRect(0, 0, 120, 60);
 
       // Rojo (180°→120°)
       ctx.beginPath();
@@ -938,10 +781,7 @@ if (mascotaImg) {
       const angle = Math.PI + (value / 100) * Math.PI;
       ctx.beginPath();
       ctx.moveTo(centerX, centerY);
-      ctx.lineTo(
-        centerX + (radius - 10) * Math.cos(angle),
-        centerY + (radius - 10) * Math.sin(angle)
-      );
+      ctx.lineTo(centerX + (radius - 10) * Math.cos(angle), centerY + (radius - 10) * Math.sin(angle));
       ctx.lineWidth = 4;
       ctx.strokeStyle = '#000';
       ctx.stroke();
@@ -995,96 +835,39 @@ function assignManager() {
       if (!selectedProject) return alert("Selecciona primero un proyecto válido.");
       const fecha = document.getElementById('date').value;
       if (!fecha) return alert("Selecciona una fecha válida.");
-
-      // Staff metrics
-      const plantillaInicial = parseInt(document.getElementById('plantillaInicial').value) || 0;
-      const altas = parseInt(document.getElementById('altas').value) || 0;
-      const bajas = parseInt(document.getElementById('bajas').value) || 0;
-      const rotacion = bajas > 0 ? (bajas / plantillaInicial) * 100 : 0;
-
-      // Performance metrics
-      let totalItems = 0;
-      let itemsCumplidos = 0;
-      let incidenciasCriticas = 0;
-      let quejas = 0;
-
-      // Recolecta respuestas y calcula métricas
-      const scoreObj = {
-        date: fecha,
-        user: currentUser.email,
-        at: Timestamp.now(),
-        staff: {
-          inicial: plantillaInicial,
-          altas: altas,
-          bajas: bajas,
-          rotacion: rotacion.toFixed(2)
-        },
-        metrics: {}
-      };
-
+      // Recolecta respuestas
+      const scoreObj = { date: fecha, user: currentUser.email, at: Timestamp.now() };
+      // Por cada ítem que no es sección, guarda el radio y comentario
       let calif = {};
       items.forEach((l, i) => {
         if (!l.startsWith('--')) {
           const num = i + 1;
           const ok = document.querySelector(`input[name="ok${num}"]:checked`);
           const coment = document.querySelector(`[name="coment${num}"], [name="tickets${num}"]`);
-          
-          if (ok) {
-            totalItems++;
-            if (ok.value === 'Sí' || ok.value === 'No Aplica') itemsCumplidos++;
-            if (negativeLabels.some(rx => rx.test(l)) && ok.value === 'Sí') {
-              incidenciasCriticas++;
-            }
-          }
-
           calif[num] = {
             label: l,
             result: ok ? ok.value : "",
             comment: coment ? coment.value.trim() : ""
           };
-
-          // Contar quejas si es el ítem correspondiente
-          if (l === 'Número de quejas recibidas en estos 30 días?') {
-            quejas = parseInt(coment?.value || '0') || 0;
-          }
         }
       });
-
-      // Calcular métricas finales
-      const tasaCumplimiento = totalItems > 0 ? (itemsCumplidos / totalItems) * 100 : 0;
-      const lamparasTotal = parseInt(document.getElementById('lamps-total').value) || 0;
-      const lamparasFundidas = parseInt(document.getElementById('lamps-fundidas').value) || 0;
-      const porcentajeLamparas = lamparasTotal > 0 ? (lamparasFundidas / lamparasTotal) * 100 : 0;
-
-      scoreObj.metrics = {
-        tasaCumplimiento: tasaCumplimiento.toFixed(2),
-        incidenciasCriticas,
-        lamparasFundidas: porcentajeLamparas.toFixed(2),
-        quejas
-      };
-
+      // Guarda el resumen
       scoreObj.answers = calif;
+      // Calificación numérica final
       scoreObj.total = parseFloat(document.getElementById("totalValue").textContent) || 0;
 
-      // Guardar en Firestore
+      // Escribe en Firestore (guarda las últimas 12)
       const ref = doc(db, "project_scores", selectedProject);
       const snap = await getDoc(ref);
       let arr = [];
       if (snap.exists() && Array.isArray(snap.data().scores)) {
         arr = snap.data().scores;
       }
-      arr.unshift(scoreObj);
+      arr.unshift(scoreObj); // agrega al inicio
       if (arr.length > 12) arr = arr.slice(0, 12);
       await setDoc(ref, { scores: arr }, { merge: true });
       alert("Calificación guardada.");
-      loadLastScores();
-
-      // Actualizar displays de métricas
-      document.getElementById('rotacionValue').textContent = rotacion.toFixed(2) + '%';
-      document.getElementById('tasaCumplimiento').textContent = tasaCumplimiento.toFixed(2) + '%';
-      document.getElementById('incidenciasCriticas').textContent = incidenciasCriticas;
-      document.getElementById('lamparasFundidas').textContent = porcentajeLamparas.toFixed(2) + '%';
-      document.getElementById('totalQuejas').textContent = quejas;
+      loadLastScores(); // refresca últimas
     }
 
     // Mostrar las últimas 12 calificaciones guardadas (por proyecto)
@@ -1182,48 +965,6 @@ window.addEventListener('DOMContentLoaded', () => {
   drawGauge(0);
 });
 
-
-  // Sonido por tecla presionada en todos los inputs y textarea
-  const keySound = document.getElementById("keySound");
-
-  function playKeySound() {
-    keySound.currentTime = 0;
-    keySound.play();
-  }
-
-  document.addEventListener("DOMContentLoaded", () => {
-    // Sonido al escribir en cualquier input o textarea
-    document.querySelectorAll('input, textarea').forEach(el => {
-      el.addEventListener("keydown", e => {
-        if (e.key.length === 1 || e.key === "Backspace" || e.key === "Delete") {
-          playKeySound();
-        }
-      });
-    });
-    // Sonido por click en cualquier botón
-    document.querySelectorAll('button').forEach(btn => {
-      btn.addEventListener("click", playKeySound);
-    });
-
-    // Sonido por click en radios de Sí, No, No Aplica (incluye los generados dinámicamente)
-    document.body.addEventListener("change", function(e) {
-      if (
-        e.target.matches('input[type="radio"][name^="ok"]')
-      ) {
-        playKeySound();
-      }
-    });
-
-    // Sonido al escribir en comentarios dinámicos (textarea dentro de la tabla)
-    document.body.addEventListener("keydown", function(e) {
-      if (
-        e.target.matches('textarea[name^="coment"], textarea[name^="tickets"]') &&
-        (e.key.length === 1 || e.key === "Backspace" || e.key === "Delete")
-      ) {
-        playKeySound();
-      }
-    });
-  });
 
   </script>
 </body>

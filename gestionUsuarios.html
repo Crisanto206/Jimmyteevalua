@@ -17,13 +17,14 @@
     .checkbox-container { max-height: 200px; overflow-y: auto; border: 1px solid #ccc; border-radius: 4px; padding: 10px; margin-top: 5px; }
     .checkbox-container label { display: flex; align-items: center; margin-bottom: 8px; }
     .checkbox-container input { margin-right: 8px; }
-    .close-btn { background: #ccc; color: #333; border: none; padding: 5px 10px; cursor: pointer; border-radius: 4px; }
+    .close-btn { background: #ccc; color: #333; border: none, padding: 5px 10px; cursor: pointer; border-radius: 4px; }
     .save-btn { background: #2E0060; color: #fff; border: none; padding: 8px 15px; cursor: pointer; border-radius: 4px; }
   </style>
 </head>
 <body>
   <div class="container">
     <h2>Gestión de Usuarios</h2>
+    <button id="btn-ingresos-egresos" style="display:none;margin-bottom:18px;">Ingresos y Egresos</button>
     <p id="loadingMsg">Cargando usuarios…</p>
     <table id="usersTable" style="display:none;">
       <thead>
@@ -62,6 +63,7 @@
     const modalProjects = document.getElementById('modalProjects');
     const closeBtn = editModal.querySelector('.close-btn');
     const saveBtn = editModal.querySelector('.save-btn');
+    const btnIngresosEgresos = document.getElementById('btn-ingresos-egresos');
 
     let usersData = [];
     const ALL_PROJECTS = [
@@ -86,7 +88,7 @@
         const lbl = document.createElement('label');
         const cb = document.createElement('input');
         cb.type = 'checkbox'; cb.value = proj;
-        if (assigned.includes(proj)) cb.checked = true;
+        if (assigned.includes(proj) || user.isAdmin) cb.checked = true;
         lbl.appendChild(cb);
         lbl.appendChild(document.createTextNode(proj));
         modalProjects.appendChild(lbl);
@@ -94,6 +96,12 @@
       editModal.style.display = 'flex';
       saveBtn.dataset.uid = user.id;
     }
+
+    // Marcar/desmarcar todos los proyectos al cambiar admin
+    modalIsAdmin.addEventListener('change', () => {
+      const allCbs = modalProjects.querySelectorAll('input[type="checkbox"]');
+      allCbs.forEach(cb => cb.checked = modalIsAdmin.checked);
+    });
 
     function closeModal() {
       editModal.style.display = 'none';
@@ -103,6 +111,12 @@
       if (!user) return window.location.href = 'login-admin.html';
       const adminSnap = await getDoc(doc(db, 'users', user.uid));
       if (!adminSnap.exists() || !adminSnap.data().isAdmin) return window.location.href = 'login-admin.html';
+
+      // Mostrar botón solo si es admin
+      btnIngresosEgresos.style.display = 'inline-block';
+      btnIngresosEgresos.onclick = () => {
+        window.location.href = "Ingresos Egresos.html";
+      };
 
       const snapshot = await getDocs(collection(db, 'users'));
       usersData = snapshot.docs.map(d => {

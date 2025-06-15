@@ -3,88 +3,232 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Login Administrador - AccessOne Checklist</title>
+  <title>Administración - AccessOne</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f9f9f9;
+    @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;900&display=swap');
+    html, body {
+      height: 100%;
       margin: 0;
+      padding: 0;
+    }
+    body {
+      min-height: 100vh;
+      font-family: 'Montserrat', 'Segoe UI', Arial, sans-serif;
+      color: #22223b;
+      background: linear-gradient(135deg, #2E0060 0%, #00B2A9 100%);
+      background-attachment: fixed;
+      position: relative;
+    }
+    body::before {
+      content: "";
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: 
+        repeating-linear-gradient(135deg, #FFD40022 0 2px, transparent 2px 40px),
+        radial-gradient(circle at 80% 20%, #FFD40018 0%, transparent 70%),
+        radial-gradient(circle at 20% 80%, #00B2A918 0%, transparent 70%);
+      opacity: 0.18;
+      z-index: 0;
+      pointer-events: none;
+    }
+    .login-card, .admin-panel {
+      background: rgba(255,255,255,0.97);
+      border-radius: 28px;
+      box-shadow: 0 8px 32px 0 rgba(46,0,96,0.13), 0 1.5px 0 #FFD400;
+      padding: 48px 38px 38px 38px;
+      min-width: 340px;
+      max-width: 370px;
+      width: 100%;
       display: flex;
-      justify-content: center;
+      flex-direction: column;
       align-items: center;
-      height: 100vh;
+      position: relative;
+      border: none;
+      margin: 48px auto 0 auto;
+      z-index: 1;
+      animation: fadeIn 0.8s cubic-bezier(.4,1.4,.6,1);
     }
-    .login-container {
-      background: #ffffff;
-      padding: 30px;
-      border-radius: 8px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-      width: 320px;
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(40px);}
+      to { opacity: 1; transform: none;}
     }
-    .login-container h2 {
-      margin-top: 0;
+    .logo-accessone {
+      width: 90px;
+      height: 90px;
+      object-fit: contain;
+      margin-bottom: 16px;
+      border-radius: 50%;
+      border: 3px solid #FFD400;
+      background: #fff;
+      box-shadow: 0 2px 16px rgba(46,0,96,0.08);
+      transition: box-shadow 0.2s;
+    }
+    .login-title {
+      font-size: 2.1em;
+      font-weight: 900;
+      color: #FFD400;
+      margin: 0 0 8px 0;
+      letter-spacing: 1.5px;
       text-align: center;
-      color: #2E0060;
+      text-shadow: 0 2px 12px #2E006022;
+      background: linear-gradient(90deg, #FFD400 10%, #2E0060 90%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
     }
-    .login-container label {
+    .subtitle {
+      color: #00B2A9;
+      font-size: 1.1em;
+      margin-bottom: 24px;
+      text-align: center;
+      letter-spacing: 0.5px;
+      font-weight: 600;
+    }
+    label {
       display: block;
-      margin-top: 15px;
-      font-weight: bold;
+      margin-top: 18px;
+      font-weight: 700;
       color: #2E0060;
+      letter-spacing: 0.5px;
+      font-size: 1.05em;
     }
-    .login-container input {
+    input[type="email"], input[type="password"] {
       width: 100%;
-      padding: 8px;
-      margin-top: 5px;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-      font-size: 1em;
+      padding: 13px 14px;
+      margin-top: 7px;
+      border: 1.5px solid #2E0060;
+      border-radius: 8px;
+      font-size: 1.08em;
+      background: #f9f9fb;
+      transition: border 0.2s, box-shadow 0.2s;
+      box-shadow: 0 1px 6px rgba(46,0,96,0.06);
+      outline: none;
     }
-    .login-container button {
-      margin-top: 20px;
+    input[type="email"]:focus, input[type="password"]:focus {
+      border-color: #00B2A9;
+      box-shadow: 0 2px 12px rgba(0,178,169,0.10);
+    }
+    button, .admin-btn {
+      margin-top: 32px;
       width: 100%;
-      padding: 10px;
-      background: #2E0060;
+      padding: 13px 0;
+      background: linear-gradient(90deg, #2E0060 60%, #00B2A9 100%);
       color: #fff;
       border: none;
-      border-radius: 4px;
+      border-radius: 10px;
       cursor: pointer;
-      font-weight: bold;
-      font-size: 1em;
+      font-weight: 800;
+      font-size: 1.15em;
+      letter-spacing: 1px;
+      box-shadow: 0 2px 12px rgba(46,0,96,0.10);
+      transition: background 0.2s, box-shadow 0.2s, transform 0.1s;
+      outline: none;
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
     }
-    .login-container button:hover {
-      background: #3a0077;
+    button:hover, .admin-btn:hover {
+      background: linear-gradient(90deg, #FFD400 60%, #00B2A9 100%);
+      color: #2E0060;
+      box-shadow: 0 4px 24px rgba(0,178,169,0.13);
+      transform: translateY(-2px) scale(1.03);
     }
     #errorMsg {
-      margin-top: 12px;
-      color: red;
-      font-size: 0.9em;
+      margin-top: 18px;
+      color: #ff4d4d;
+      font-size: 1em;
       display: none;
+      text-align: center;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      min-height: 24px;
+    }
+    .admin-panel {
+      min-width: 340px;
+      max-width: 400px;
+      margin-top: 48px;
+      padding-top: 32px;
+      padding-bottom: 32px;
+      align-items: stretch;
+    }
+    .admin-panel .admin-btn {
+      margin-top: 18px;
+      font-size: 1.08em;
+      padding: 12px 0;
+    }
+    .footer-accessone {
+      margin-top: 32px;
+      text-align: center;
+      font-size: 0.98em;
+      color: #888;
+      letter-spacing: 0.5px;
+    }
+    .footer-accessone span {
+      color: #FFD400;
+      font-weight: 700;
+    }
+    @media (max-width: 500px) {
+      .login-card, .admin-panel {
+        padding: 24px 6vw 24px 6vw;
+        min-width: 0;
+        max-width: 98vw;
+      }
+      .logo-accessone {
+        width: 64px;
+        height: 64px;
+      }
+      .login-title { font-size: 1.3em; }
+      .subtitle { font-size: 1em; }
+      button, .admin-btn { font-size: 1em; padding: 11px 0; }
     }
   </style>
 </head>
 <body>
-  <div class="login-container">
-    <h2>Login Administrador</h2>
+  <div id="loginSection" class="login-card">
+    <img src="logo.jpg" alt="AccessOne Logo" class="logo-accessone"/>
+    <div class="login-title">Administración</div>
+    <div class="subtitle">Acceso exclusivo para administradores</div>
     <label for="email">Correo electrónico</label>
-    <input type="email" id="email" placeholder="admin@dominio.com"/>
+    <input id="email" type="email" placeholder="admin@dominio.com" autocomplete="username"/>
     <label for="password">Contraseña</label>
-    <input type="password" id="password" placeholder="********"/>
+    <input id="password" type="password" placeholder="********" autocomplete="current-password"/>
     <button id="loginBtn">Ingresar</button>
-    <p id="errorMsg"></p>
+    <div id="errorMsg"></div>
+    <div class="footer-accessone">
+      &copy; <span>AccessOne</span> 2025. Todos los derechos reservados.
+    </div>
   </div>
-
+  <div id="adminPanel" class="admin-panel" style="display:none;">
+    <img src="logo.jpg" alt="AccessOne Logo" class="logo-accessone"/>
+    <div class="login-title">Panel de Administración</div>
+    <div class="subtitle" id="adminEmail"></div>
+    <a class="admin-btn" href="gestionUsuarios.html"><span>👤</span> Gestión de Usuarios</a>
+    <a class="admin-btn" href="dashboard.html"><span>📊</span> Dashboard Calificaciones</a>
+    <a class="admin-btn" href="dashboard-financiero.html"><span>💰</span> Dashboard Financiero</a>
+    <a class="admin-btn" href="indicadores-proyectos.html"><span>📈</span> Indicadores de Proyectos</a>
+    <a class="admin-btn" href="Ingresos Egresos Consulta.html"><span>💼</span> Ingresos/Egresos Consulta</a>
+    <a id="btn-ingresar-info" class="admin-btn" href="Ingresos Egresos.html" style="display:none;"><span>➕</span> Ingresar Información</a>
+    <a class="admin-btn" href="checklist.html?all=1"><span>✅</span> Check List (Todos los proyectos)</a>
+    <a class="admin-btn" href="https://accessone.alphaerpweb.mx/" target="_blank"><span>🔗</span> SAI</a>
+    <button class="admin-btn" id="logoutBtn"><span>🚪</span> Cerrar sesión</button>
+    <div class="footer-accessone">
+      &copy; <span>AccessOne</span> 2025. Todos los derechos reservados.
+    </div>
+  </div>
   <script type="module">
     import { auth, db } from "./js/firebase-config.js";
-    import { signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
+    import { signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
     import { doc, getDoc } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
 
     const loginBtn = document.getElementById("loginBtn");
     const errorMsg = document.getElementById("errorMsg");
+    const loginSection = document.getElementById("loginSection");
+    const adminPanel = document.getElementById("adminPanel");
+    const adminEmail = document.getElementById("adminEmail");
 
     loginBtn.addEventListener("click", async () => {
       errorMsg.style.display = "none";
-
       const email = document.getElementById("email").value.trim();
       const password = document.getElementById("password").value;
       if (!email || !password) {
@@ -92,22 +236,24 @@
         errorMsg.style.display = "block";
         return;
       }
-
       try {
         // 1) Iniciar sesión
         const cred = await signInWithEmailAndPassword(auth, email, password);
         const uid = cred.user.uid;
-
         // 2) Verificar rol en Firestore
         const snap = await getDoc(doc(db, "users", uid));
-        if (!snap.exists() || snap.data().isAdmin !== true) {
+        if (!snap.exists() || (!snap.data().admin && !snap.data().isAdmin)) {
           throw new Error("No tienes permisos de administrador.");
         }
-
-        // 3) Redirigir al panel admin
-        window.location.href = "admin.html";
+        // 3) Mostrar panel admin
+        loginSection.style.display = "none";
+        adminPanel.style.display = "flex";
+        adminEmail.textContent = email;
+        // Mostrar botón solo para csa...
+        if (email.toLowerCase() === "csalcala@accessone.com.mx") {
+          document.getElementById("btn-ingresar-info").style.display = "flex";
+        }
       } catch (err) {
-        console.error(err);
         let msg = err.message;
         if (err.code === "auth/user-not-found") msg = "Usuario no registrado.";
         else if (err.code === "auth/wrong-password") msg = "Contraseña incorrecta.";
@@ -115,6 +261,17 @@
         errorMsg.textContent = msg;
         errorMsg.style.display = "block";
       }
+    });
+
+    // Cerrar sesión desde panel admin
+    document.getElementById("logoutBtn").onclick = async () => {
+      await signOut(auth);
+      window.location.href = "login-admin.html";
+    };
+
+    // Permite login con Enter
+    document.addEventListener("keydown", e => {
+      if(e.key === "Enter" && loginSection.style.display !== "none") loginBtn.click();
     });
   </script>
 </body>

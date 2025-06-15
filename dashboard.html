@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Dashboard de KPIs</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root {
+      --primary: #2E0060;
+      --secondary: #FFD400;
+      --accent: #00B2A9;
+      --bg-light: #f4f6fa;
+      --bg-white: #fff;
+      --gray: #e0e3e8;
+      --text: #22223b;
+      --shadow: 0 4px 24px rgba(46,0,96,0.08);
+    }
+
+    /* Reusing checklist styles */
+    body {
+      background: linear-gradient(135deg, #f4f6fa 0%, #e0e3e8 100%);
+      font-family: 'Montserrat', 'Segoe UI', Arial, sans-serif;
+      margin: 0;
+      min-height: 100vh;
+    }
+
+    header {
+      background: linear-gradient(90deg, #2E0060 60%, #00B2A9 100%);
+      color: #fff;
+      padding: 32px 48px;
+      border-bottom: 8px solid var(--secondary);
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    .dashboard-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2rem;
+    }
+
+    .filters {
+      background: var(--bg-white);
+      padding: 1.5rem;
+      border-radius: 16px;
+      box-shadow: var(--shadow);
+      display: flex;
+      gap: 1rem;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .filters select, 
+    .filters input,
+    .filters button {
+      padding: 0.75rem 1rem;
+      border: 2px solid var(--gray);
+      border-radius: 8px;
+      font-size: 1rem;
+      transition: all 0.3s ease;
+    }
+
+    .filters button {
+      background: var(--primary);
+      color: white;
+      border: none;
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    .filters button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(46,0,96,0.15);
+    }
+
+    .view-toggle {
+      display: flex;
+      gap: 1rem;
+      margin-left: auto;
+    }
+
+    .chart-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(600px, 1fr));
+      gap: 20px;
+      margin-bottom: 20px;
+    }
+
+    .projects-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 1.5rem;
+      margin-top: 2rem;
+      animation: fadeIn 0.5s ease;
+    }
+
+    .project-card {
+      background: var(--bg-white);
+      border-radius: 16px;
+      padding: 1.5rem;
+      box-shadow: var(--shadow);
+      transition: all 0.3s ease;
+    }
+
+    .project-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 8px 24px rgba(46,0,96,0.15);
+    }
+
+    .project-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+
+    .project-title {
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: var(--primary);
+    }
+
+    .project-score {
+      font-size: 2rem;
+      font-weight: 800;
+      color: var(--accent);
+    }
+
+    .chart-container {
+      position: relative;
+      padding: 1.5rem;
+      border-radius: 16px;
+      background: var(--bg-white);
+      box-shadow: var(--shadow);
+      transition: all 0.3s ease;
+    }
+
+    .chart-container:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 6px 20px rgba(46,0,96,0.12);
+    }
+
+    .chart-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-bottom: 1rem;
+      color: var(--primary);
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @media (max-width: 768px) {
+      .chart-grid {
+        grid-template-columns: 1fr;
+      }
+      
+      .filters {
+        flex-direction: column;
+      }
+      
+      .view-toggle {
+        width: 100%;
+        justify-content: center;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Dashboard de KPIs</h1>
+  </header>
+
+  <div class="container">
+    <!-- Filtros de mes -->
+    <div class="filters" style="margin-bottom: 1.5rem;">
+      <label for="filtro-mes" style="font-weight:700;color:var(--primary);">Mes:</label>
+      <select id="filtro-mes">
+        <option value="todos">Todos</option>
+        <option value="01">Enero</option>
+        <option value="02">Febrero</option>
+        <option value="03">Marzo</option>
+        <option value="04">Abril</option>
+        <option value="05">Mayo</option>
+        <option value="06">Junio</option>
+        <option value="07">Julio</option>
+        <option value="08">Agosto</option>
+        <option value="09">Septiembre</option>
+        <option value="10">Octubre</option>
+        <option value="11">Noviembre</option>
+        <option value="12">Diciembre</option>
+      </select>
+    </div>
+    <!-- Oculta el singleProjectView por defecto y muestra allProjectsView -->
+    <div id="singleProjectView" style="display:none;">
+      <div class="gauge-container">
+        <canvas id="gaugeChart"></canvas>
+        <img id="mascotaStatus" src="mascota_amarillo.png" class="mascota">
+      </div>
+
+      <div class="chart-grid">
+        <div class="chart-container">
+          <canvas id="rotacionChart"></canvas>
+        </div>
+        <div class="chart-container">
+          <canvas id="quejasTendencia"></canvas>
+        </div>
+        <div class="chart-container">
+          <canvas id="cumplimientoTrend"></canvas>
+        </div>
+        <div class="chart-container">
+          <canvas id="incidenciasChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <div id="allProjectsView" class="projects-grid" style="display: grid">
+      <!-- Se llenará dinámicamente -->
+    </div>
+  </div>
+  <div id="modal-calificaciones" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:1000;align-items:center;justify-content:center;background:rgba(0,0,0,0.18);">
+    <div style="background:#fff;border-radius:18px;max-width:420px;width:95vw;padding:28px 18px;box-shadow:0 8px 32px #FFD40033;position:relative;">
+      <button onclick="document.getElementById('modal-calificaciones').style.display='none'" style="position:absolute;top:12px;right:12px;background:#FFD400;color:#2E0060;border:none;border-radius:50%;width:32px;height:32px;font-size:1.3em;font-weight:900;cursor:pointer;">&times;</button>
+      <h3 id="modal-proyecto-titulo" style="color:#2E0060;text-align:center;margin-top:0;margin-bottom:18px;"></h3>
+      <div id="modal-calificaciones-list"></div>
+    </div>
+  </div>
+  <script type="module">
+    import { auth, db } from "./js/firebase-config.js";
+    import { collection, query, where, getDocs, orderBy, Timestamp, doc, getDoc } 
+      from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
+    import { onAuthStateChanged, signOut }
+      from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
+
+    // Lista completa de proyectos
+    const ALL_PROJECTS = [
+      "Adagio","Boulevard 5 de mayo","Buenavista","Centenario","Combo Aeropuerto",
+      "Combo Azcapotzalco","Combo Carrizal","Combo Cuautitlán","Combo Satélite",
+      "Comitán","Cuautitlán 1ero de mayo","Dorada I Dorada II","Galerías VHS",
+      "Hermosillo","Insurgentes Nte.","Kómplex","La Raza","León","Tijuana",
+      "Macroplaza Insurgentes Tijuana","Moroleon","Paroli","Patio Pedregal",
+      "Portal Churubusco","San Manuel","Símbolos Patrios","Suburbia","Tacámbaro",
+      "Tapachula","Tepeyac","Tlalpan","Tlaxcala","Uruapan","Vía San Ángel",
+      "Zitácuaro","Playa del Carmen","Paseo Akia","WE Periferico","Pirules",
+      "La Mangana","WE Horacio","Tacubaya","Mariano Escobedo","Ferrocarril Hidalgo",
+      "Sam´s Oaxaca","Plaza Alamos","San Pedrito"
+    ];
+
+    let charts = {};
+    let currentUser = null;
+    let userProjects = [];
+
+    // Verificar autenticación y obtener proyectos asignados
+    onAuthStateChanged(auth, async user => {
+      if (!user) {
+        window.location.href = "login.html";
+        return;
+      }
+      currentUser = user;
+      // Obtener proyectos asignados del usuario
+      let userDoc = await getDoc(doc(db, "users", user.uid));
+      if (userDoc.exists()) {
+        const data = userDoc.data();
+        if (data.isAdmin || data.admin) {
+          userProjects = ALL_PROJECTS;
+        } else if (Array.isArray(data.assignedProjects)) {
+          userProjects = data.assignedProjects;
+        } else {
+          userProjects = [];
+        }
+      } else {
+        userProjects = [];
+      }
+      showAllProjects();
+    });
+
+    // Nueva función de inicialización
+    function initDashboard() {
+      initCharts();
+      populateProjectSelect();
+      setDefaultDates();
+    }
+
+    // Initialize charts
+    function initCharts() {
+      // Gauge chart
+      charts.gauge = new Chart(document.getElementById('gaugeChart'), {
+        type: 'doughnut',
+        data: {
+          datasets: [{
+            data: [0, 100],
+            backgroundColor: ['#2E0060', '#e0e3e8']
+          }]
+        },
+        options: {
+          circumference: 180,
+          rotation: -90,
+          cutout: '80%',
+          plugins: {
+            tooltip: { enabled: false },
+            legend: { display: false }
+          }
+        }
+      });
+
+      // Line charts
+      const commonOptions = {
+        responsive: true,
+        plugins: {
+          legend: { position: 'top' }
+        },
+        scales: {
+          y: { beginAtZero: true }
+        }
+      };
+
+      charts.rotacion = new Chart(document.getElementById('rotacionChart'), {
+        type: 'line',
+        data: {
+          labels: [],
+          datasets: [{
+            label: 'Tasa de Rotación',
+            data: [],
+            borderColor: '#2E0060'
+          }]
+        },
+        options: commonOptions
+      });
+
+      charts.quejas = new Chart(document.getElementById('quejasTendencia'), {
+        type: 'bar',
+        data: {
+          labels: [],
+          datasets: [{
+            label: 'Quejas por Mes',
+            data: [],
+            backgroundColor: '#00B2A9'
+          }]
+        },
+        options: commonOptions
+      });
+
+      charts.cumplimiento = new Chart(document.getElementById('cumplimientoTrend'), {
+        type: 'line',
+        data: {
+          labels: [],
+          datasets: [{
+            label: 'Tasa de Cumplimiento',
+            data: [],
+            borderColor: '#FFD400'
+          }]
+        },
+        options: commonOptions
+      });
+
+      charts.incidencias = new Chart(document.getElementById('incidenciasChart'), {
+        type: 'bar',
+        data: {
+          labels: [],
+          datasets: [{
+            label: 'Incidencias Críticas',
+            data: [],
+            backgroundColor: '#ff4d4d'
+          }]
+        },
+        options: commonOptions
+      });
+    }
+
+    // Load data from Firestore
+    async function loadData() {
+      const projectId = document.getElementById('projectSelect').value;
+      if (!projectId) {
+        alert("Selecciona un proyecto");
+        return;
+      }
+
+      try {
+        const startDate = document.getElementById('startDate').value;
+        const endDate = document.getElementById('endDate').value;
+
+        // Obtener documento específico del proyecto
+        const docRef = doc(db, "project_scores", projectId);
+        const projectDoc = await getDoc(docRef);
+        
+        if (!projectDoc.exists()) {
+          alert("No hay datos para este proyecto");
+          return;
+        }
+
+        // Obtener el array de scores y filtrar por fecha
+        const scores = projectDoc.data().scores || [];
+        const filteredScores = scores.filter(score => 
+          score.date >= startDate && 
+          score.date <= endDate
+        );
+
+        if (filteredScores.length === 0) {
+          alert("No hay datos para el período seleccionado");
+          return;
+        }
+
+        console.log("Datos encontrados:", filteredScores);
+        updateCharts(filteredScores);
+
+      } catch (err) {
+        console.error("Error loading data:", err);
+        alert("Error al cargar datos: " + err.message);
+      }
+    }
+
+    // Actualizar función updateCharts para manejar posibles datos faltantes
+    function updateCharts(data) {
+      // Calculate averages safely
+      const avgCumplimiento = data.reduce((sum, d) => {
+        const value = d.metrics?.tasaCumplimiento || 0;
+        return sum + parseFloat(value);
+      }, 0) / data.length;
+
+      // Update gauge and mascota
+      charts.gauge.data.datasets[0].data = [avgCumplimiento, 100 - avgCumplimiento];
+      charts.gauge.update();
+
+      // Update mascota image based on compliance
+      const mascotaImg = document.getElementById('mascotaStatus');
+      if (avgCumplimiento <= 40) {
+        mascotaImg.src = "mascota_rojo.png";
+      } else if (avgCumplimiento <= 75) {
+        mascotaImg.src = "mascota_amarillo.png";
+      } else {
+        mascotaImg.src = "mascota_verde.png";
+      }
+
+      // Prepare data for trend charts safely
+      const labels = data.map(d => d.date);
+      
+      charts.rotacion.data.labels = labels;
+      charts.rotacion.data.datasets[0].data = data.map(d => parseFloat(d.staff?.rotacion || 0));
+      charts.rotacion.update();
+
+      charts.quejas.data.labels = labels;
+      charts.quejas.data.datasets[0].data = data.map(d => parseInt(d.metrics?.quejas || 0));
+      charts.quejas.update();
+
+      charts.cumplimiento.data.labels = labels;
+      charts.cumplimiento.data.datasets[0].data = data.map(d => parseFloat(d.metrics?.tasaCumplimiento || 0));
+      charts.cumplimiento.update();
+
+      charts.incidencias.data.labels = labels;
+      charts.incidencias.data.datasets[0].data = data.map(d => parseInt(d.metrics?.incidenciasCriticas || 0));
+      charts.incidencias.update();
+    }
+
+    // Función para poblar el selector de proyectos
+    function populateProjectSelect() {
+      const select = document.getElementById('projectSelect');
+      select.innerHTML = '<option value="">Seleccionar Proyecto</option>';
+      ALL_PROJECTS.forEach(p => {
+        const opt = document.createElement('option');
+        opt.value = p;
+        opt.textContent = p;
+        select.appendChild(opt);
+      });
+    }
+
+    // Función para establecer fechas por defecto
+    function setDefaultDates() {
+      const end = new Date();
+      const start = new Date();
+      start.setDate(start.getDate() - 30);
+      
+      document.getElementById('startDate').value = start.toISOString().slice(0,10);
+      document.getElementById('endDate').value = end.toISOString().slice(0,10);
+    }
+
+    // Initialize on load
+    window.addEventListener('DOMContentLoaded', () => {
+      // Al cargar la página, muestra todos los proyectos automáticamente
+      showAllProjects();
+    });
+
+    // Añadir nueva función para mostrar todos los proyectos
+    const filtroMes = document.getElementById('filtro-mes');
+    filtroMes.addEventListener('change', () => showAllProjects());
+
+    async function showAllProjects() {
+      const container = document.getElementById('allProjectsView');
+      const singleView = document.getElementById('singleProjectView');
+      container.style.display = 'grid';
+      singleView.style.display = 'none';
+      container.innerHTML = '<div class="loading">Cargando proyectos...</div>';
+
+      const mesSel = filtroMes.value;
+      try {
+        const projects = await Promise.all(
+          (userProjects.length ? userProjects : []).map(async (projectId) => {
+            const docRef = doc(db, "project_scores", projectId);
+            const projectDoc = await getDoc(docRef);
+            if (projectDoc.exists() && projectDoc.data().scores?.length > 0) {
+              // Filtrar por mes si aplica
+              let scores = projectDoc.data().scores;
+              if (mesSel !== "todos") {
+                scores = scores.filter(s => {
+                  // s.date formato YYYY-MM-DD
+                  return (s.date || "").slice(5,7) === mesSel;
+                });
+              }
+              if (scores.length === 0) return null;
+              const lastScore = scores[0];
+              // Buscar última persona que hizo checklist (asume campo 'usuario' o 'user')
+              const lastUser = lastScore.usuario || lastScore.user || "N/A";
+              return {
+                id: projectId,
+                lastScore,
+                lastUser,
+                allScores: scores
+              };
+            }
+            return null;
+          })
+        );
+
+        container.innerHTML = projects
+          .filter(p => p !== null)
+          .map(project => `
+            <div class="project-card" style="cursor:pointer;" onclick="window.showCalificacionesModal('${project.id}')">
+              <div class="project-header">
+                <h3 class="project-title">${project.id}</h3>
+                <span class="project-score">${project.lastScore.total?.toFixed(1) ?? "0.0"}%</span>
+              </div>
+              <div class="project-metrics">
+                <div class="metric">
+                  <span class="label">Rotación</span>
+                  <span class="value">${project.lastScore.staff?.rotacion || 0}%</span>
+                </div>
+                <div class="metric">
+                  <span class="label">Quejas</span>
+                  <span class="value">${project.lastScore.metrics?.quejas || 0}</span>
+                </div>
+                <div class="metric">
+                  <span class="label">Última revisión</span>
+                  <span class="value">${new Date(project.lastScore.date).toLocaleDateString()}</span>
+                </div>
+                <div class="metric">
+                  <span class="label">Último usuario</span>
+                  <span class="value">${project.lastUser}</span>
+                </div>
+              </div>
+            </div>
+          `).join('');
+        // Guardar datos para el modal
+        window._allProjectsData = projects.filter(p => p !== null);
+      } catch (err) {
+        console.error("Error loading all projects:", err);
+        container.innerHTML = '<div class="error">Error al cargar los proyectos</div>';
+      }
+    }
+
+    // Modal de últimas calificaciones
+    window.showCalificacionesModal = function(projectId) {
+      const modal = document.getElementById('modal-calificaciones');
+      const titulo = document.getElementById('modal-proyecto-titulo');
+      const list = document.getElementById('modal-calificaciones-list');
+      const project = (window._allProjectsData || []).find(p => p.id === projectId);
+      if (!project) return;
+      titulo.textContent = project.id + " - Últimas calificaciones";
+      list.innerHTML = project.allScores.slice(0, 5).map(s => `
+        <div style="margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid #e0e3e8;">
+          <b>Fecha:</b> ${new Date(s.date).toLocaleDateString()}<br>
+          <b>Calificación:</b> ${s.total?.toFixed(1) ?? "0.0"}%<br>
+          <b>Usuario:</b> ${s.usuario || s.user || "N/A"}
+        </div>
+      `).join('');
+      modal.style.display = "flex";
+    };
+    // Make functions globally available
+    window.showAllProjects = showAllProjects;
+    window.selectProject = selectProject;
+  </script>
+</body>
+</html>
