@@ -10,6 +10,24 @@
     import { doc, getDoc } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
     import { db } from './js/firebase-config.js';
 
+    // Redirección por click en logo según usuario autenticado
+    document.addEventListener("DOMContentLoaded", () => {
+      const logo = document.getElementById("logo-accessone");
+      logo.onclick = () => {
+        // No hay auth aquí, solo intenta con localStorage/email si existe
+        const email = (window.localStorage?.userEmail || "").toLowerCase();
+        if (
+          email === "csalcala@accessone.com.mx" ||
+          email === "valonzo@accessone.com.mx" ||
+          email === "jfernandez@accessone.com.mx"
+        ) {
+          window.location.href = "login-admin.html";
+        } else {
+          window.location.href = "index.html";
+        }
+      };
+    });
+
     const COLORS = {
       primary: "#2E0060",
       secondary: "#FFD400",
@@ -54,7 +72,9 @@
         return;
       }
       proyectos = docSnap.data().proyectos || {};
-      proyectosArray = Object.entries(proyectos).map(([nombre, datos]) => ({ nombre, ...datos }));
+      proyectosArray = Object.entries(proyectos)
+        .filter(([nombre]) => !nombre.toLowerCase().includes('corporativo') && !nombre.toLowerCase().includes('pachuca'))
+        .map(([nombre, datos]) => ({ nombre, ...datos }));
     }
 
     function calcularScore(p, mes) {
@@ -403,7 +423,7 @@
       transition: opacity 0.18s;
     }
     .score-label {
-      font-size: 1.18em;
+      font-size: 1em; /* más pequeño */
       font-weight: 900;
       margin-top: 2px;
       margin-bottom: 0;
@@ -487,7 +507,7 @@
       border: none;
       padding: 8px 4px;
       text-align: right;
-      font-size: 1em;
+      font-size: 0.77em; /* más pequeño */
       font-weight: 700;
     }
     .desglose-content th {
@@ -541,7 +561,7 @@
 <body>
   <div class="container">
     <div class="header-accessone">
-      <img src="logo.jpg" alt="AccessOne Logo">
+      <img src="logo.jpg" alt="AccessOne Logo" id="logo-accessone">
       <h1>Indicadores de Proyectos</h1>
     </div>
     <div class="controls">

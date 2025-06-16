@@ -186,7 +186,7 @@
 </head>
 <body>
   <div id="loginSection" class="login-card">
-    <img src="logo.jpg" alt="AccessOne Logo" class="logo-accessone"/>
+    <img src="logo.jpg" alt="AccessOne Logo" class="logo-accessone" id="logo-accessone"/>
     <div class="login-title">Administración</div>
     <div class="subtitle">Acceso exclusivo para administradores</div>
     <label for="email">Correo electrónico</label>
@@ -203,7 +203,7 @@
     <img src="logo.jpg" alt="AccessOne Logo" class="logo-accessone"/>
     <div class="login-title">Panel de Administración</div>
     <div class="subtitle" id="adminEmail"></div>
-    <a class="admin-btn" href="gestionUsuarios.html"><span>👤</span> Gestión de Usuarios</a>
+    <a id="btn-gestion-usuarios" class="admin-btn" href="gestionUsuarios.html" style="display:none;"><span>👤</span> Gestión de Usuarios</a>
     <a class="admin-btn" href="dashboard.html"><span>📊</span> Dashboard Calificaciones</a>
     <a class="admin-btn" href="dashboard-financiero.html"><span>💰</span> Dashboard Financiero</a>
     <a class="admin-btn" href="indicadores-proyectos.html"><span>📈</span> Indicadores de Proyectos</a>
@@ -218,8 +218,22 @@
   </div>
   <script type="module">
     import { auth, db } from "./js/firebase-config.js";
-    import { signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
+    import { signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
     import { doc, getDoc } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
+
+    // Redirección por click en logo según usuario
+    document.getElementById("logo-accessone").onclick = () => {
+      const email = document.getElementById("email").value.trim().toLowerCase();
+      if (
+        email === "csalcala@accessone.com.mx" ||
+        email === "valonzo@accessone.com.mx" ||
+        email === "jfernandez@accessone.com.mx"
+      ) {
+        window.location.href = "login-admin.html";
+      } else {
+        window.location.href = "index.html";
+      }
+    };
 
     const loginBtn = document.getElementById("loginBtn");
     const errorMsg = document.getElementById("errorMsg");
@@ -261,6 +275,34 @@
         errorMsg.textContent = msg;
         errorMsg.style.display = "block";
       }
+    });
+
+    // Mostrar panel admin si ya está logeado y es admin, y mostrar Gestión de Usuarios solo para csa...
+    onAuthStateChanged(auth, async user => {
+      if (user) {
+        try {
+          const snap = await getDoc(doc(db, "users", user.uid));
+          if (snap.exists() && (snap.data().admin || snap.data().isAdmin)) {
+            loginSection.style.display = "none";
+            adminPanel.style.display = "flex";
+            adminEmail.textContent = user.email;
+            // Mostrar Gestión de Usuarios solo para csa...
+            if (user.email.toLowerCase() === "csalcala@accessone.com.mx") {
+              document.getElementById("btn-gestion-usuarios").style.display = "flex";
+            } else {
+              document.getElementById("btn-gestion-usuarios").style.display = "none";
+            }
+            // Mostrar botón solo para csa...
+            if (user.email.toLowerCase() === "csalcala@accessone.com.mx") {
+              document.getElementById("btn-ingresar-info").style.display = "flex";
+            }
+            return;
+          }
+        } catch {}
+      }
+      // Si no está logeado o no es admin, mostrar login
+      loginSection.style.display = "flex";
+      adminPanel.style.display = "none";
     });
 
     // Cerrar sesión desde panel admin

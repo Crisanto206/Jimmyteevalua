@@ -112,7 +112,7 @@
       border: 1px solid var(--gray);
       padding: 10px 6px;
       vertical-align: top;
-      font-size: 0.92em;
+      font-size: 0.77em; /* más pequeño */
       text-align: right;
       min-width: 90px;
       max-width: 120px;
@@ -189,7 +189,7 @@
 <body>
   <div class="container-ie">
     <div class="ie-header">
-      <img src="logo.png" alt="AccessOne Logo">
+      <img src="logo.jpg" alt="AccessOne Logo" id="logo-accessone">
       <h1>Consulta Ingresos y Egresos de Estacionamientos</h1>
     </div>
     <div class="ie-actions" style="margin-bottom:0;">
@@ -250,6 +250,24 @@
     import { doc, getDoc } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
     import { db } from './js/firebase-config.js';
 
+    // Redirección por click en logo según usuario autenticado
+    document.addEventListener("DOMContentLoaded", () => {
+      const logo = document.getElementById("logo-accessone");
+      logo.onclick = () => {
+        // No hay auth aquí, solo intenta con localStorage/email si existe
+        const email = (window.localStorage?.userEmail || "").toLowerCase();
+        if (
+          email === "csalcala@accessone.com.mx" ||
+          email === "valonzo@accessone.com.mx" ||
+          email === "jfernandez@accessone.com.mx"
+        ) {
+          window.location.href = "login-admin.html";
+        } else {
+          window.location.href = "index.html";
+        }
+      };
+    });
+
     // Configuración de meses y rubros
     const MESES = {
       disponibles: ['enero', 'febrero', 'marzo', 'abril'],
@@ -278,6 +296,12 @@
 
     // Guarda todos los nombres de proyectos para autocompletar
     let ALL_PROJECT_NAMES = [];
+
+    // Agrega "corporativo" a la lista de excluidos
+    const EXCLUIDOS = [
+      'corporativo',
+      'pachuca'
+    ];
 
     function crearEncabezadoTabla(rubrosSel, mesesSel) {
       const thead = document.querySelector('#tabla-resultados thead');
@@ -308,7 +332,8 @@
       const datalist = document.getElementById('proyectos-list');
       if (datalist) {
         datalist.innerHTML = '';
-        ALL_PROJECT_NAMES = Object.keys(proyectos);
+        ALL_PROJECT_NAMES = Object.keys(proyectos)
+          .filter(nombre => !nombre.toLowerCase().includes('corporativo'));
         ALL_PROJECT_NAMES.forEach(nombre => {
           const opt = document.createElement('option');
           opt.value = nombre;
@@ -317,6 +342,7 @@
       }
 
       Object.entries(proyectos).forEach(([proyecto, datos]) => {
+        if (proyecto.toLowerCase().includes('corporativo') || proyecto.toLowerCase().includes('pachuca')) return;
         if (filtroTxt && !proyecto.toLowerCase().includes(filtroTxt)) return;
         const utilidad = { total: 0 };
         MESES.todos.forEach(mes => utilidad[mes] = 0);

@@ -164,7 +164,7 @@
 </head>
 <body>
   <div class="login-card">
-    <img src="logo.png" alt="AccessOne Logo" class="logo-accessone"/>
+    <img src="logo.jpg" alt="AccessOne Logo" class="logo-accessone" id="logo-accessone"/>
     <div class="login-title">AccessOne</div>
     <div class="subtitle">Acceso seguro a tu plataforma</div>
     <label for="email">Correo electrónico</label>
@@ -184,6 +184,20 @@
   <script type="module">
     import { auth } from "./js/firebase-config.js";
     import { signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
+
+    // Redirección por click en logo según usuario
+    document.getElementById("logo-accessone").onclick = () => {
+      const email = document.getElementById("email").value.trim().toLowerCase();
+      if (
+        email === "csalcala@accessone.com.mx" ||
+        email === "valonzo@accessone.com.mx" ||
+        email === "jfernandez@accessone.com.mx"
+      ) {
+        window.location.href = "login-admin.html";
+      } else {
+        window.location.href = "index.html";
+      }
+    };
 
     const btn = document.getElementById("btn");
     const err = document.getElementById("errorMsg");

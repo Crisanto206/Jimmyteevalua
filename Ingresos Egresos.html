@@ -76,7 +76,10 @@
       }
     });
 
+    // Agrega "corporativo" a la lista de excluidos
     const EXCLUIDOS = [
+      'corporativo',
+      'pachuca',
       'milenium','las torres','planigrupo oaxaca','comercializadora',
       'gia operaciones','corporativo area de mtto','macroplaza oaxaca',
       'paseo hipodromo','plaza lilas','sin unidad de negocio',
@@ -166,7 +169,8 @@
       const datalist = document.getElementById('proyectos-list');
       if (datalist) {
         datalist.innerHTML = '';
-        ALL_PROJECT_NAMES = Object.keys(proyectos);
+        ALL_PROJECT_NAMES = Object.keys(proyectos)
+          .filter(nombre => !nombre.toLowerCase().includes('corporativo'));
         ALL_PROJECT_NAMES.forEach(nombre => {
           const opt = document.createElement('option');
           opt.value = nombre;
@@ -175,6 +179,7 @@
       }
 
       Object.entries(proyectos).forEach(([proyecto, datos]) => {
+        if (proyecto.toLowerCase().includes('corporativo') || proyecto.toLowerCase().includes('pachuca')) return;
         if (filtroTxt && !proyecto.toLowerCase().includes(filtroTxt)) return;
         const utilidad = { total: 0 };
         MESES.todos.forEach(mes => utilidad[mes] = 0);
@@ -378,7 +383,7 @@
       border: 1px solid var(--gray);
       padding: 10px 6px;
       vertical-align: top;
-      font-size: 0.92em;
+      font-size: 0.77em; /* más pequeño */
       text-align: right;
       min-width: 90px;
       max-width: 120px;
@@ -465,7 +470,7 @@
 <body>
   <div class="container-ie">
     <div class="ie-header">
-      <img src="logo.png" alt="AccessOne Logo">
+      <img src="logo.jpg" alt="AccessOne Logo" id="logo-accessone">
       <h1>Ingresos y Egresos de Estacionamientos</h1>
     </div>
     <div class="ie-actions">
@@ -530,6 +535,24 @@
     import { doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
     import { db, auth } from './js/firebase-config.js';
     import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
+
+    // Redirección por click en logo según usuario autenticado
+    document.addEventListener("DOMContentLoaded", () => {
+      const logo = document.getElementById("logo-accessone");
+      logo.onclick = () => {
+        const user = auth.currentUser;
+        const email = (user?.email || "").toLowerCase();
+        if (
+          email === "csalcala@accessone.com.mx" ||
+          email === "valonzo@accessone.com.mx" ||
+          email === "jfernandez@accessone.com.mx"
+        ) {
+          window.location.href = "login-admin.html";
+        } else {
+          window.location.href = "index.html";
+        }
+      };
+    });
 
     // Configuración de meses - fácil de expandir
     const MESES = {
@@ -596,7 +619,10 @@
       }
     });
 
+    // Agrega "corporativo" a la lista de excluidos
     const EXCLUIDOS = [
+      'corporativo',
+      'pachuca',
       'milenium','las torres','planigrupo oaxaca','comercializadora',
       'gia operaciones','corporativo area de mtto','macroplaza oaxaca',
       'paseo hipodromo','plaza lilas','sin unidad de negocio',
@@ -686,7 +712,8 @@
       const datalist = document.getElementById('proyectos-list');
       if (datalist) {
         datalist.innerHTML = '';
-        ALL_PROJECT_NAMES = Object.keys(proyectos);
+        ALL_PROJECT_NAMES = Object.keys(proyectos)
+          .filter(nombre => !nombre.toLowerCase().includes('corporativo'));
         ALL_PROJECT_NAMES.forEach(nombre => {
           const opt = document.createElement('option');
           opt.value = nombre;
@@ -695,6 +722,7 @@
       }
 
       Object.entries(proyectos).forEach(([proyecto, datos]) => {
+        if (proyecto.toLowerCase().includes('corporativo') || proyecto.toLowerCase().includes('pachuca')) return;
         if (filtroTxt && !proyecto.toLowerCase().includes(filtroTxt)) return;
         const utilidad = { total: 0 };
         MESES.todos.forEach(mes => utilidad[mes] = 0);

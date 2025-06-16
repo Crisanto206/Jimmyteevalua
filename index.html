@@ -16,23 +16,20 @@
     let userIsAdmin = false;
     let userEmail = "";
 
-    function showUser(email) {
-      document.getElementById("user-email").textContent = email;
-    }
-
-    function showAdminButtons(isAdmin) {
-      document.querySelectorAll(".admin-only").forEach(btn => {
-        btn.style.display = isAdmin ? "" : "none";
-      });
-    }
-
-    function setChecklistLink(isAdmin) {
-      const btn = document.getElementById("btn-checklist");
-      btn.href = isAdmin ? "checklist.html?all=1" : "checklist.html";
-    }
-
-    // Cerrar sesión
+    // Redirección por click en logo según usuario autenticado
     document.addEventListener("DOMContentLoaded", () => {
+      document.getElementById("logo-accessone").onclick = () => {
+        const email = userEmail.toLowerCase();
+        if (
+          email === "csalcala@accessone.com.mx" ||
+          email === "valonzo@accessone.com.mx" ||
+          email === "jfernandez@accessone.com.mx"
+        ) {
+          window.location.href = "login-admin.html";
+        } else {
+          window.location.href = "index.html";
+        }
+      };
       document.getElementById("logout-btn").onclick = async () => {
         await signOut(auth);
         window.location.href = "login.html";
@@ -46,7 +43,8 @@
         return;
       }
       userEmail = user.email;
-      showUser(userEmail);
+      // Mostrar el correo real en la barra de usuario
+      document.getElementById("user-email").textContent = userEmail;
 
       // Busca si es admin (en users collection)
       let admin = false;
@@ -253,7 +251,7 @@
 <body>
   <div class="container">
     <div class="header-accessone">
-      <img src="logo.jpg" alt="AccessOne Logo">
+      <img src="logo.jpg" alt="AccessOne Logo" id="logo-accessone">
       <h1>Bienvenido a AccessOne</h1>
     </div>
     <div class="user-bar">

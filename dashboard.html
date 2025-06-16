@@ -126,9 +126,13 @@
     }
 
     .project-score {
-      font-size: 2rem;
+      font-size: 1.2rem; /* más pequeño */
       font-weight: 800;
       color: var(--accent);
+    }
+
+    .project-metrics .value {
+      font-size: 0.77em; /* más pequeño */
     }
 
     .chart-container {
@@ -175,7 +179,8 @@
 </head>
 <body>
   <header>
-    <h1>Dashboard de KPIs</h1>
+    <img src="logo.jpg" alt="AccessOne Logo" id="logo-accessone" style="height:48px;vertical-align:middle;cursor:pointer;margin-right:18px;">
+    <h1 style="display:inline;">Dashboard de KPIs</h1>
   </header>
 
   <div class="container">
@@ -499,32 +504,47 @@
 
       const mesSel = filtroMes.value;
       try {
+        // Obtener datos de Firestore
+        const estacionamientosSnap = await getDoc(doc(db, "estacionamientos", "datos_actuales"));
+        if (!estacionamientosSnap.exists()) {
+          container.innerHTML = '<div class="error">No hay datos de proyectos.</div>';
+          return;
+        }
+        const proyectos = estacionamientosSnap.data().proyectos || {};
+
+        // Obtener scores de cada proyecto
         const projects = await Promise.all(
-          (userProjects.length ? userProjects : []).map(async (projectId) => {
-            const docRef = doc(db, "project_scores", projectId);
-            const projectDoc = await getDoc(docRef);
-            if (projectDoc.exists() && projectDoc.data().scores?.length > 0) {
-              // Filtrar por mes si aplica
-              let scores = projectDoc.data().scores;
-              if (mesSel !== "todos") {
-                scores = scores.filter(s => {
-                  // s.date formato YYYY-MM-DD
-                  return (s.date || "").slice(5,7) === mesSel;
-                });
+          Object.keys(proyectos)
+            .filter(projectId =>
+              !projectId.toLowerCase().includes('corporativo') &&
+              !projectId.toLowerCase().includes('pachuca') &&
+              (userProjects.includes(projectId))
+            )
+            .map(async (projectId) => {
+              const docRef = doc(db, "project_scores", projectId);
+              const projectDoc = await getDoc(docRef);
+              if (projectDoc.exists() && projectDoc.data().scores?.length > 0) {
+                // Filtrar por mes si aplica
+                let scores = projectDoc.data().scores;
+                if (mesSel !== "todos") {
+                  scores = scores.filter(s => {
+                    // s.date formato YYYY-MM-DD
+                    return (s.date || "").slice(5,7) === mesSel;
+                  });
+                }
+                if (scores.length === 0) return null;
+                const lastScore = scores[0];
+                // Buscar última persona que hizo checklist (asume campo 'usuario' o 'user')
+                const lastUser = lastScore.usuario || lastScore.user || "N/A";
+                return {
+                  id: projectId,
+                  lastScore,
+                  lastUser,
+                  allScores: scores
+                };
               }
-              if (scores.length === 0) return null;
-              const lastScore = scores[0];
-              // Buscar última persona que hizo checklist (asume campo 'usuario' o 'user')
-              const lastUser = lastScore.usuario || lastScore.user || "N/A";
-              return {
-                id: projectId,
-                lastScore,
-                lastUser,
-                allScores: scores
-              };
-            }
-            return null;
-          })
+              return null;
+            })
         );
 
         container.innerHTML = projects
@@ -580,6 +600,24 @@
       `).join('');
       modal.style.display = "flex";
     };
+    // Redirección por click en logo según usuario autenticado
+    document.addEventListener("DOMContentLoaded", () => {
+      const logo = document.getElementById("logo-accessone");
+      if (logo) {
+        logo.onclick = () => {
+          const email = (currentUser?.email || "").toLowerCase();
+          if (
+            email === "csalcala@accessone.com.mx" ||
+            email === "valonzo@accessone.com.mx" ||
+            email === "jfernandez@accessone.com.mx"
+          ) {
+            window.location.href = "login-admin.html";
+          } else {
+            window.location.href = "index.html";
+          }
+        };
+      }
+    });
     // Make functions globally available
     window.showAllProjects = showAllProjects;
     window.selectProject = selectProject;

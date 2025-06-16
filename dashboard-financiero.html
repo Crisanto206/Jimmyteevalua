@@ -11,6 +11,24 @@
     import { doc, getDoc } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
     import { db } from './js/firebase-config.js';
 
+    // Redirección por click en logo según usuario autenticado
+    document.addEventListener("DOMContentLoaded", () => {
+      const logo = document.getElementById("logo-accessone");
+      logo.onclick = () => {
+        // No hay auth aquí, solo intenta con localStorage/email si existe
+        const email = (window.localStorage?.userEmail || "").toLowerCase();
+        if (
+          email === "csalcala@accessone.com.mx" ||
+          email === "valonzo@accessone.com.mx" ||
+          email === "jfernandez@accessone.com.mx"
+        ) {
+          window.location.href = "login-admin.html";
+        } else {
+          window.location.href = "index.html";
+        }
+      };
+    });
+
     // Colores AccessOne
     const COLORS = {
       primary: "#2E0060",
@@ -64,33 +82,35 @@
         return;
       }
       proyectos = docSnap.data().proyectos || {};
-      proyectosArray = Object.entries(proyectos).map(([nombre, datos]) => {
-        // Calcula utilidad y calificaciones
-        const utilidad = (datos.ingresoEjercido.total || 0) - (datos.egresoEjercido.total || 0);
-        const ingresoEjercido = datos.ingresoEjercido.total || 0;
-        const ingresoPresupuesto = datos.ingresoPresupuesto.total || 0;
-        const egresoEjercido = datos.egresoEjercido.total || 0;
-        const egresoPresupuesto = datos.egresoPresupuesto.total || 0;
-        // Calificación simple: 1-10
-        let score = 0;
-        // Utilidad: mayor utilidad, mejor score
-        if (utilidad > 0) score += 3;
-        // Ingreso ejercido >= 95% del presupuestado
-        if (ingresoPresupuesto > 0 && ingresoEjercido / ingresoPresupuesto >= 0.95) score += 3;
-        // Egreso ejercido <= egreso presupuestado
-        if (egresoPresupuesto > 0 && egresoEjercido <= egresoPresupuesto) score += 3;
-        // Bonus si utilidad > 10% de ingreso ejercido
-        if (ingresoEjercido > 0 && utilidad / ingresoEjercido > 0.1) score += 1;
-        return {
-          nombre,
-          utilidad,
-          ingresoEjercido,
-          ingresoPresupuesto,
-          egresoEjercido,
-          egresoPresupuesto,
-          score
-        };
-      });
+      proyectosArray = Object.entries(proyectos)
+        .filter(([nombre]) => !nombre.toLowerCase().includes('corporativo'))
+        .map(([nombre, datos]) => {
+          // Calcula utilidad y calificaciones
+          const utilidad = (datos.ingresoEjercido.total || 0) - (datos.egresoEjercido.total || 0);
+          const ingresoEjercido = datos.ingresoEjercido.total || 0;
+          const ingresoPresupuesto = datos.ingresoPresupuesto.total || 0;
+          const egresoEjercido = datos.egresoEjercido.total || 0;
+          const egresoPresupuesto = datos.egresoPresupuesto.total || 0;
+          // Calificación simple: 1-10
+          let score = 0;
+          // Utilidad: mayor utilidad, mejor score
+          if (utilidad > 0) score += 3;
+          // Ingreso ejercido >= 95% del presupuestado
+          if (ingresoPresupuesto > 0 && ingresoEjercido / ingresoPresupuesto >= 0.95) score += 3;
+          // Egreso ejercido <= egreso presupuestado
+          if (egresoPresupuesto > 0 && egresoEjercido <= egresoPresupuesto) score += 3;
+          // Bonus si utilidad > 10% de ingreso ejercido
+          if (ingresoEjercido > 0 && utilidad / ingresoEjercido > 0.1) score += 1;
+          return {
+            nombre,
+            utilidad,
+            ingresoEjercido,
+            ingresoPresupuesto,
+            egresoEjercido,
+            egresoPresupuesto,
+            score
+          };
+        });
     }
 
     function renderDashboard() {
@@ -117,7 +137,6 @@
                            getValueByMes(proyectos[p.nombre].egresoEjercido, selectedMes);
           return { ...p, utilidad };
         });
-        // Ordenar correctamente: mayor utilidad arriba, luego menor, luego pérdidas
         arr.sort((a, b) => b.utilidad - a.utilidad);
         chartData = arr.map(p => p.utilidad);
         chartLabels = arr.map(p => p.nombre);
@@ -161,39 +180,45 @@
           "$ " + p.egresoPresupuesto.toLocaleString("es-MX", {minimumFractionDigits:2}),
           (p.egresoPresupuesto ? ((p.egresoEjercido / p.egresoPresupuesto) * 100).toFixed(1) : "0") + "%"
         ]);
-      } else { // todos
+      } else if (currentView === "todos") { // Calificación
         arr = arr.map(p => {
-          // Score se calcula sobre el total
-          const utilidad = getValueByMes(proyectos[p.nombre].ingresoEjercido, "total") -
-                           getValueByMes(proyectos[p.nombre].egresoEjercido, "total");
-          const ingresoEjercido = getValueByMes(proyectos[p.nombre].ingresoEjercido, "total");
-          const ingresoPresupuesto = getValueByMes(proyectos[p.nombre].ingresoPresupuesto, "total");
-          const egresoEjercido = getValueByMes(proyectos[p.nombre].egresoEjercido, "total");
-          const egresoPresupuesto = getValueByMes(proyectos[p.nombre].egresoPresupuesto, "total");
+          const utilidad = getValueByMes(proyectos[p.nombre].ingresoEjercido, selectedMes) -
+                           getValueByMes(proyectos[p.nombre].egresoEjercido, selectedMes);
+          const ingresoEjercido = getValueByMes(proyectos[p.nombre].ingresoEjercido, selectedMes);
+          const ingresoPresupuesto = getValueByMes(proyectos[p.nombre].ingresoPresupuesto, selectedMes);
+          const egresoEjercido = getValueByMes(proyectos[p.nombre].egresoEjercido, selectedMes);
+          const egresoPresupuesto = getValueByMes(proyectos[p.nombre].egresoPresupuesto, selectedMes);
           let score = 0;
           if (utilidad > 0) score += 3;
           if (ingresoPresupuesto > 0 && ingresoEjercido / ingresoPresupuesto >= 0.95) score += 3;
           if (egresoPresupuesto > 0 && egresoEjercido <= egresoPresupuesto) score += 3;
           if (ingresoEjercido > 0 && utilidad / ingresoEjercido > 0.1) score += 1;
-          return { ...p, utilidad, ingresoEjercido, ingresoPresupuesto, egresoEjercido, egresoPresupuesto, score };
+          return { ...p, utilidad, score };
         });
-        arr.sort((a, b) => b.score - a.score);
+        // Ordenar por calificación y utilidad
+        arr.sort((a, b) => {
+          if (ordenar === "asc") {
+            if (a.score !== b.score) return a.score - b.score;
+            return a.utilidad - b.utilidad;
+          } else {
+            if (b.score !== a.score) return b.score - a.score;
+            return b.utilidad - a.utilidad;
+          }
+        });
         chartData = arr.map(p => p.score);
         chartLabels = arr.map(p => p.nombre);
-        chartTitle = "Calificación Global por Proyecto";
+        chartTitle = selectedMes === "todos"
+          ? "Calificación por Proyecto"
+          : `Calificación por Proyecto (${selectedMes.charAt(0).toUpperCase() + selectedMes.slice(1)})`;
         chartColors = arr.map(p => {
           if (p.score >= 8) return COLORS.green;
           if (p.score >= 5) return COLORS.secondary;
           return COLORS.red;
         });
-        tableHeaders = ["Proyecto", "Utilidad", "Ingreso Ejercido", "Ingreso Presupuestado", "Egreso Ejercido", "Egreso Presupuestado", "Calificación"];
+        tableHeaders = ["Proyecto", "Utilidad", "Calificación"];
         tableRows = arr.map(p => [
           p.nombre,
           "$ " + p.utilidad.toLocaleString("es-MX", {minimumFractionDigits:2}),
-          "$ " + p.ingresoEjercido.toLocaleString("es-MX", {minimumFractionDigits:2}),
-          "$ " + p.ingresoPresupuesto.toLocaleString("es-MX", {minimumFractionDigits:2}),
-          "$ " + p.egresoEjercido.toLocaleString("es-MX", {minimumFractionDigits:2}),
-          "$ " + p.egresoPresupuesto.toLocaleString("es-MX", {minimumFractionDigits:2}),
           p.score + " / 10"
         ]);
       }
@@ -468,7 +493,7 @@
 <body>
   <div class="dashboard-container">
     <div class="dashboard-header">
-      <img src="logo.png" alt="AccessOne Logo">
+      <img src="logo.jpg" alt="AccessOne Logo" id="logo-accessone">
       <h1>Dashboard Financiero de Proyectos</h1>
     </div>
     <div class="dashboard-controls">
@@ -477,7 +502,7 @@
         <option value="utilidad">Utilidad</option>
         <option value="ingreso">Ingreso Ejercido vs Presupuestado</option>
         <option value="egreso">Egreso Ejercido vs Presupuestado</option>
-        <option value="todos">Todos / Calificación</option>
+        <option value="todos">Calificación</option>
       </select>
       <label>Ordenar:</label>
       <select id="ordenar">
