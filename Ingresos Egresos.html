@@ -11,6 +11,24 @@
     import { db, auth } from './js/firebase-config.js';
     import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
 
+    // Redirección por click en logo según usuario autenticado
+    document.addEventListener("DOMContentLoaded", () => {
+      const logo = document.getElementById("logo-accessone");
+      logo.onclick = () => {
+        const user = auth.currentUser;
+        const email = (user?.email || "").toLowerCase();
+        if (
+          email === "csalcala@accessone.com.mx" ||
+          email === "valonzo@accessone.com.mx" ||
+          email === "jfernandez@accessone.com.mx"
+        ) {
+          window.location.href = "login-admin.html";
+        } else {
+          window.location.href = "index.html";
+        }
+      };
+    });
+
     // Configuración de meses - fácil de expandir
     const MESES = {
       disponibles: ['enero', 'febrero', 'marzo', 'abril'],
@@ -50,7 +68,7 @@
         if (!datosOriginales) return;
         const rubrosSel = getRubrosSeleccionados();
         const mesesSel = getMesesSeleccionados();
-        crearEncabezadoTabla(rubrosSel, mesesSel);
+        crearEncabezadoTabla(rubrosSel, mesesSel, datosOriginales);
         renderTabla(datosOriginales, rubrosSel, mesesSel, filtroProyecto.value);
       });
       btnLimpiar.addEventListener('click', () => {
@@ -58,8 +76,8 @@
         filtroMes.value = 'todos';
         filtroProyecto.value = '';
         if (datosOriginales) {
-          crearEncabezadoTabla();
-          renderTabla(datosOriginales);
+          crearEncabezadoTabla(undefined, undefined, datosOriginales);
+          renderTabla(datosOriginales, undefined, undefined, '');
         }
       });
     });
@@ -127,11 +145,34 @@
       }
     }
 
-    // Corrige la función crearEncabezadoTabla para NO ocultar la primera celda de la fila de meses
-    function crearEncabezadoTabla(rubrosSel, mesesSel) {
+    // Detecta todos los meses presentes en los datos
+    function obtenerMesesDisponibles(proyectos) {
+      const mesesSet = new Set();
+      Object.values(proyectos).forEach(datos => {
+        ['ingresoEjercido', 'egresoEjercido', 'ingresoPresupuesto', 'egresoPresupuesto'].forEach(tipo => {
+          if (datos[tipo]) {
+            Object.keys(datos[tipo]).forEach(mes => {
+              if (mes !== 'total') mesesSet.add(mes);
+            });
+          }
+        });
+      });
+      // Ordena meses por el orden tradicional
+      const ordenMeses = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+      const meses = Array.from(mesesSet);
+      meses.sort((a, b) => ordenMeses.indexOf(a) - ordenMeses.indexOf(b));
+      return meses;
+    }
+
+    function crearEncabezadoTabla(rubrosSel, mesesSel, proyectos) {
       const thead = document.querySelector('#tabla-resultados thead');
       let rubros = rubrosSel || RUBROS.map(r => r.key);
-      let meses = mesesSel || MESES.disponibles.concat('total');
+      // Detecta meses automáticamente si no se pasan
+      let meses = mesesSel || (() => {
+        if (!proyectos) return MESES.disponibles.concat('total');
+        const mesesDetectados = obtenerMesesDisponibles(proyectos);
+        return mesesDetectados.concat('total');
+      })();
       let thMeses = meses.map(mes =>
         `<th>${mes === 'total' ? 'Total' : mes.charAt(0).toUpperCase() + mes.slice(1)}</th>`
       ).join('');
@@ -162,7 +203,12 @@
       const cuerpo = document.querySelector('#tabla-resultados tbody');
       cuerpo.innerHTML = '';
       let rubros = rubrosSel || RUBROS.map(r => r.key);
-      let meses = mesesSel || MESES.disponibles.concat('total');
+      // Detecta meses automáticamente si no se pasan
+      let meses = mesesSel || (() => {
+        if (!proyectos) return MESES.disponibles.concat('total');
+        const mesesDetectados = obtenerMesesDisponibles(proyectos);
+        return mesesDetectados.concat('total');
+      })();
       let filtroTxt = (filtroProyectoTxt || '').trim().toLowerCase();
 
       // Actualiza datalist de autocompletado de proyectos
@@ -181,18 +227,21 @@
       Object.entries(proyectos).forEach(([proyecto, datos]) => {
         if (proyecto.toLowerCase().includes('corporativo') || proyecto.toLowerCase().includes('pachuca')) return;
         if (filtroTxt && !proyecto.toLowerCase().includes(filtroTxt)) return;
+        // Calcula utilidad para todos los meses detectados
         const utilidad = { total: 0 };
-        MESES.todos.forEach(mes => utilidad[mes] = 0);
-        MESES.disponibles.forEach(mes => {
-          utilidad[mes] = datos.ingresoEjercido[mes] - datos.egresoEjercido[mes];
-          utilidad.total += utilidad[mes];
+        meses.forEach(mes => utilidad[mes] = 0);
+        meses.forEach(mes => {
+          if (mes !== 'total') {
+            utilidad[mes] = (datos.ingresoEjercido?.[mes] || 0) - (datos.egresoEjercido?.[mes] || 0);
+            utilidad.total += utilidad[mes];
+          }
         });
 
         let tr = `<tr><td>${proyecto}</td>`;
         rubros.forEach(tipo => {
           let datos_tipo = tipo === 'utilidad' ? utilidad : datos[tipo];
           meses.forEach(mes => {
-            let val = datos_tipo[mes] !== undefined ? datos_tipo[mes] : '';
+            let val = datos_tipo?.[mes] !== undefined ? datos_tipo[mes] : '';
             tr += `<td>${typeof val === 'number' ? ('$ ' + val.toLocaleString('es-MX',{minimumFractionDigits:2, maximumFractionDigits:2})) : ''}</td>`;
           });
         });
@@ -223,6 +272,11 @@
         const firstSheet = workbook.SheetNames[0];
         const rows = XLSX.utils.sheet_to_json(workbook.Sheets[firstSheet], { defval: '' });
 
+        // Detecta meses dinámicamente de las columnas del archivo
+        const mesesExcel = Object.keys(rows[0] || {}).filter(col =>
+          ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'].includes(col.toLowerCase())
+        );
+
         const proyectos = {};
         rows.forEach(row => {
           const tipo = (row['datos'] || '').toString().trim();
@@ -245,10 +299,14 @@
           if (EXCLUIDOS.some(ex => proyecto.toLowerCase().includes(ex))) return;
 
           if (!proyectos[proyecto]) {
-            proyectos[proyecto] = inicializarDatosProyecto();
+            proyectos[proyecto] = {};
+            ['ingresoEjercido', 'egresoEjercido', 'ingresoPresupuesto', 'egresoPresupuesto'].forEach(tipo => {
+              proyectos[proyecto][tipo] = { total: 0 };
+              mesesExcel.forEach(mes => proyectos[proyecto][tipo][mes] = 0);
+            });
           }
           let target = proyectos[proyecto][tipoDato];
-          MESES.disponibles.forEach(mes => {
+          mesesExcel.forEach(mes => {
             const valor = parseFloat(row[mes]) || 0;
             target[mes] += valor;
             target.total += valor; // Sumamos al total cada mes
@@ -260,8 +318,8 @@
         datosOriginales = proyectos;
         document.getElementById('btn-guardar').disabled = false;
 
-        crearEncabezadoTabla();
-        renderTabla(proyectos);
+        crearEncabezadoTabla(undefined, undefined, proyectos);
+        renderTabla(proyectos, undefined, undefined, '');
       };
       reader.readAsBinaryString(file);
     }
@@ -593,7 +651,7 @@
         if (!datosOriginales) return;
         const rubrosSel = getRubrosSeleccionados();
         const mesesSel = getMesesSeleccionados();
-        crearEncabezadoTabla(rubrosSel, mesesSel);
+        crearEncabezadoTabla(rubrosSel, mesesSel, datosOriginales);
         renderTabla(datosOriginales, rubrosSel, mesesSel, filtroProyecto.value);
       });
       btnLimpiar.addEventListener('click', () => {
@@ -601,8 +659,8 @@
         filtroMes.value = 'todos';
         filtroProyecto.value = '';
         if (datosOriginales) {
-          crearEncabezadoTabla();
-          renderTabla(datosOriginales);
+          crearEncabezadoTabla(undefined, undefined, datosOriginales);
+          renderTabla(datosOriginales, undefined, undefined, '');
         }
       });
     });
@@ -670,11 +728,34 @@
       }
     }
 
-    // Corrige la función crearEncabezadoTabla para NO ocultar la primera celda de la fila de meses
-    function crearEncabezadoTabla(rubrosSel, mesesSel) {
+    // Detecta todos los meses presentes en los datos
+    function obtenerMesesDisponibles(proyectos) {
+      const mesesSet = new Set();
+      Object.values(proyectos).forEach(datos => {
+        ['ingresoEjercido', 'egresoEjercido', 'ingresoPresupuesto', 'egresoPresupuesto'].forEach(tipo => {
+          if (datos[tipo]) {
+            Object.keys(datos[tipo]).forEach(mes => {
+              if (mes !== 'total') mesesSet.add(mes);
+            });
+          }
+        });
+      });
+      // Ordena meses por el orden tradicional
+      const ordenMeses = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+      const meses = Array.from(mesesSet);
+      meses.sort((a, b) => ordenMeses.indexOf(a) - ordenMeses.indexOf(b));
+      return meses;
+    }
+
+    function crearEncabezadoTabla(rubrosSel, mesesSel, proyectos) {
       const thead = document.querySelector('#tabla-resultados thead');
       let rubros = rubrosSel || RUBROS.map(r => r.key);
-      let meses = mesesSel || MESES.disponibles.concat('total');
+      // Detecta meses automáticamente si no se pasan
+      let meses = mesesSel || (() => {
+        if (!proyectos) return MESES.disponibles.concat('total');
+        const mesesDetectados = obtenerMesesDisponibles(proyectos);
+        return mesesDetectados.concat('total');
+      })();
       let thMeses = meses.map(mes =>
         `<th>${mes === 'total' ? 'Total' : mes.charAt(0).toUpperCase() + mes.slice(1)}</th>`
       ).join('');
@@ -705,7 +786,12 @@
       const cuerpo = document.querySelector('#tabla-resultados tbody');
       cuerpo.innerHTML = '';
       let rubros = rubrosSel || RUBROS.map(r => r.key);
-      let meses = mesesSel || MESES.disponibles.concat('total');
+      // Detecta meses automáticamente si no se pasan
+      let meses = mesesSel || (() => {
+        if (!proyectos) return MESES.disponibles.concat('total');
+        const mesesDetectados = obtenerMesesDisponibles(proyectos);
+        return mesesDetectados.concat('total');
+      })();
       let filtroTxt = (filtroProyectoTxt || '').trim().toLowerCase();
 
       // Actualiza datalist de autocompletado de proyectos
@@ -724,18 +810,21 @@
       Object.entries(proyectos).forEach(([proyecto, datos]) => {
         if (proyecto.toLowerCase().includes('corporativo') || proyecto.toLowerCase().includes('pachuca')) return;
         if (filtroTxt && !proyecto.toLowerCase().includes(filtroTxt)) return;
+        // Calcula utilidad para todos los meses detectados
         const utilidad = { total: 0 };
-        MESES.todos.forEach(mes => utilidad[mes] = 0);
-        MESES.disponibles.forEach(mes => {
-          utilidad[mes] = datos.ingresoEjercido[mes] - datos.egresoEjercido[mes];
-          utilidad.total += utilidad[mes];
+        meses.forEach(mes => utilidad[mes] = 0);
+        meses.forEach(mes => {
+          if (mes !== 'total') {
+            utilidad[mes] = (datos.ingresoEjercido?.[mes] || 0) - (datos.egresoEjercido?.[mes] || 0);
+            utilidad.total += utilidad[mes];
+          }
         });
 
         let tr = `<tr><td>${proyecto}</td>`;
         rubros.forEach(tipo => {
           let datos_tipo = tipo === 'utilidad' ? utilidad : datos[tipo];
           meses.forEach(mes => {
-            let val = datos_tipo[mes] !== undefined ? datos_tipo[mes] : '';
+            let val = datos_tipo?.[mes] !== undefined ? datos_tipo[mes] : '';
             tr += `<td>${typeof val === 'number' ? ('$ ' + val.toLocaleString('es-MX',{minimumFractionDigits:2, maximumFractionDigits:2})) : ''}</td>`;
           });
         });
@@ -766,6 +855,11 @@
         const firstSheet = workbook.SheetNames[0];
         const rows = XLSX.utils.sheet_to_json(workbook.Sheets[firstSheet], { defval: '' });
 
+        // Detecta meses dinámicamente de las columnas del archivo
+        const mesesExcel = Object.keys(rows[0] || {}).filter(col =>
+          ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'].includes(col.toLowerCase())
+        );
+
         const proyectos = {};
         rows.forEach(row => {
           const tipo = (row['datos'] || '').toString().trim();
@@ -788,10 +882,14 @@
           if (EXCLUIDOS.some(ex => proyecto.toLowerCase().includes(ex))) return;
 
           if (!proyectos[proyecto]) {
-            proyectos[proyecto] = inicializarDatosProyecto();
+            proyectos[proyecto] = {};
+            ['ingresoEjercido', 'egresoEjercido', 'ingresoPresupuesto', 'egresoPresupuesto'].forEach(tipo => {
+              proyectos[proyecto][tipo] = { total: 0 };
+              mesesExcel.forEach(mes => proyectos[proyecto][tipo][mes] = 0);
+            });
           }
           let target = proyectos[proyecto][tipoDato];
-          MESES.disponibles.forEach(mes => {
+          mesesExcel.forEach(mes => {
             const valor = parseFloat(row[mes]) || 0;
             target[mes] += valor;
             target.total += valor; // Sumamos al total cada mes
@@ -803,8 +901,8 @@
         datosOriginales = proyectos;
         document.getElementById('btn-guardar').disabled = false;
 
-        crearEncabezadoTabla();
-        renderTabla(proyectos);
+        crearEncabezadoTabla(undefined, undefined, proyectos);
+        renderTabla(proyectos, undefined, undefined, '');
       };
       reader.readAsBinaryString(file);
     }

@@ -303,10 +303,57 @@
       'pachuca'
     ];
 
-    function crearEncabezadoTabla(rubrosSel, mesesSel) {
+    // INCONGRUENCIAS Y CORRECCIONES:
+
+    // 1. El filtro de meses (select#filtro-mes) se llena estáticamente en el HTML, pero debe llenarse DINÁMICAMENTE con los meses detectados en los datos.
+    // 2. La función getMesesSeleccionados() retorna MESES.disponibles.concat('total') cuando el valor es 'todos', pero esto no refleja los meses realmente presentes en los datos.
+    // 3. Cuando se sube un archivo Excel, no se actualiza el filtro de meses dinámicamente.
+    // 4. El filtro de meses no se actualiza cuando se cargan datos de Firestore.
+    // 5. El evento 'change' del filtro de meses no actualiza la tabla si los meses cambian tras cargar datos nuevos.
+
+    // CORRECCIÓN: Llenar el filtro de meses dinámicamente y usar los meses detectados en todas las funciones.
+
+    // Detecta todos los meses presentes en los datos
+    function obtenerMesesDisponibles(proyectos) {
+      const mesesSet = new Set();
+      Object.values(proyectos).forEach(datos => {
+        ['ingresoEjercido', 'egresoEjercido', 'ingresoPresupuesto', 'egresoPresupuesto'].forEach(tipo => {
+          if (datos[tipo]) {
+            Object.keys(datos[tipo]).forEach(mes => {
+              if (mes !== 'total') mesesSet.add(mes);
+            });
+          }
+        });
+      });
+      const ordenMeses = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+      const meses = Array.from(mesesSet);
+      meses.sort((a, b) => ordenMeses.indexOf(a) - ordenMeses.indexOf(b));
+      return meses;
+    }
+
+    // Llenar el filtro de meses dinámicamente y mantener la selección
+    function actualizarFiltroMeses(proyectos, selected) {
+      const filtroMes = document.getElementById('filtro-mes');
+      const mesesDetectados = obtenerMesesDisponibles(proyectos);
+      let html = `<option value="todos"${selected === "todos" ? " selected" : ""}>Todos</option>`;
+      mesesDetectados.forEach(m => {
+        html += `<option value="${m}"${selected === m ? " selected" : ""}>${m.charAt(0).toUpperCase() + m.slice(1)}</option>`;
+      });
+      html += `<option value="total"${selected === "total" ? " selected" : ""}>Total</option>`;
+      filtroMes.innerHTML = html;
+    }
+
+    function crearEncabezadoTabla(rubrosSel, mesesSel, proyectos) {
       const thead = document.querySelector('#tabla-resultados thead');
       let rubros = rubrosSel || RUBROS.map(r => r.key);
-      let meses = mesesSel || MESES.disponibles.concat('total');
+      let meses = mesesSel;
+      if (!meses) {
+        if (!proyectos) meses = MESES.disponibles.concat('total');
+        else {
+          const mesesDetectados = obtenerMesesDisponibles(proyectos);
+          meses = mesesDetectados.concat('total');
+        }
+      }
       let thMeses = meses.map(mes =>
         `<th>${mes === 'total' ? 'Total' : mes.charAt(0).toUpperCase() + mes.slice(1)}</th>`
       ).join('');
@@ -325,7 +372,14 @@
       const cuerpo = document.querySelector('#tabla-resultados tbody');
       cuerpo.innerHTML = '';
       let rubros = rubrosSel || RUBROS.map(r => r.key);
-      let meses = mesesSel || MESES.disponibles.concat('total');
+      let meses = mesesSel;
+      if (!meses) {
+        if (!proyectos) meses = MESES.disponibles.concat('total');
+        else {
+          const mesesDetectados = obtenerMesesDisponibles(proyectos);
+          meses = mesesDetectados.concat('total');
+        }
+      }
       let filtroTxt = (filtroProyectoTxt || '').trim().toLowerCase();
 
       // Actualiza datalist de autocompletado de proyectos
@@ -345,17 +399,19 @@
         if (proyecto.toLowerCase().includes('corporativo') || proyecto.toLowerCase().includes('pachuca')) return;
         if (filtroTxt && !proyecto.toLowerCase().includes(filtroTxt)) return;
         const utilidad = { total: 0 };
-        MESES.todos.forEach(mes => utilidad[mes] = 0);
-        MESES.disponibles.forEach(mes => {
-          utilidad[mes] = datos.ingresoEjercido[mes] - datos.egresoEjercido[mes];
-          utilidad.total += utilidad[mes];
+        meses.forEach(mes => utilidad[mes] = 0);
+        meses.forEach(mes => {
+          if (mes !== 'total') {
+            utilidad[mes] = (datos.ingresoEjercido?.[mes] || 0) - (datos.egresoEjercido?.[mes] || 0);
+            utilidad.total += utilidad[mes];
+          }
         });
 
         let tr = `<tr><td>${proyecto}</td>`;
         rubros.forEach(tipo => {
           let datos_tipo = tipo === 'utilidad' ? utilidad : datos[tipo];
           meses.forEach(mes => {
-            let val = datos_tipo[mes] !== undefined ? datos_tipo[mes] : '';
+            let val = datos_tipo?.[mes] !== undefined ? datos_tipo[mes] : '';
             tr += `<td>${typeof val === 'number' ? ('$ ' + val.toLocaleString('es-MX',{minimumFractionDigits:2, maximumFractionDigits:2})) : ''}</td>`;
           });
         });
@@ -369,16 +425,29 @@
     }
     function getMesesSeleccionados() {
       const val = filtroMes.value;
-      if (val === 'todos') return MESES.disponibles.concat('total');
+      if (val === 'todos') {
+        if (!datosOriginales) return [];
+        const mesesDetectados = obtenerMesesDisponibles(datosOriginales);
+        return mesesDetectados.concat('total');
+      }
       if (val === 'total') return ['total'];
       return [val];
     }
+
+    // Evento para cambiar el filtro de mes y actualizar tabla
+    filtroMes.addEventListener('change', () => {
+      if (!datosOriginales) return;
+      const rubrosSel = getRubrosSeleccionados();
+      const mesesSel = getMesesSeleccionados();
+      crearEncabezadoTabla(rubrosSel, mesesSel, datosOriginales);
+      renderTabla(datosOriginales, rubrosSel, mesesSel, filtroProyecto.value);
+    });
 
     btnFiltrar.addEventListener('click', () => {
       if (!datosOriginales) return;
       const rubrosSel = getRubrosSeleccionados();
       const mesesSel = getMesesSeleccionados();
-      crearEncabezadoTabla(rubrosSel, mesesSel);
+      crearEncabezadoTabla(rubrosSel, mesesSel, datosOriginales);
       renderTabla(datosOriginales, rubrosSel, mesesSel, filtroProyecto.value);
     });
 
@@ -387,8 +456,10 @@
       filtroMes.value = 'todos';
       filtroProyecto.value = '';
       if (datosOriginales) {
-        crearEncabezadoTabla();
-        renderTabla(datosOriginales);
+        actualizarFiltroMeses(datosOriginales, "todos");
+        const mesesSel = getMesesSeleccionados();
+        crearEncabezadoTabla(undefined, mesesSel, datosOriginales);
+        renderTabla(datosOriginales, undefined, mesesSel, '');
       }
     });
 
@@ -401,11 +472,18 @@
       }
       const data = docSnap.data();
       datosOriginales = data.proyectos || {};
-      crearEncabezadoTabla();
-      renderTabla(datosOriginales);
+      actualizarFiltroMeses(datosOriginales, "todos");
+      const mesesSel = getMesesSeleccionados();
+      crearEncabezadoTabla(undefined, mesesSel, datosOriginales);
+      renderTabla(datosOriginales, undefined, mesesSel, '');
     }
 
     cargarDatosFirestore();
+
+    // Si tienes carga de archivo Excel, después de procesar los datos:
+    // actualizarFiltroMeses(proyectos, "todos");
+    // ...y luego crearEncabezadoTabla/renderTabla como arriba.
+
   </script>
 </body>
 </html>

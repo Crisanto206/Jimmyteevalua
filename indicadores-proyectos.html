@@ -45,15 +45,6 @@
     let chartInstances = {};
 
     document.addEventListener("DOMContentLoaded", async () => {
-      // Filtro de mes
-      const mesSelect = document.getElementById("filtro-mes");
-      mesSelect.innerHTML = `<option value="todos" selected>Todos</option>` +
-        MESES.map(m => `<option value="${m}">${m.charAt(0).toUpperCase() + m.slice(1)}</option>`).join('');
-      mesSelect.addEventListener("change", e => {
-        selectedMes = e.target.value;
-        renderCards();
-      });
-
       // Filtro de orden
       const ordenSelect = document.getElementById("filtro-orden");
       ordenSelect.addEventListener("change", e => {
@@ -62,8 +53,37 @@
       });
 
       await cargarDatos();
+      // Detecta meses dinámicamente
+      const mesesDetectados = obtenerMesesDisponibles(proyectos);
+      const mesSelect = document.getElementById("filtro-mes");
+      mesSelect.innerHTML = `<option value="todos" selected>Todos</option>` +
+        mesesDetectados.map(m => `<option value="${m}">${m.charAt(0).toUpperCase() + m.slice(1)}</option>`).join('');
+      selectedMes = "todos";
+      mesSelect.addEventListener("change", e => {
+        selectedMes = e.target.value;
+        renderCards();
+      });
       renderCards();
     });
+
+    // Detecta todos los meses presentes en los datos
+    function obtenerMesesDisponibles(proyectos) {
+      const mesesSet = new Set();
+      Object.values(proyectos).forEach(datos => {
+        ['ingresoEjercido', 'egresoEjercido', 'ingresoPresupuesto', 'egresoPresupuesto'].forEach(tipo => {
+          if (datos[tipo]) {
+            Object.keys(datos[tipo]).forEach(mes => {
+              if (mes !== 'total') mesesSet.add(mes);
+            });
+          }
+        });
+      });
+      // Ordena meses por el orden tradicional
+      const ordenMeses = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+      const meses = Array.from(mesesSet);
+      meses.sort((a, b) => ordenMeses.indexOf(a) - ordenMeses.indexOf(b));
+      return meses;
+    }
 
     async function cargarDatos() {
       const docSnap = await getDoc(doc(db, "estacionamientos", "datos_actuales"));

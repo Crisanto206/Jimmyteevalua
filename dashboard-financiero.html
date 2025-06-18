@@ -50,23 +50,31 @@
 
     // DOM Ready
     document.addEventListener("DOMContentLoaded", async () => {
-      // Agrega filtro de mes dinámicamente
+      // Agrega filtro de mes dinámicamente SOLO si no existe
       const controls = document.querySelector('.dashboard-controls');
-      const mesLabel = document.createElement('label');
-      mesLabel.textContent = "Mes:";
-      const mesSelect = document.createElement('select');
-      mesSelect.id = "filtro-mes";
-      mesSelect.innerHTML = `<option value="todos" selected>Todos</option>` +
-        MESES.map(m => `<option value="${m}">${m.charAt(0).toUpperCase() + m.slice(1)}</option>`).join('');
-      mesLabel.appendChild(mesSelect);
-      controls.insertBefore(mesLabel, controls.children[2]);
+      if (!document.getElementById('filtro-mes')) {
+        const mesLabel = document.createElement('label');
+        mesLabel.textContent = "Mes:";
+        const mesSelect = document.createElement('select');
+        mesSelect.id = "filtro-mes";
+        mesSelect.innerHTML = `<option value="todos" selected>Todos</option>` +
+          MESES.map(m => `<option value="${m}">${m.charAt(0).toUpperCase() + m.slice(1)}</option>`).join('');
+        mesLabel.appendChild(mesSelect);
+        controls.insertBefore(mesLabel, controls.children[2]);
+      }
 
+      await cargarDatos();
+      // Detecta meses dinámicamente
+      const mesesDetectados = obtenerMesesDisponibles(proyectos);
+      const mesSelect = document.getElementById('filtro-mes');
+      mesSelect.innerHTML = `<option value="todos" selected>Todos</option>` +
+        mesesDetectados.map(m => `<option value="${m}">${m.charAt(0).toUpperCase() + m.slice(1)}</option>`).join('') +
+        `<option value="total">Total</option>`;
+      selectedMes = "todos";
       mesSelect.addEventListener("change", e => {
         selectedMes = e.target.value;
         renderDashboard();
       });
-
-      await cargarDatos();
       renderDashboard();
       document.getElementById("selector-rubro").addEventListener("change", e => {
         currentView = e.target.value;
@@ -74,6 +82,25 @@
       });
       document.getElementById("ordenar").addEventListener("change", renderDashboard);
     });
+
+    // Detecta todos los meses presentes en los datos
+    function obtenerMesesDisponibles(proyectos) {
+      const mesesSet = new Set();
+      Object.values(proyectos).forEach(datos => {
+        ['ingresoEjercido', 'egresoEjercido', 'ingresoPresupuesto', 'egresoPresupuesto'].forEach(tipo => {
+          if (datos[tipo]) {
+            Object.keys(datos[tipo]).forEach(mes => {
+              if (mes !== 'total') mesesSet.add(mes);
+            });
+          }
+        });
+      });
+      // Ordena meses por el orden tradicional
+      const ordenMeses = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+      const meses = Array.from(mesesSet);
+      meses.sort((a, b) => ordenMeses.indexOf(a) - ordenMeses.indexOf(b));
+      return meses;
+    }
 
     async function cargarDatos() {
       const docSnap = await getDoc(doc(db, "estacionamientos", "datos_actuales"));
