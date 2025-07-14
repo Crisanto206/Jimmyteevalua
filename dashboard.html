@@ -175,8 +175,7 @@
 </head>
 <body>
   <header>
-    <img src="logo.jpg" alt="AccessOne Logo" id="logo-accessone" style="height:48px;vertical-align:middle;cursor:pointer;margin-right:18px;">
-    <h1 style="display:inline;">Dashboard de KPIs</h1>
+    <h1>Dashboard de KPIs</h1>
   </header>
 
   <div class="container">
@@ -581,24 +580,6 @@
       `).join('');
       modal.style.display = "flex";
     };
-    // Redirección por click en logo según usuario autenticado
-    document.addEventListener("DOMContentLoaded", () => {
-      const logo = document.getElementById("logo-accessone");
-      if (logo) {
-        logo.onclick = () => {
-          const email = (currentUser?.email || "").toLowerCase();
-          if (
-            email === "csalcala@accessone.com.mx" ||
-            email === "valonzo@accessone.com.mx" ||
-            email === "jfernandez@accessone.com.mx"
-          ) {
-            window.location.href = "login-admin.html";
-          } else {
-            window.location.href = "index.html";
-          }
-        };
-      }
-    });
     // Make functions globally available
     window.showAllProjects = showAllProjects;
     window.selectProject = selectProject;

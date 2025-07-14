@@ -68,9 +68,16 @@
       min-height: 100vh;
       font-family: 'Montserrat', 'Segoe UI', Arial, sans-serif;
       color: #22223b;
+      /* Fondo animado institucional AccessOne */
       background: linear-gradient(135deg, #2E0060 0%, #00B2A9 100%);
       background-attachment: fixed;
       position: relative;
+      overflow-x: hidden;
+      animation: bgMove 18s linear infinite alternate;
+    }
+    @keyframes bgMove {
+      0% { background-position: 0 0, 0 0; }
+      100% { background-position: 100px 100px, 0 0; }
     }
     body::before {
       content: "";
@@ -83,10 +90,16 @@
       opacity: 0.18;
       z-index: 0;
       pointer-events: none;
+      animation: patternMove 24s linear infinite alternate;
+    }
+    @keyframes patternMove {
+      0% { background-position: 0 0, 0 0, 0 0; }
+      100% { background-position: 60px 60px, 40px 0, 0 40px; }
     }
     .container {
       max-width: 600px;
-      margin: 48px auto 0 auto;
+      min-height: 80vh;
+      margin: 0 auto;
       background: rgba(255,255,255,0.97);
       border-radius: 32px;
       box-shadow: 0 8px 32px 0 rgba(46,0,96,0.10), 0 1.5px 0 #FFD400;
@@ -96,6 +109,17 @@
       position: relative;
       overflow: visible;
       z-index: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: stretch;
+      animation: fadeInContainer 1.1s cubic-bezier(.4,0,.2,1);
+      margin-top: 5vh;
+      margin-bottom: 5vh;
+    }
+    @keyframes fadeInContainer {
+      from { opacity: 0; transform: translateY(60px) scale(0.98);}
+      to { opacity: 1; transform: none;}
     }
     .header-accessone {
       display: flex;
@@ -107,6 +131,11 @@
       background: linear-gradient(90deg, #2E0060 60%, #00B2A9 100%);
       box-shadow: 0 4px 24px #2E006022;
       position: relative;
+      animation: fadeInDown 1.1s cubic-bezier(.4,0,.2,1);
+    }
+    @keyframes fadeInDown {
+      from { opacity: 0; transform: translateY(-40px);}
+      to { opacity: 1; transform: none;}
     }
     .header-accessone img {
       width: 82px;
@@ -118,6 +147,11 @@
       margin-bottom: 12px;
       border: 3px solid #FFD400;
       transition: box-shadow 0.2s;
+      animation: popInLogo 1.2s cubic-bezier(.4,0,.2,1);
+    }
+    @keyframes popInLogo {
+      from { opacity: 0; transform: scale(0.7);}
+      to { opacity: 1; transform: scale(1);}
     }
     .header-accessone h1 {
       font-size: 2.2em;
@@ -130,6 +164,11 @@
       background: none;
       -webkit-background-clip: unset;
       -webkit-text-fill-color: unset;
+      animation: fadeInText 1.2s cubic-bezier(.4,0,.2,1);
+    }
+    @keyframes fadeInText {
+      from { opacity: 0; letter-spacing: 0;}
+      to { opacity: 1; letter-spacing: 2px;}
     }
     .user-bar {
       display: flex;
@@ -143,6 +182,11 @@
       color: #2E0060;
       box-shadow: 0 2px 8px #FFD40011;
       margin-bottom: 18px;
+      animation: fadeInBar 1.2s cubic-bezier(.4,0,.2,1);
+    }
+    @keyframes fadeInBar {
+      from { opacity: 0; transform: translateY(-20px);}
+      to { opacity: 1; transform: none;}
     }
     .user-bar .user-info {
       display: flex;
@@ -167,11 +211,17 @@
       transition: background 0.2s, color 0.2s, transform 0.1s;
       outline: none;
       letter-spacing: 1px;
+      animation: fadeInBtn 1.2s cubic-bezier(.4,0,.2,1);
+    }
+    @keyframes fadeInBtn {
+      from { opacity: 0; transform: scale(0.95);}
+      to { opacity: 1; transform: scale(1);}
     }
     .logout-btn:hover {
       background: linear-gradient(90deg, #2E0060 60%, #FFD400 100%);
       color: #FFD400;
-      transform: scale(1.04);
+      transform: scale(1.07) translateY(-2px);
+      box-shadow: 0 6px 24px #FFD40044;
     }
     .menu-buttons {
       display: flex;
@@ -183,6 +233,11 @@
       max-width: 400px;
       margin-left: auto;
       margin-right: auto;
+      animation: fadeInMenu 1.2s cubic-bezier(.4,0,.2,1);
+    }
+    @keyframes fadeInMenu {
+      from { opacity: 0; transform: translateY(40px);}
+      to { opacity: 1; transform: none;}
     }
     .menu-btn {
       display: flex;
@@ -197,27 +252,37 @@
       font-weight: 800;
       cursor: pointer;
       box-shadow: 0 2px 12px #FFD40022;
-      transition: background 0.2s, color 0.2s, border 0.2s, transform 0.1s;
+      transition: background 0.25s, color 0.2s, border 0.2s, transform 0.13s, box-shadow 0.2s;
       outline: none;
       text-decoration: none;
       justify-content: flex-start;
       min-height: 54px;
       letter-spacing: 1px;
-    }
-    .menu-btn:hover {
-      background: linear-gradient(90deg, #FFD400 60%, #00B2A9 100%);
-      color: #fff;
-      border-color: #2E0060;
-      transform: scale(1.03);
+      position: relative;
+      overflow: hidden;
+      animation: fadeInBtn 1.2s cubic-bezier(.4,0,.2,1);
     }
     .menu-btn .icon {
       font-size: 1.5em;
       margin-right: 8px;
       color: #00B2A9;
       transition: color 0.2s;
+      filter: drop-shadow(0 2px 8px #FFD40011);
+    }
+    .menu-btn:hover {
+      background: linear-gradient(90deg, #FFD400 60%, #00B2A9 100%);
+      color: #fff;
+      border-color: #2E0060;
+      transform: scale(1.045) translateY(-2px);
+      box-shadow: 0 10px 32px #FFD40033, 0 2px 0 #00B2A9;
+      z-index: 2;
     }
     .menu-btn:hover .icon {
       color: #FFD400;
+      filter: drop-shadow(0 2px 8px #2E006044);
+    }
+    .menu-btn:active {
+      transform: scale(0.98);
     }
     .admin-only {
       display: none;
@@ -233,18 +298,29 @@
       z-index: 2;
       position: relative;
       opacity: 0.85;
+      animation: fadeInFooter 1.2s cubic-bezier(.4,0,.2,1);
+    }
+    @keyframes fadeInFooter {
+      from { opacity: 0; }
+      to { opacity: 0.85; }
     }
     .footer-accessone span {
       color: #FFD400;
       font-weight: 700;
     }
     @media (max-width: 700px) {
-      .container { padding: 0; }
+      .container { padding: 0; min-height: 100vh; }
       .header-accessone { padding: 18px 0 10px 0; }
       .header-accessone img { width: 54px; height: 54px; }
       .header-accessone h1 { font-size: 1.2em; }
       .menu-buttons { width: 98%; max-width: 98vw; }
       .menu-btn { font-size: 1em; padding: 12px 10px; }
+      .user-bar { flex-direction: column; gap: 8px; padding: 10px 8px; }
+    }
+    @media (max-width: 480px) {
+      .container { border-radius: 0; }
+      .header-accessone { border-radius: 0; }
+      .menu-btn { padding: 10px 4px; font-size: 0.98em; }
     }
   </style>
 </head>

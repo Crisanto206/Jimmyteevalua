@@ -803,18 +803,15 @@ function assignManager() {
     selectedProject = val;
     managerInput.value = projectManagerMap[val] || '';
     projectInput.readOnly = true; // Bloquea edición después de seleccionar
-
- 
-
     loadLastScores();
     createSections();
     window.ctx = document.getElementById('gauge').getContext('2d');
-    
     updateTotal();
     document.getElementById('date').value = getTodayMx();
   } else {
     managerInput.value = '';
     selectedProject = '';
+    document.getElementById("lastScores").innerHTML = "";
   }
 }
 
@@ -893,7 +890,7 @@ function assignManager() {
             </tr>
           </thead>
           <tbody>
-            ${arr.map(s => `
+            ${arr.slice(0,12).map(s => `
               <tr>
                 <td>${(s.date||"").toString().slice(0,10)}</td>
                 <td>${s.user||""}</td>

@@ -81,6 +81,9 @@
         renderDashboard();
       });
       document.getElementById("ordenar").addEventListener("change", renderDashboard);
+      document.getElementById("btn-comparativo").addEventListener("click", () => {
+        window.location.href = "comparativo-corporativo.html";
+      });
     });
 
     // Detecta todos los meses presentes en los datos
@@ -536,6 +539,7 @@
         <option value="desc">Mayor a menor</option>
         <option value="asc">Menor a mayor</option>
       </select>
+      <button id="btn-comparativo" style="background: linear-gradient(90deg, #FFD400 60%, #2E0060 100%); color: #fff; font-weight: 800; border-radius: 10px; padding: 10px 24px; font-size: 1.1em; box-shadow: 0 2px 8px #FFD40033; border: none; cursor: pointer; transition: background 0.2s, color 0.2s; margin-left: 18px;">Ir a Comparativo vs 2024</button>
     </div>
     <div class="dashboard-main">
       <div class="dashboard-chart">

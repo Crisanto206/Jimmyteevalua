@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Ingresos y Egresos 2024</title>
+  <!-- Incluir SheetJS para leer archivos Excel -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <!-- Firebase imports -->
+  <script type="module">
+    import { doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
+    import { db, auth } from './js/firebase-config.js';
+    import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
+
+    // Redirección por click en logo según usuario autenticado
+    document.addEventListener("DOMContentLoaded", () => {
+      const logo = document.getElementById("logo-accessone");
+      logo.onclick = () => {
+        const user = auth.currentUser;
+        const email = (user?.email || "").toLowerCase();
+        if (
+          email === "csalcala@accessone.com.mx" ||
+          email === "valonzo@accessone.com.mx" ||
+          email === "jfernandez@accessone.com.mx"
+        ) {
+          window.location.href = "login-admin.html";
+        } else {
+          window.location.href = "index.html";
+        }
+      };
+    });
+
+    // Configuración de meses para todo 2024
+    const MESES = {
+      disponibles: [
+        'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto',
+        'septiembre', 'octubre', 'noviembre', 'diciembre'
+      ],
+      todos: [
+        'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto',
+        'septiembre', 'octubre', 'noviembre', 'diciembre'
+      ]
+    };
+
+    let datosActuales = null;
+    let datosOriginales = null;
+    let filtroRubro, filtroMes, filtroProyecto, btnFiltrar, btnLimpiar;
+    let RUBROS;
+
+    document.addEventListener('DOMContentLoaded', () => {
+      filtroRubro = document.getElementById('filtro-rubro');
+      filtroMes = document.getElementById('filtro-mes');
+      filtroProyecto = document.getElementById('filtro-proyecto');
+      btnFiltrar = document.getElementById('btn-filtrar');
+      btnLimpiar = document.getElementById('btn-limpiar');
+
+      RUBROS = [
+        { key: 'ingresoEjercido', label: 'Ingreso Ejercido' },
+        { key: 'egresoEjercido', label: 'Egreso Ejercido' },
+        { key: 'utilidad', label: 'Utilidad' },
+        { key: 'ingresoPresupuesto', label: 'Ingreso Presupuesto' },
+        { key: 'egresoPresupuesto', label: 'Egreso Presupuesto' }
+      ];
+
+      document.getElementById('input-excel').addEventListener('change', handleFile, false);
+      document.getElementById('btn-guardar').addEventListener('click', guardarDatos);
+      btnFiltrar.addEventListener('click', () => {
+        if (!datosOriginales) return;
+        const rubrosSel = getRubrosSeleccionados();
+        const mesesSel = getMesesSeleccionados();
+        crearEncabezadoTabla(rubrosSel, mesesSel, datosOriginales);
+        renderTabla(datosOriginales, rubrosSel, mesesSel, filtroProyecto.value);
+      });
+      btnLimpiar.addEventListener('click', () => {
+        filtroRubro.querySelectorAll('option').forEach(opt => opt.selected = true);
+        filtroMes.value = 'todos';
+        filtroProyecto.value = '';
+        if (datosOriginales) {
+          crearEncabezadoTabla(undefined, undefined, datosOriginales);
+          renderTabla(datosOriginales, undefined, undefined, '');
+        }
+      });
+    });
+
+    // Solo admin logueado puede ver la página
+    onAuthStateChanged(auth, async user => {
+      if (!user) {
+        window.location.href = "login-admin.html";
+        return;
+      }
+      const snap = await getDoc(doc(db, "users", user.uid));
+      if (!snap.exists() || !snap.data().isAdmin) {
+        window.location.href = "login-admin.html";
+      }
+    });
+
+    // Proyectos excluidos
+    const EXCLUIDOS = [
+      'corporativo', 'pachuca', 'milenium','las torres','planigrupo oaxaca','comercializadora',
+      'gia operaciones','corporativo area de mtto','macroplaza oaxaca',
+      'paseo hipodromo','plaza lilas','sin unidad de negocio',
+      'macro plaza oaxaca','mexicali','plaza las haciendas',
+      'paseo alcalde','totales','area de mtto'
+    ].map(s => s.toLowerCase());
+
+    function normalizaProyecto(str) {
+      if (!str) return '';
+      const nombre = str.replace(/^\d+\s*/, '').trim();
+      if (nombre.toLowerCase().includes('pirules')) {
+        return 'WALMART PIRULES';
+      }
+      return nombre;
+    }
+
+    async function guardarDatos() {
+      if (!datosActuales) {
+        alert('No hay datos para guardar');
+        return;
+      }
+      try {
+        const user = auth.currentUser;
+        if (!user) {
+          alert('Debes iniciar sesión como administrador para guardar.');
+          return;
+        }
+        const snap = await getDoc(doc(db, "users", user.uid));
+        if (!snap.exists() || !snap.data().isAdmin) {
+          alert('No tienes permisos de administrador para guardar.');
+          return;
+        }
+        // Guarda en base de datos con ID "datos_2024"
+        const docRef = doc(db, "estacionamientos", "datos_2024");
+        const datos = {
+          timestamp: new Date().toISOString(),
+          proyectos: datosActuales
+        };
+        await setDoc(docRef, datos);
+        console.log("Documento guardado con ID: datos_2024");
+        alert('Datos guardados correctamente en base de datos 2024');
+      } catch (error) {
+        console.error("Error guardando datos:", error);
+        alert(`Error al guardar: ${error.message}\n\nVerifica que tu usuario tenga permisos de escritura en Firestore.\nSi el problema persiste, consulta la configuración de reglas de seguridad en Firebase.`);
+      }
+    }
+
+    function obtenerMesesDisponibles(proyectos) {
+      const mesesSet = new Set();
+      Object.values(proyectos).forEach(datos => {
+        ['ingresoEjercido', 'egresoEjercido', 'ingresoPresupuesto', 'egresoPresupuesto'].forEach(tipo => {
+          if (datos[tipo]) {
+            Object.keys(datos[tipo]).forEach(mes => {
+              if (mes !== 'total') mesesSet.add(mes);
+            });
+          }
+        });
+      });
+      const ordenMeses = MESES.todos;
+      const meses = Array.from(mesesSet);
+      meses.sort((a, b) => ordenMeses.indexOf(a) - ordenMeses.indexOf(b));
+      return meses;
+    }
+
+    function crearEncabezadoTabla(rubrosSel, mesesSel, proyectos) {
+      const thead = document.querySelector('#tabla-resultados thead');
+      let rubros = rubrosSel || RUBROS.map(r => r.key);
+      let meses = mesesSel || (() => {
+        if (!proyectos) return MESES.disponibles.concat('total');
+        const mesesDetectados = obtenerMesesDisponibles(proyectos);
+        return mesesDetectados.concat('total');
+      })();
+      let thMeses = meses.map(mes =>
+        `<th>${mes === 'total' ? 'Total' : mes.charAt(0).toUpperCase() + mes.slice(1)}</th>`
+      ).join('');
+      thead.innerHTML = `
+        <tr>
+          <th>Proyecto</th>
+          ${rubros.map(r => `<th colspan="${meses.length}">${RUBROS.find(x=>x.key===r).label} (MXN)</th>`).join('')}
+        </tr>
+        <tr>
+          <th></th>
+          ${rubros.map(() => thMeses).join('')}
+        </tr>`;
+    }
+
+    function inicializarDatosProyecto() {
+      const datos = {};
+      ['ingresoEjercido', 'egresoEjercido', 'ingresoPresupuesto', 'egresoPresupuesto'].forEach(tipo => {
+        datos[tipo] = { total: 0 };
+        MESES.todos.forEach(mes => datos[tipo][mes] = 0);
+      });
+      return datos;
+    }
+
+    let ALL_PROJECT_NAMES = [];
+
+    function renderTabla(proyectos, rubrosSel, mesesSel, filtroProyectoTxt) {
+      const cuerpo = document.querySelector('#tabla-resultados tbody');
+      cuerpo.innerHTML = '';
+      let rubros = rubrosSel || RUBROS.map(r => r.key);
+      let meses = mesesSel || (() => {
+        if (!proyectos) return MESES.disponibles.concat('total');
+        const mesesDetectados = obtenerMesesDisponibles(proyectos);
+        return mesesDetectados.concat('total');
+      })();
+      let filtroTxt = (filtroProyectoTxt || '').trim().toLowerCase();
+
+      const datalist = document.getElementById('proyectos-list');
+      if (datalist) {
+        datalist.innerHTML = '';
+        ALL_PROJECT_NAMES = Object.keys(proyectos)
+          .filter(nombre => !nombre.toLowerCase().includes('corporativo'));
+        ALL_PROJECT_NAMES.forEach(nombre => {
+          const opt = document.createElement('option');
+          opt.value = nombre;
+          datalist.appendChild(opt);
+        });
+      }
+
+      Object.entries(proyectos).forEach(([proyecto, datos]) => {
+        if (proyecto.toLowerCase().includes('corporativo') || proyecto.toLowerCase().includes('pachuca')) return;
+        if (filtroTxt && !proyecto.toLowerCase().includes(filtroTxt)) return;
+        const utilidad = { total: 0 };
+        meses.forEach(mes => utilidad[mes] = 0);
+        meses.forEach(mes => {
+          if (mes !== 'total') {
+            utilidad[mes] = (datos.ingresoEjercido?.[mes] || 0) - (datos.egresoEjercido?.[mes] || 0);
+            utilidad.total += utilidad[mes];
+          }
+        });
+
+        let tr = `<tr><td>${proyecto}</td>`;
+        rubros.forEach(tipo => {
+          let datos_tipo = tipo === 'utilidad' ? utilidad : datos[tipo];
+          meses.forEach(mes => {
+            let val = datos_tipo?.[mes] !== undefined ? datos_tipo[mes] : '';
+            tr += `<td>${typeof val === 'number' ? ('$ ' + val.toLocaleString('es-MX',{minimumFractionDigits:2, maximumFractionDigits:2})) : ''}</td>`;
+          });
+        });
+        tr += '</tr>';
+        cuerpo.innerHTML += tr;
+      });
+    }
+
+    function getRubrosSeleccionados() {
+      return Array.from(filtroRubro.selectedOptions).map(opt => opt.value);
+    }
+    function getMesesSeleccionados() {
+      const val = filtroMes.value;
+      if (val === 'todos') return MESES.disponibles.concat('total');
+      if (val === 'total') return ['total'];
+      return [val];
+    }
+
+    function handleFile(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      crearEncabezadoTabla();
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        const data = evt.target.result;
+        const workbook = XLSX.read(data, { type: 'binary' });
+        const firstSheet = workbook.SheetNames[0];
+        const rows = XLSX.utils.sheet_to_json(workbook.Sheets[firstSheet], { defval: '' });
+        const mesesExcel = Object.keys(rows[0] || {}).filter(col =>
+          MESES.todos.includes(col.toLowerCase())
+        );
+        const proyectos = {};
+        rows.forEach(row => {
+          const tipo = (row['datos'] || '').toString().trim();
+          const t = tipo.toLowerCase();
+          let tipoDato = '';
+          if (t.includes('ingreso') && t.includes('ejercido')) {
+            tipoDato = 'ingresoEjercido';
+          } else if (t.includes('egreso') && t.includes('ejercido')) {
+            tipoDato = 'egresoEjercido';
+          } else if (t.includes('ingreso') && t.includes('presupuesto')) {
+            tipoDato = 'ingresoPresupuesto';
+          } else if (t.includes('egreso') && t.includes('presupuesto')) {
+            tipoDato = 'egresoPresupuesto';
+          } else {
+            return;
+          }
+          let proyecto = normalizaProyecto(row['nivel']);
+          if (!proyecto) return;
+          if (EXCLUIDOS.some(ex => proyecto.toLowerCase().includes(ex))) return;
+          if (!proyectos[proyecto]) {
+            proyectos[proyecto] = {};
+            ['ingresoEjercido', 'egresoEjercido', 'ingresoPresupuesto', 'egresoPresupuesto'].forEach(tipo => {
+              proyectos[proyecto][tipo] = { total: 0 };
+              mesesExcel.forEach(mes => proyectos[proyecto][tipo][mes] = 0);
+            });
+          }
+          let target = proyectos[proyecto][tipoDato];
+          mesesExcel.forEach(mes => {
+            const valor = parseFloat(row[mes]) || 0;
+            target[mes] += valor;
+            target.total += valor;
+          });
+        });
+        datosActuales = proyectos;
+        datosOriginales = proyectos;
+        document.getElementById('btn-guardar').disabled = false;
+        crearEncabezadoTabla(undefined, undefined, proyectos);
+        renderTabla(proyectos, undefined, undefined, '');
+      };
+      reader.readAsBinaryString(file);
+    }
+  </script>
+  <style>
+    /* ...existing styles from Ingresos Egresos.html... */
+  </style>
+</head>
+<body>
+  <div class="container-ie">
+    <div class="ie-header">
+      <img src="logo.jpg" alt="AccessOne Logo" id="logo-accessone">
+      <h1>Ingresos y Egresos de Estacionamientos 2024</h1>
+    </div>
+    <div class="ie-actions">
+      <input type="file" id="input-excel" accept=".xls,.xlsx" />
+      <button id="btn-guardar" disabled>Guardar en Base de Datos 2024</button>
+    </div>
+    <div class="ie-actions" style="margin-bottom:0;">
+      <label>
+        Rubros:
+        <select id="filtro-rubro" multiple size="5" style="min-width:170px;">
+          <option value="ingresoEjercido" selected>Ingreso Ejercido</option>
+          <option value="egresoEjercido" selected>Egreso Ejercido</option>
+          <option value="utilidad" selected>Utilidad</option>
+          <option value="ingresoPresupuesto" selected>Ingreso Presupuesto</option>
+          <option value="egresoPresupuesto" selected>Egreso Presupuesto</option>
+        </select>
+      </label>
+      <label>
+        Mes:
+        <select id="filtro-mes" style="min-width:110px;">
+          <option value="todos" selected>Todos</option>
+          <option value="enero">Enero</option>
+          <option value="febrero">Febrero</option>
+          <option value="marzo">Marzo</option>
+          <option value="abril">Abril</option>
+          <option value="mayo">Mayo</option>
+          <option value="junio">Junio</option>
+          <option value="julio">Julio</option>
+          <option value="agosto">Agosto</option>
+          <option value="septiembre">Septiembre</option>
+          <option value="octubre">Octubre</option>
+          <option value="noviembre">Noviembre</option>
+          <option value="diciembre">Diciembre</option>
+          <option value="total">Total</option>
+        </select>
+      </label>
+      <label>
+        Proyecto:
+        <input type="text" id="filtro-proyecto" placeholder="Todos" style="min-width:140px;" list="proyectos-list">
+        <datalist id="proyectos-list"></datalist>
+      </label>
+      <button id="btn-filtrar" type="button">Filtrar</button>
+      <button id="btn-limpiar" type="button">Limpiar</button>
+    </div>
+    <div class="ie-table-container">
+      <table id="tabla-resultados">
+        <thead>
+          <tr>
+            <th>Proyecto</th>
+            <th colspan="13">Ingreso Ejercido (MXN)</th>
+            <th colspan="13">Egreso Ejercido (MXN)</th>
+            <th colspan="13">Utilidad (MXN)</th>
+            <th colspan="13">Ingreso Presupuesto (MXN)</th>
+            <th colspan="13">Egreso Presupuesto (MXN)</th>
+          </tr>
+          <tr>
+            <th></th>
+            <th>Enero</th><th>Febrero</th><th>Marzo</th><th>Abril</th><th>Mayo</th><th>Junio</th><th>Julio</th><th>Agosto</th><th>Septiembre</th><th>Octubre</th><th>Noviembre</th><th>Diciembre</th><th>Total</th>
+            <th>Enero</th><th>Febrero</th><th>Marzo</th><th>Abril</th><th>Mayo</th><th>Junio</th><th>Julio</th><th>Agosto</th><th>Septiembre</th><th>Octubre</th><th>Noviembre</th><th>Diciembre</th><th>Total</th>
+            <th>Enero</th><th>Febrero</th><th>Marzo</th><th>Abril</th><th>Mayo</th><th>Junio</th><th>Julio</th><th>Agosto</th><th>Septiembre</th><th>Octubre</th><th>Noviembre</th><th>Diciembre</th><th>Total</th>
+            <th>Enero</th><th>Febrero</th><th>Marzo</th><th>Abril</th><th>Mayo</th><th>Junio</th><th>Julio</th><th>Agosto</th><th>Septiembre</th><th>Octubre</th><th>Noviembre</th><th>Diciembre</th><th>Total</th>
+            <th>Enero</th><th>Febrero</th><th>Marzo</th><th>Abril</th><th>Mayo</th><th>Junio</th><th>Julio</th><th>Agosto</th><th>Septiembre</th><th>Octubre</th><th>Noviembre</th><th>Diciembre</th><th>Total</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+  <script type="module">
+    // ...existing JS code from above...
+  </script>
+</body>
+</html>
