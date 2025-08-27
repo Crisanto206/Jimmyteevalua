@@ -152,10 +152,10 @@
   <script type="module">
     import { auth, db } from './js/firebase-config.js';
     import { onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js';
-    import { collection, addDoc, getDocs, serverTimestamp, query, where, limit, updateDoc, doc } from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js';
+    import { collection, addDoc, getDocs, getDoc, serverTimestamp, query, where, limit, updateDoc, doc } from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js';
 
     let currentUserEmail = '';
-    let allProjects = [];
+    let userProjects = [];
 
     document.getElementById('logo-accessone').onclick = () => {
       window.location.href = 'index.html';
@@ -165,20 +165,28 @@
       window.location.href = 'login.html';
     };
 
-    onAuthStateChanged(auth, user => {
+    onAuthStateChanged(auth, async user => {
       if (!user) {
         window.location.href = 'login.html';
         return;
       }
       document.getElementById('user-email').textContent = user.email;
       currentUserEmail = user.email;
-      cargarProyectos().then(cargarVacantes);
+
+      const snap = await getDoc(doc(db, 'users', user.uid));
+      userProjects = snap.exists() ? (snap.data().assignedProjects || []) : [];
+      buildProjectList();
+      cargarVacantes();
     });
 
     const form = document.getElementById('vacanteForm');
     form.addEventListener('submit', async e => {
       e.preventDefault();
       const proyecto = document.getElementById('proyecto').value;
+      if (!userProjects.includes(proyecto)) {
+        alert('Proyecto no permitido');
+        return;
+      }
       const num = Number(document.getElementById('vacantes').value);
       for (let i = 0; i < num; i++) {
         await addDoc(collection(db, 'vacantes'), {
@@ -192,17 +200,17 @@
       form.reset();
       cargarVacantes();
     });
-    async function cargarProyectos() {
-      const snap = await getDocs(collection(db, 'project_scores'));
+    function buildProjectList() {
       const datalist = document.getElementById('projectList');
       datalist.innerHTML = '';
-      allProjects = [];
-      snap.forEach(docSnap => {
-        allProjects.push(docSnap.id);
+      userProjects.forEach(p => {
         const opt = document.createElement('option');
-        opt.value = docSnap.id;
+        opt.value = p;
         datalist.appendChild(opt);
       });
+      if (userProjects.length === 1) {
+        document.getElementById('proyecto').value = userProjects[0];
+      }
     }
 
     async function cargarVacantes() {
@@ -215,7 +223,7 @@
       });
       const tbody = document.getElementById('tablaVacantes');
       tbody.innerHTML = '';
-      allProjects.forEach(proj => {
+      userProjects.forEach(proj => {
         const vacs = data[proj] || [];
         const row = document.createElement('tr');
         row.innerHTML = `<td>${proj}</td><td>${vacs.length}</td><td><button data-proyecto="${proj}" class="contratar-btn">Contratar</button></td>`;
