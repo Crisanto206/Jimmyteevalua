@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Base de Entrevistas</title>
+</head>
+<body>
+  <h1>Registro de Entrevistas</h1>
+  <form id="entrevistaForm">
+    <input type="text" id="nombre" placeholder="Nombre del candidato" required />
+    <input type="text" id="puesto" placeholder="Puesto solicitado" required />
+    <input type="text" id="ticket" placeholder="Número de ticket" required />
+    <label>Fecha de creación del ticket: <input type="date" id="fechaTicket" required /></label>
+    <select id="estatus">
+      <option value="Abierto">Abierto</option>
+      <option value="En proceso">En proceso</option>
+      <option value="Cerrado">Cerrado</option>
+    </select>
+    <input type="url" id="cv" placeholder="Enlace al CV" />
+    <input type="text" id="motivo" placeholder="Motivo por no ser viable" />
+    <button type="submit">Guardar</button>
+  </form>
+
+  <h2>Entrevistas registradas</h2>
+  <table border="1">
+    <thead>
+      <tr>
+        <th>Nombre del candidato</th>
+        <th>Puesto solicitado</th>
+        <th>Número de ticket</th>
+        <th>Fecha de creación</th>
+        <th>Antigüedad (días)</th>
+        <th>Estatus</th>
+        <th>CV</th>
+        <th>Motivo no viable</th>
+      </tr>
+    </thead>
+    <tbody id="tablaEntrevistas"></tbody>
+  </table>
+
+  <script type="module">
+    import { db } from "./js/firebase-config.js";
+    import { collection, addDoc, getDocs, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
+
+    const form = document.getElementById('entrevistaForm');
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const data = {
+        nombre: document.getElementById('nombre').value,
+        puesto: document.getElementById('puesto').value,
+        ticket: document.getElementById('ticket').value,
+        fechaTicket: document.getElementById('fechaTicket').value,
+        estatus: document.getElementById('estatus').value,
+        cv: document.getElementById('cv').value,
+        motivo: document.getElementById('motivo').value,
+        creado: serverTimestamp()
+      };
+      await addDoc(collection(db, 'entrevistas'), data);
+      form.reset();
+      cargarEntrevistas();
+    });
+
+    async function cargarEntrevistas() {
+      const snapshot = await getDocs(collection(db, 'entrevistas'));
+      const tbody = document.getElementById('tablaEntrevistas');
+      tbody.innerHTML = '';
+      snapshot.forEach(doc => {
+        const e = doc.data();
+        const antiguedad = Math.floor((Date.now() - new Date(e.fechaTicket)) / (1000 * 60 * 60 * 24));
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${e.nombre}</td>
+          <td>${e.puesto}</td>
+          <td>${e.ticket}</td>
+          <td>${e.fechaTicket}</td>
+          <td>${antiguedad}</td>
+          <td>${e.estatus}</td>
+          <td>${e.cv ? `<a href="${e.cv}" target="_blank">Ver CV</a>` : ''}</td>
+          <td>${e.motivo || ''}</td>
+        `;
+        tbody.appendChild(row);
+      });
+    }
+
+    cargarEntrevistas();
+  </script>
+</body>
+</html>
