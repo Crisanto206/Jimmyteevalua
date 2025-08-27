@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>KPI de Vacantes</title>
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    .header-accessone {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 38px 0 18px 0;
+      border-radius: 32px 32px 0 0;
+      background: linear-gradient(90deg, #2E0060 60%, #00B2A9 100%);
+      box-shadow: 0 4px 24px #2E006022;
+      position: relative;
+      animation: fadeInDown 1.1s cubic-bezier(.4,0,.2,1);
+    }
+    @keyframes fadeInDown {
+      from { opacity: 0; transform: translateY(-40px); }
+      to { opacity: 1; transform: none; }
+    }
+    .header-accessone img {
+      width: 82px;
+      height: 82px;
+      object-fit: contain;
+      border-radius: 50%;
+      background: #fff;
+      box-shadow: 0 2px 16px #FFD40033;
+      margin-bottom: 12px;
+      border: 3px solid #FFD400;
+      transition: box-shadow 0.2s;
+      animation: popInLogo 1.2s cubic-bezier(.4,0,.2,1);
+    }
+    @keyframes popInLogo {
+      from { opacity: 0; transform: scale(0.7); }
+      to { opacity: 1; transform: scale(1); }
+    }
+    .header-accessone h1 {
+      font-size: 2.2em;
+      color: #FFD400;
+      font-weight: 900;
+      letter-spacing: 2px;
+      margin: 0;
+      text-align: center;
+      text-shadow: 0 4px 16px #2E006022;
+      background: none;
+      -webkit-background-clip: unset;
+      -webkit-text-fill-color: unset;
+      animation: fadeInText 1.2s cubic-bezier(.4,0,.2,1);
+    }
+    @keyframes fadeInText {
+      from { opacity: 0; letter-spacing: 0; }
+      to { opacity: 1; letter-spacing: 2px; }
+    }
+    .user-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #fffbe7;
+      border-radius: 0 0 18px 18px;
+      padding: 12px 24px;
+      font-size: 1.08em;
+      font-weight: 700;
+      color: #2E0060;
+      box-shadow: 0 2px 8px #FFD40011;
+      margin-bottom: 18px;
+      animation: fadeInBar 1.2s cubic-bezier(.4,0,.2,1);
+    }
+    @keyframes fadeInBar {
+      from { opacity: 0; transform: translateY(-20px); }
+      to { opacity: 1; transform: none; }
+    }
+    .user-bar .user-info {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .user-bar .user-info span {
+      font-weight: 900;
+      color: #00B2A9;
+      font-size: 1.08em;
+    }
+    .logout-btn {
+      background: linear-gradient(90deg, #2E0060 60%, #00B2A9 100%);
+      color: #fff;
+      border: none;
+      border-radius: 18px;
+      padding: 8px 20px;
+      font-weight: bold;
+      cursor: pointer;
+      box-shadow: 0 2px 8px #2E006022;
+    }
+    .logout-btn:hover {
+      background: linear-gradient(90deg, #3a0077 60%, #FFD400 100%);
+      transform: scale(1.04);
+    }
+    .footer-accessone {
+      margin-top: 32px;
+      text-align: center;
+      font-size: 0.9em;
+      color: #fff;
+    }
+    .footer-accessone span {
+      color: #FFD400;
+      font-weight: 700;
+    }
+  </style>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+</head>
+<body>
+  <div class="container">
+    <div class="header-accessone">
+      <img src="logo.jpg" alt="AccessOne Logo" id="logo-accessone">
+      <h1>KPI de Vacantes</h1>
+    </div>
+    <div class="user-bar">
+      <div class="user-info"><span id="user-email">usuario@dominio.com</span></div>
+      <button id="logout-btn" class="logout-btn">Cerrar sesión</button>
+    </div>
+    <div id="kpi"></div>
+    <div class="footer-accessone">
+      &copy; <span>AccessOne</span> 2025. Todos los derechos reservados.
+    </div>
+  </div>
+
+  <script type="module">
+    import { auth, db } from './js/firebase-config.js';
+    import { onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js';
+    import { collection, getDocs, doc, getDoc } from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js';
+
+    document.getElementById('logo-accessone').onclick = () => {
+      window.location.href = 'index.html';
+    };
+    document.getElementById('logout-btn').onclick = async () => {
+      await signOut(auth);
+      window.location.href = 'login.html';
+    };
+
+    onAuthStateChanged(auth, async user => {
+      if (!user) {
+        window.location.href = 'login.html';
+        return;
+      }
+      document.getElementById('user-email').textContent = user.email;
+      const snap = await getDoc(doc(db, 'users', user.uid));
+      if (!snap.exists() || snap.data().admin !== true) {
+        window.location.href = 'index.html';
+        return;
+      }
+      calcularKPI();
+    });
+
+    async function calcularKPI() {
+      const entrevistasSnap = await getDocs(collection(db, 'entrevistas'));
+      let abiertos = 0, proceso = 0, cerrados = 0;
+      entrevistasSnap.forEach(doc => {
+        const estatus = doc.data().estatus;
+        if (estatus === 'Abierto') abiertos++;
+        else if (estatus === 'En proceso') proceso++;
+        else if (estatus === 'Cerrado') cerrados++;
+      });
+
+      const vacantesSnap = await getDocs(collection(db, 'vacantes'));
+      let totalVacantes = 0, cubiertas = 0, diasAcum = 0;
+      vacantesSnap.forEach(docSnap => {
+        totalVacantes++;
+        const v = docSnap.data();
+        if (v.fechaContratacion) {
+          cubiertas++;
+          const dias = (v.fechaContratacion.toDate() - v.creado.toDate()) / 86400000;
+          diasAcum += dias;
+        }
+      });
+
+      const sinCubrir = totalVacantes - cubiertas;
+      const promedio = cubiertas ? (diasAcum / cubiertas).toFixed(1) : 0;
+      const contenedor = document.getElementById('kpi');
+      contenedor.innerHTML = `
+        <p>Vacantes totales declaradas: <strong>${totalVacantes}</strong></p>
+        <p>Vacantes cubiertas: <strong>${cubiertas}</strong></p>
+        <p>Vacantes sin cubrir: <strong>${sinCubrir}</strong></p>
+        <p>Tickets abiertos: <strong>${abiertos}</strong></p>
+        <p>Tickets en proceso: <strong>${proceso}</strong></p>
+        <p>Tickets cerrados: <strong>${cerrados}</strong></p>
+        <p>Tiempo promedio de cobertura: <strong>${promedio} días</strong></p>
+      `;
+
+      if (sinCubrir > 10) {
+        const alerta = document.createElement('p');
+        alerta.style.color = 'red';
+        alerta.textContent = 'Alerta: hay muchas vacantes sin cubrir';
+        contenedor.appendChild(alerta);
+      }
+    }
+  </script>
+</body>
+</html>
+
