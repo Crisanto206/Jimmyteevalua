@@ -144,6 +144,18 @@
       </thead>
       <tbody id="tablaVacantes"></tbody>
     </table>
+
+    <h2>Vacantes agregadas</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Proyecto</th>
+          <th>ID Vacante</th>
+          <th>Creado</th>
+        </tr>
+      </thead>
+      <tbody id="detalleVacantes"></tbody>
+    </table>
     <div class="footer-accessone">
       &copy; <span>AccessOne</span> 2025. Todos los derechos reservados.
     </div>
@@ -152,10 +164,10 @@
   <script type="module">
     import { auth, db } from './js/firebase-config.js';
     import { onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js';
-    import { collection, addDoc, getDocs, serverTimestamp, query, where, limit, updateDoc, doc } from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js';
+    import { collection, addDoc, getDocs, getDoc, serverTimestamp, query, where, limit, updateDoc, doc, setDoc } from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js';
 
     let currentUserEmail = '';
-    let allProjects = [];
+    let userProjects = [];
 
     document.getElementById('logo-accessone').onclick = () => {
       window.location.href = 'index.html';
@@ -165,79 +177,102 @@
       window.location.href = 'login.html';
     };
 
-    onAuthStateChanged(auth, user => {
+    onAuthStateChanged(auth, async user => {
       if (!user) {
         window.location.href = 'login.html';
         return;
       }
       document.getElementById('user-email').textContent = user.email;
       currentUserEmail = user.email;
-      cargarProyectos().then(cargarVacantes);
+
+      const snap = await getDoc(doc(db, 'users', user.uid));
+      userProjects = snap.exists() ? (snap.data().assignedProjects || []) : [];
+      buildProjectList();
+      await cargarVacantes();
     });
 
     const form = document.getElementById('vacanteForm');
     form.addEventListener('submit', async e => {
       e.preventDefault();
       const proyecto = document.getElementById('proyecto').value;
+      if (!userProjects.includes(proyecto)) {
+        alert('Proyecto no permitido');
+        return;
+      }
       const num = Number(document.getElementById('vacantes').value);
       for (let i = 0; i < num; i++) {
-        await addDoc(collection(db, 'vacantes'), {
+        const vacData = {
           proyecto,
           creado: serverTimestamp(),
           creadoPor: currentUserEmail,
           fechaContratacion: null
-        });
+        };
+        const vacRef = doc(collection(db, 'vacantes'));
+        await setDoc(vacRef, vacData);
+        await setDoc(doc(db, 'project_scores', proyecto, 'vacantes', vacRef.id), vacData);
       }
       await actualizarVacantesProyecto(proyecto);
       form.reset();
-      cargarVacantes();
+      await cargarVacantes();
     });
-    async function cargarProyectos() {
-      const snap = await getDocs(collection(db, 'project_scores'));
+    function buildProjectList() {
       const datalist = document.getElementById('projectList');
       datalist.innerHTML = '';
-      allProjects = [];
-      snap.forEach(docSnap => {
-        allProjects.push(docSnap.id);
+      userProjects.forEach(p => {
         const opt = document.createElement('option');
-        opt.value = docSnap.id;
+        opt.value = p;
         datalist.appendChild(opt);
       });
+      if (userProjects.length === 1) {
+        document.getElementById('proyecto').value = userProjects[0];
+      }
     }
 
     async function cargarVacantes() {
-      const snapshot = await getDocs(query(collection(db, 'vacantes'), where('fechaContratacion', '==', null)));
-      const data = {};
-      snapshot.forEach(docSnap => {
-        const v = docSnap.data();
-        if (!data[v.proyecto]) data[v.proyecto] = [];
-        data[v.proyecto].push({ id: docSnap.id, ...v });
-      });
       const tbody = document.getElementById('tablaVacantes');
       tbody.innerHTML = '';
-      allProjects.forEach(proj => {
-        const vacs = data[proj] || [];
+      for (const proj of userProjects) {
+        const snap = await getDocs(query(collection(db, 'project_scores', proj, 'vacantes'), where('fechaContratacion', '==', null)));
         const row = document.createElement('tr');
-        row.innerHTML = `<td>${proj}</td><td>${vacs.length}</td><td><button data-proyecto="${proj}" class="contratar-btn">Contratar</button></td>`;
+        row.innerHTML = `<td>${proj}</td><td>${snap.size}</td><td><button data-proyecto="${proj}" class="contratar-btn">Contratar</button></td>`;
         tbody.appendChild(row);
-      });
+      }
       document.querySelectorAll('.contratar-btn').forEach(btn => {
         btn.addEventListener('click', () => contratarVacante(btn.dataset.proyecto));
       });
+      await listarVacantes();
+    }
+
+    async function listarVacantes() {
+      const tbody = document.getElementById('detalleVacantes');
+      tbody.innerHTML = '';
+      for (const proj of userProjects) {
+        const snap = await getDocs(query(collection(db, 'project_scores', proj, 'vacantes'), where('fechaContratacion', '==', null)));
+        snap.forEach(docSnap => {
+          const data = docSnap.data();
+          const fecha = data.creado ? data.creado.toDate().toLocaleString() : '';
+          const row = document.createElement('tr');
+          row.innerHTML = `<td>${proj}</td><td>${docSnap.id}</td><td>${fecha}</td>`;
+          tbody.appendChild(row);
+        });
+      }
     }
 
     async function contratarVacante(proyecto) {
       const snap = await getDocs(query(collection(db, 'vacantes'), where('proyecto', '==', proyecto), where('fechaContratacion', '==', null), limit(1)));
       if (!snap.empty) {
-        const docRef = doc(db, 'vacantes', snap.docs[0].id);
-        await updateDoc(docRef, { fechaContratacion: serverTimestamp(), contratadoPor: currentUserEmail });
+        const vacId = snap.docs[0].id;
+        const vacRef = doc(db, 'vacantes', vacId);
+        const data = { fechaContratacion: serverTimestamp(), contratadoPor: currentUserEmail };
+        await updateDoc(vacRef, data);
+        await updateDoc(doc(db, 'project_scores', proyecto, 'vacantes', vacId), data);
         await actualizarVacantesProyecto(proyecto);
-        cargarVacantes();
+        await cargarVacantes();
       }
     }
 
     async function actualizarVacantesProyecto(proyecto) {
-      const openSnap = await getDocs(query(collection(db, 'vacantes'), where('proyecto', '==', proyecto), where('fechaContratacion', '==', null)));
+      const openSnap = await getDocs(query(collection(db, 'project_scores', proyecto, 'vacantes'), where('fechaContratacion', '==', null)));
       await updateDoc(doc(db, 'project_scores', proyecto), { vacantes: openSnap.size });
     }
   </script>
