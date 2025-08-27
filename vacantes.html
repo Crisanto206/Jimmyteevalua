@@ -166,6 +166,7 @@
     import { onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js';
     import { collection, getDocs, getDoc, serverTimestamp, query, where, limit, updateDoc, doc, setDoc } from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js';
 
+    let currentUser = null;
     let currentUserEmail = '';
     let userProjects = [];
 
@@ -182,12 +183,26 @@
         window.location.href = 'login.html';
         return;
       }
+      currentUser = user;
       document.getElementById('user-email').textContent = user.email;
       currentUserEmail = user.email;
 
       const snap = await getDoc(doc(db, 'users', user.uid));
-      userProjects = snap.exists() ? (snap.data().assignedProjects || []) : [];
+      if (!snap.exists()) {
+        alert('No tienes permisos configurados. Contacta al administrador.');
+        window.location.href = 'login.html';
+        return;
+      }
+      userProjects = snap.data().assignedProjects || [];
+      if (!Array.isArray(userProjects) || userProjects.length === 0) {
+        alert('No tienes proyectos asignados. Contacta al administrador.');
+        window.location.href = 'login.html';
+        return;
+      }
       buildProjectList();
+      if (userProjects.length === 1) {
+        document.getElementById('proyecto').value = userProjects[0];
+      }
       await cargarVacantes();
     });
 
@@ -223,9 +238,6 @@
         opt.value = p;
         datalist.appendChild(opt);
       });
-      if (userProjects.length === 1) {
-        document.getElementById('proyecto').value = userProjects[0];
-      }
     }
 
     async function cargarVacantes() {
