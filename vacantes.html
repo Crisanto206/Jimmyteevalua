@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Vacantes por Proyecto</title>
+  <link rel="stylesheet" href="styles.css" />
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+</head>
+<body>
+  <div class="container">
+    <h1>Vacantes por Proyecto</h1>
+    <form id="vacanteForm">
+      <label>Proyecto
+        <input type="text" id="proyecto" required />
+      </label>
+      <label>Número de vacantes
+        <input type="number" id="vacantes" min="0" required />
+      </label>
+      <button type="submit">Guardar</button>
+    </form>
+
+    <h2>Proyectos</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Proyecto</th>
+          <th>Vacantes</th>
+          <th>Registrado por</th>
+        </tr>
+      </thead>
+      <tbody id="tablaVacantes"></tbody>
+    </table>
+  </div>
+
+  <script type="module">
+    import { auth, db } from './js/firebase-config.js';
+    import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js';
+    import { collection, addDoc, getDocs, serverTimestamp } from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js';
+
+    let currentUserEmail = '';
+    onAuthStateChanged(auth, user => {
+      if (!user) {
+        window.location.href = 'login.html';
+        return;
+      }
+      currentUserEmail = user.email;
+      cargarVacantes();
+    });
+
+    const form = document.getElementById('vacanteForm');
+    form.addEventListener('submit', async e => {
+      e.preventDefault();
+      await addDoc(collection(db, 'vacantes'), {
+        proyecto: document.getElementById('proyecto').value,
+        vacantes: Number(document.getElementById('vacantes').value),
+        creado: serverTimestamp(),
+        creadoPor: currentUserEmail
+      });
+      form.reset();
+      cargarVacantes();
+    });
+
+    async function cargarVacantes() {
+      const snapshot = await getDocs(collection(db, 'vacantes'));
+      const tbody = document.getElementById('tablaVacantes');
+      tbody.innerHTML = '';
+      snapshot.forEach(docSnap => {
+        const v = docSnap.data();
+        const row = document.createElement('tr');
+        row.innerHTML = `<td>${v.proyecto}</td><td>${v.vacantes}</td><td>${v.creadoPor || ''}</td>`;
+        tbody.appendChild(row);
+      });
+    }
+  </script>
+</body>
+</html>
+

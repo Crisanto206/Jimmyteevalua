@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>KPI de Vacantes</title>
+  <link rel="stylesheet" href="styles.css" />
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+</head>
+<body>
+  <div class="container">
+    <h1>KPI de Vacantes</h1>
+    <div id="kpi"></div>
+  </div>
+
+  <script type="module">
+    import { auth, db } from './js/firebase-config.js';
+    import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js';
+    import { collection, getDocs, doc, getDoc } from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js';
+
+    onAuthStateChanged(auth, async user => {
+      if (!user) {
+        window.location.href = 'login.html';
+        return;
+      }
+      const snap = await getDoc(doc(db, 'users', user.uid));
+      if (!snap.exists() || snap.data().admin !== true) {
+        window.location.href = 'index.html';
+        return;
+      }
+      calcularKPI();
+    });
+
+    async function calcularKPI() {
+      const entrevistasSnap = await getDocs(collection(db, 'entrevistas'));
+      let abiertos = 0, proceso = 0, cerrados = 0;
+      entrevistasSnap.forEach(doc => {
+        const estatus = doc.data().estatus;
+        if (estatus === 'Abierto') abiertos++;
+        else if (estatus === 'En proceso') proceso++;
+        else if (estatus === 'Cerrado') cerrados++;
+      });
+
+      const vacantesSnap = await getDocs(collection(db, 'vacantes'));
+      let totalVacantes = 0;
+      vacantesSnap.forEach(doc => {
+        totalVacantes += Number(doc.data().vacantes);
+      });
+
+      const sinCubrir = totalVacantes - cerrados;
+      const contenedor = document.getElementById('kpi');
+      contenedor.innerHTML = `
+        <p>Vacantes totales declaradas: <strong>${totalVacantes}</strong></p>
+        <p>Tickets abiertos: <strong>${abiertos}</strong></p>
+        <p>Tickets en proceso: <strong>${proceso}</strong></p>
+        <p>Tickets cerrados: <strong>${cerrados}</strong></p>
+        <p>Vacantes sin cubrir: <strong>${sinCubrir}</strong></p>
+      `;
+
+      if (sinCubrir > 10) {
+        const alerta = document.createElement('p');
+        alerta.style.color = 'red';
+        alerta.textContent = 'Alerta: hay muchas vacantes sin cubrir';
+        contenedor.appendChild(alerta);
+      }
+    }
+  </script>
+</body>
+</html>
+
