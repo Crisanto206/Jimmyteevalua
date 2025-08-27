@@ -164,7 +164,7 @@
   <script type="module">
     import { auth, db } from './js/firebase-config.js';
     import { onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js';
-    import { collection, addDoc, getDocs, getDoc, serverTimestamp, query, where, limit, updateDoc, doc, setDoc } from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js';
+    import { collection, getDocs, getDoc, serverTimestamp, query, where, limit, updateDoc, doc, setDoc } from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js';
 
     let currentUserEmail = '';
     let userProjects = [];
