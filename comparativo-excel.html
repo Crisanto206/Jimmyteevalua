@@ -1,0 +1,881 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Comparativo desde Excel</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+  <style>
+    /* Dashboard Modernizado: Glassmorphism, Gradientes, Animaciones, Responsive, Minimalista */
+    @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;900&display=swap');
+    :root {
+      --primary: #1B1F3B;
+      --secondary: #FFD400;
+      --accent: #00B2A9;
+      --success: #00C48C;
+      --danger: #FF4D4F;
+      --gray: #e0e3e8;
+      --white: #fff;
+      --bg-gradient: linear-gradient(135deg, #f4f6fa 0%, #e0e3e8 100%);
+      --glass: rgba(255,255,255,0.92);
+      --shadow-lg: 0 8px 32px rgba(27,31,59,0.18);
+      --shadow-md: 0 4px 16px rgba(27,31,59,0.12);
+      --shadow-sm: 0 2px 8px rgba(27,31,59,0.08);
+      --border-radius-lg: 24px;
+      --border-radius-md: 14px;
+      --border-radius-sm: 6px;
+      --transition: 0.18s cubic-bezier(.4,0,.2,1);
+      --font-main: 'Montserrat', 'Segoe UI', Arial, sans-serif;
+    }
+    body {
+      background: linear-gradient(120deg, #e0e3e8 0%, #f4f6fa 100%);
+      font-family: var(--font-main);
+      color: var(--primary);
+      margin: 0;
+      min-height: 100vh;
+      background-image: url('pattern.svg'), var(--bg-gradient);
+      background-repeat: repeat, no-repeat;
+      padding: 0;
+      letter-spacing: 0.01em;
+      overflow-x: hidden;
+    }
+    .comparativo-container {
+      width: 100vw;
+      max-width: 100vw;
+      margin: 0;
+      background: var(--glass);
+      border-radius: 0 0 var(--border-radius-lg) var(--border-radius-lg);
+      box-shadow: var(--shadow-lg);
+      padding: 0 2vw 2vw 2vw;
+      border: none;
+      backdrop-filter: blur(10px);
+      animation: fadeIn 0.8s;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(40px);}
+      to { opacity: 1; transform: none;}
+    }
+    .comparativo-header {
+      display: flex;
+      align-items: center;
+      background: linear-gradient(90deg, #1B1F3B 60%, #00B2A9 100%);
+      color: #fff;
+      padding: 28px 3vw;
+      border-radius: 0 0 var(--border-radius-lg) var(--border-radius-lg);
+      margin-bottom: 0;
+      border-bottom: 8px solid var(--secondary);
+      box-shadow: var(--shadow-md);
+      animation: slideDown 0.7s;
+      width: 100%;
+      min-width: 0;
+    }
+    @keyframes slideDown {
+      from { opacity: 0; transform: translateY(-40px);}
+      to { opacity: 1; transform: none;}
+    }
+    .comparativo-header img {
+      height: 54px;
+      margin-right: 28px;
+      border-radius: 12px;
+      box-shadow: var(--shadow-sm);
+      background: var(--white);
+      padding: 6px;
+    }
+    .comparativo-header h1 {
+      font-size: 2.1em;
+      letter-spacing: 1.5px;
+      margin: 0;
+      font-weight: 900;
+      color: var(--secondary);
+      text-shadow: 0 4px 16px rgba(27,31,59,0.10);
+      line-height: 1.1;
+      white-space: pre-line;
+      word-break: break-word;
+    }
+    .comparativo-controls {
+      display: flex;
+      gap: 18px;
+      align-items: center;
+      margin: 28px 0 18px 0;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      background: var(--glass);
+      border-radius: var(--border-radius-md);
+      box-shadow: var(--shadow-sm);
+      padding: 12px 2vw;
+      border: 1px solid var(--gray);
+      width: 100%;
+      min-width: 0;
+      box-sizing: border-box;
+    }
+    .comparativo-controls label {
+      font-weight: 700;
+      color: var(--primary);
+      margin-right: 6px;
+      font-size: 1em;
+      letter-spacing: 0.01em;
+    }
+    .comparativo-controls select, .comparativo-controls input {
+      font-size: 1em;
+      padding: 7px 12px;
+      border-radius: var(--border-radius-sm);
+      border: 2px solid var(--accent);
+      background: var(--white);
+      color: var(--primary);
+      outline: none;
+      font-weight: 600;
+      margin-right: 10px;
+      box-shadow: var(--shadow-sm);
+      transition: border var(--transition), box-shadow var(--transition);
+      cursor: pointer;
+      min-width: 90px;
+    }
+    .comparativo-controls select:focus, .comparativo-controls input:focus {
+      border: 2.5px solid var(--secondary);
+      box-shadow: 0 0 0 2px var(--accent);
+    }
+    .comparativo-main {
+      display: flex;
+      flex-wrap: nowrap;
+      gap: 24px;
+      margin-top: 18px;
+      align-items: flex-start;
+      justify-content: space-between;
+      width: 100%;
+      min-width: 0;
+      box-sizing: border-box;
+    }
+    .comparativo-chart {
+      flex: 1 1 0;
+      min-width: 0;
+      background: var(--glass);
+      border-radius: var(--border-radius-md);
+      box-shadow: var(--shadow-md);
+      padding: 18px 2vw 14px 2vw;
+      margin-bottom: 18px;
+      border: 1px solid var(--gray);
+      animation: fadeIn 0.8s;
+      overflow-x: auto;
+      max-width: 100%;
+      backdrop-filter: blur(6px);
+      transition: box-shadow var(--transition);
+      box-sizing: border-box;
+      width: 100%;
+    }
+    .comparativo-table {
+      flex: 1 1 0;
+      min-width: 0;
+      background: var(--glass);
+      border-radius: var(--border-radius-md);
+      box-shadow: var(--shadow-md);
+      padding: 18px 2vw 14px 2vw;
+      margin-bottom: 18px;
+      border: 1px solid var(--gray);
+      animation: fadeIn 0.8s;
+      overflow-x: auto !important;
+      max-width: 100%;
+      backdrop-filter: blur(6px);
+      transition: box-shadow var(--transition);
+      box-sizing: border-box;
+      width: 100%;
+    }
+    table {
+      border-collapse: separate;
+      border-spacing: 0;
+      width: max-content;
+      min-width: 700px;
+      margin: 0;
+      table-layout: auto;
+      background: var(--white);
+      border-radius: var(--border-radius-md);
+      box-shadow: var(--shadow-sm);
+      overflow: hidden;
+      font-size: 1em;
+      letter-spacing: 0.01em;
+    }
+    th, td {
+      border: 1px solid var(--gray);
+      padding: 10px 7px;
+      vertical-align: top;
+      font-size: 0.98em;
+      text-align: right;
+      min-width: 90px;
+      max-width: 180px;
+      word-break: break-word;
+      transition: background var(--transition), color var(--transition);
+    }
+    th {
+      background: linear-gradient(90deg, var(--primary) 80%, var(--accent) 100%);
+      color: #fff;
+      font-size: 1em;
+      border: none;
+      text-align: center;
+      font-weight: 900;
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      letter-spacing: 0.02em;
+      box-shadow: 0 2px 8px rgba(27,31,59,0.10);
+    }
+    td:first-child, th:first-child {
+      text-align: left;
+      font-weight: 700;
+      background: var(--bg-gradient);
+      color: var(--primary);
+      min-width: 160px;
+      max-width: 240px;
+      font-size: 1em;
+      letter-spacing: 0.01em;
+    }
+    tr:nth-child(even) td {
+      background: #f5f6fa;
+    }
+    tr:hover td {
+      background: var(--secondary);
+      color: var(--primary);
+      transition: background var(--transition), color var(--transition);
+    }
+    tr td:last-child {
+      font-weight: 900;
+      font-size: 1em;
+      border-left: 4px solid var(--accent);
+    }
+    .btn {
+      display: inline-block;
+      padding: 10px 22px;
+      font-size: 1em;
+      font-weight: 700;
+      color: var(--white);
+      background: linear-gradient(90deg, var(--primary) 70%, var(--accent) 100%);
+      border: none;
+      border-radius: var(--border-radius-sm);
+      box-shadow: var(--shadow-sm);
+      cursor: pointer;
+      transition: background var(--transition), box-shadow var(--transition);
+      margin-right: 8px;
+      letter-spacing: 0.01em;
+    }
+    .btn:hover, .btn:focus {
+      background: linear-gradient(90deg, var(--accent) 70%, var(--primary) 100%);
+      box-shadow: 0 4px 16px rgba(27,31,59,0.18);
+    }
+    /* Dashboard summary cards */
+    .dashboard-cards {
+      display: flex;
+      gap: 24px;
+      margin: 24px 0 0 0;
+      flex-wrap: wrap;
+      justify-content: flex-start;
+    }
+    .dashboard-card {
+      background: linear-gradient(120deg, #fff 60%, #e0e3e8 100%);
+      border-radius: var(--border-radius-md);
+      box-shadow: var(--shadow-md);
+      padding: 18px 32px 14px 24px;
+      min-width: 180px;
+      min-height: 80px;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      border-left: 6px solid var(--accent);
+      font-size: 1.1em;
+      font-weight: 700;
+      color: var(--primary);
+      transition: box-shadow var(--transition), border-color var(--transition);
+      margin-bottom: 8px;
+    }
+    .dashboard-card .card-label {
+      font-size: 0.95em;
+      color: var(--accent);
+      font-weight: 600;
+      margin-bottom: 2px;
+      letter-spacing: 0.01em;
+    }
+    .dashboard-card .card-value {
+      font-size: 1.35em;
+      font-weight: 900;
+      color: var(--primary);
+      margin-bottom: 0;
+      letter-spacing: 0.01em;
+    }
+    .dashboard-card.positive { border-left-color: var(--success);}
+    .dashboard-card.negative { border-left-color: var(--danger);}
+    .dashboard-card.neutral { border-left-color: var(--gray);}
+    /* Responsive */
+    @media (max-width: 1200px) {
+      .comparativo-main { flex-direction: column; gap: 14px; }
+      .comparativo-chart, .comparativo-table { min-width: 0; width: 100%; }
+      .comparativo-header { padding: 18px 2vw; }
+      .comparativo-controls { padding: 7px 2vw; }
+    }
+    @media (max-width: 900px) {
+      .comparativo-container { padding: 0; }
+      .comparativo-header { flex-direction: column; align-items: flex-start; padding: 8px 2vw; }
+      .comparativo-header img { height: 36px; margin-bottom: 8px; }
+      .comparativo-header h1 { font-size: 1.1em; }
+      .comparativo-controls { flex-direction: column; gap: 8px; padding: 7px 2vw; }
+      th, td { font-size: 0.93em; padding: 5px 2px; }
+      td:first-child, th:first-child { min-width: 80px; max-width: 120px; }
+      .comparativo-chart, .comparativo-table { padding: 7px 2vw; }
+    }
+    @media (max-width: 600px) {
+      .comparativo-header h1 { font-size: 0.95em; }
+      .comparativo-header img { height: 24px; }
+      .comparativo-container { padding: 0; }
+      .comparativo-main { gap: 4px; }
+      .comparativo-chart, .comparativo-table { padding: 2px 1vw; }
+      th, td { font-size: 0.90em; padding: 2px 1px; }
+      td:first-child, th:first-child { min-width: 40px; max-width: 60px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="comparativo-container">
+    <div class="comparativo-header" id="comparativo-header">
+      <img src="logo.jpg" alt="AccessOne Logo" id="logo-accessone">
+      <h1>Resultados Zona Norte</h1>
+    </div>
+    <!-- Dashboard summary cards -->
+    <div style="display:flex;align-items:center;gap:18px;">
+      <div id="dashboard-cards" class="dashboard-cards" style="display:none;"></div>
+      <button id="btn-quitar-tijuana" class="btn" style="display:none;background:linear-gradient(90deg,#FF4D4F 70%,#FFD400 100%);color:#fff;">Quitar Tijuana</button>
+    </div>
+    <div class="comparativo-controls" id="comparativo-controls">
+      <label>Archivo Excel:</label>
+      <input type="file" id="input-excel" accept=".xlsx,.xls" />
+      <label>Comparativo:</label>
+      <select id="tipo-comparativo">
+        <option value="ingreso_vs_presupuesto">Ingreso ejercido vs Ingreso presupuesto</option>
+        <option value="ingreso_vs_egreso">Ingreso ejercido vs Egreso ejercido</option>
+        <option value="egreso_vs_presupuesto">Egreso ejercido vs Egreso presupuesto</option>
+        <option value="utilidad">Utilidad</option>
+      </select>
+      <label>Mes:</label>
+      <select id="filtro-mes"><option value="todos">Todos</option></select>
+      <label>Ordenar:</label>
+      <select id="filtro-orden">
+        <option value="desc">Mayor a menor</option>
+        <option value="asc">Menor a mayor</option>
+      </select>
+      <label>Proyecto:</label>
+      <input type="text" id="buscador-proyecto" placeholder="Buscar proyecto..." style="min-width:180px;max-width:320px;height:2.5em;margin-right:12px;">
+      <select id="filtro-proyecto" size="1" style="min-width:180px;max-width:320px;height:2.5em;">
+        <option value="__todos__">Todos</option>
+      </select>
+      <button id="btn-ver-todos" class="btn" style="display:none;">Ver todos</button>
+      <label id="detalle-label" style="display:none;">Detalle:</label>
+      <select id="detalle-tipo" style="display:none;">
+        <option value="ingreso">Ingresos por meses</option>
+        <option value="egreso">Egresos por meses</option>
+        <option value="utilidad">Utilidad por meses</option>
+      </select>
+    </div>
+    <div class="comparativo-main" id="comparativo-main">
+      <div class="comparativo-chart">
+        <canvas id="chart" height="320"></canvas>
+      </div>
+      <div class="comparativo-table">
+        <table id="tabla-comparativo"></table>
+      </div>
+    </div>
+    <div id="detalle-proyecto"></div>
+  </div>
+  <script type="module">
+    let excelData = [];
+    let meses = [];
+    let proyectos = [];
+    let tipoComparativo = "ingreso_vs_presupuesto";
+    let selectedMes = "todos";
+    let filtroOrden = "desc";
+    let detalleTipo = "ingreso";
+    let modoDetalle = false;
+    let filtroSinTijuana = false;
+
+    document.getElementById("input-excel").addEventListener("change", handleExcel, false);
+    document.getElementById("tipo-comparativo").addEventListener("change", e => {
+      tipoComparativo = e.target.value;
+      renderComparativo();
+    });
+    document.getElementById("filtro-mes").addEventListener("change", e => {
+      selectedMes = e.target.value;
+      renderComparativo();
+    });
+    document.getElementById("filtro-orden").addEventListener("change", e => {
+      filtroOrden = e.target.value;
+      renderComparativo();
+    });
+    document.getElementById("detalle-tipo").addEventListener("change", e => {
+      detalleTipo = e.target.value;
+      renderDetalleProyecto(getProyectoSeleccionado());
+    });
+    document.getElementById("buscador-proyecto").addEventListener("input", function() {
+      const val = this.value.toLowerCase();
+      const proyectoSel = document.getElementById("filtro-proyecto");
+      Array.from(proyectoSel.options).forEach(opt => {
+        if (opt.value === "__todos__") {
+          opt.style.display = "";
+        } else {
+          opt.style.display = opt.value.toLowerCase().includes(val) ? "" : "none";
+        }
+      });
+    });
+    document.getElementById("filtro-proyecto").addEventListener("change", function() {
+      const val = this.value;
+      if (val === "__todos__") {
+        modoDetalle = false;
+        document.getElementById("detalle-proyecto").innerHTML = "";
+        document.getElementById("detalle-tipo").style.display = "none";
+        document.getElementById("detalle-label").style.display = "none";
+        document.getElementById("btn-ver-todos").style.display = "none";
+        // Mostrar encabezado, controles y main
+        document.getElementById("comparativo-header").style.display = "";
+        document.getElementById("comparativo-controls").style.display = "";
+        document.getElementById("comparativo-main").style.display = "flex";
+        renderComparativo();
+      } else {
+        modoDetalle = true;
+        document.getElementById("detalle-tipo").style.display = "";
+        document.getElementById("detalle-label").style.display = "";
+        document.getElementById("btn-ver-todos").style.display = "";
+        // Oculta encabezado y main, pero deja solo el select de proyecto y el botón "ver todos"
+        document.getElementById("comparativo-header").style.display = "none";
+        document.getElementById("comparativo-main").style.display = "none";
+        // Oculta todos los controles excepto buscador, select proyecto y botón "ver todos"
+        Array.from(document.getElementById("comparativo-controls").children).forEach(el => {
+          if (
+            el.id === "buscador-proyecto" ||
+            el.id === "filtro-proyecto" ||
+            el.id === "btn-ver-todos"
+          ) {
+            el.style.display = "";
+          } else {
+            el.style.display = "none";
+          }
+        });
+        renderDetalleProyecto(val, true);
+      }
+    });
+    document.getElementById("btn-ver-todos").addEventListener("click", function() {
+      document.getElementById("filtro-proyecto").value = "__todos__";
+      modoDetalle = false;
+      document.getElementById("detalle-proyecto").innerHTML = "";
+      document.getElementById("detalle-tipo").style.display = "none";
+      document.getElementById("detalle-label").style.display = "none";
+      document.getElementById("btn-ver-todos").style.display = "none";
+      // Restaura todos los controles
+      Array.from(document.getElementById("comparativo-controls").children).forEach(el => {
+        el.style.display = "";
+      });
+      document.getElementById("comparativo-header").style.display = "";
+      document.getElementById("comparativo-main").style.display = "flex";
+      renderComparativo();
+    });
+    document.getElementById("btn-quitar-tijuana").addEventListener("click", function() {
+      filtroSinTijuana = !filtroSinTijuana;
+      this.textContent = filtroSinTijuana ? "Mostrar Tijuana" : "Quitar Tijuana";
+      renderComparativo();
+    });
+
+    function handleExcel(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        const data = new Uint8Array(evt.target.result);
+        const workbook = XLSX.read(data, {type: 'array'});
+        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+        excelData = XLSX.utils.sheet_to_json(sheet, {header:1});
+        parseExcelData();
+      };
+      reader.readAsArrayBuffer(file);
+    }
+
+    function parseExcelData() {
+      // Asume que la primera fila es encabezado
+      const header = excelData[0].map(h => h.toString().toLowerCase().trim());
+      meses = [];
+      proyectos = [];
+      // Encuentra columnas de meses
+      header.forEach((h, idx) => {
+        if (["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"].includes(h)) {
+          meses.push({name: h, idx});
+        }
+      });
+      // Llena proyectos (mejor manejo de tipo)
+      proyectos = excelData.slice(1).map(row => ({
+        proyecto: (row[0]||"").trim(),
+        tipo: (row[1]||"").toLowerCase().replace(/[\s:]+/g, " ").trim(),
+        datos: row
+      }));
+      // Llena select de meses
+      const mesSel = document.getElementById("filtro-mes");
+      mesSel.innerHTML = `<option value="todos">Todos</option>` + meses.map(m => `<option value="${m.name}">${m.name.charAt(0).toUpperCase()+m.name.slice(1)}</option>`).join("");
+      // Llena select de proyectos (buscador y single-select)
+      const proyectosUnicos = [...new Set(proyectos.map(p => p.proyecto))];
+      const proyectoSel = document.getElementById("filtro-proyecto");
+      proyectoSel.innerHTML = `<option value="__todos__">Todos</option>` + proyectosUnicos.map(p => `<option value="${p}">${p}</option>`).join("");
+      proyectoSel.value = "__todos__";
+      modoDetalle = false;
+      document.getElementById("detalle-proyecto").innerHTML = "";
+      document.getElementById("detalle-tipo").style.display = "none";
+      document.getElementById("detalle-label").style.display = "none";
+      document.getElementById("btn-ver-todos").style.display = "none";
+      renderComparativo();
+    }
+
+    // Nuevo: obtener proyectos seleccionados (multi-select)
+    function getProyectosSeleccionados() {
+      const sel = document.getElementById("filtro-proyecto");
+      return Array.from(sel.selectedOptions).map(opt => opt.value);
+    }
+
+    function getProyectoSeleccionado() {
+      const sel = document.getElementById("filtro-proyecto");
+      return sel.value && sel.value !== "__todos__" ? sel.value : "";
+    }
+
+    // Render dashboard summary cards
+    function renderDashboardCards() {
+      if (!excelData.length || modoDetalle) {
+        document.getElementById("dashboard-cards").style.display = "none";
+        document.getElementById("dashboard-cards").innerHTML = "";
+        document.getElementById("btn-quitar-tijuana").style.display = "none";
+        return;
+      }
+      // Mostrar botón quitar tijuana solo en modo global
+      document.getElementById("btn-quitar-tijuana").style.display = "";
+      // Totales globales (aplica filtro si corresponde)
+      let proyectosFiltrados = filtroSinTijuana
+        ? proyectos.filter(p => !/tijuana/i.test(p.proyecto))
+        : proyectos;
+      const tipos = {
+        ingreso_ejercido: "ingresos ingreso ejercido",
+        ingreso_presupuesto: "ingresos presupuesto",
+        egreso_ejercido: "egresos egreso ejercido",
+        egreso_presupuesto: "egresos presupuesto"
+      };
+      let ingreso = getValor(proyectosFiltrados, tipos.ingreso_ejercido);
+      let ingresoPres = getValor(proyectosFiltrados, tipos.ingreso_presupuesto);
+      let egreso = getValor(proyectosFiltrados, tipos.egreso_ejercido);
+      let egresoPres = getValor(proyectosFiltrados, tipos.egreso_presupuesto);
+      let utilidad = ingreso - egreso;
+      let cards = [
+        {
+          label: "Ingreso ejercido total",
+          value: ingreso,
+          class: "positive"
+        },
+        {
+          label: "Ingreso presupuesto total",
+          value: ingresoPres,
+          class: "neutral"
+        },
+        {
+          label: "Egreso ejercido total",
+          value: egreso,
+          class: "negative"
+        },
+        {
+          label: "Egreso presupuesto total",
+          value: egresoPres,
+          class: "neutral"
+        },
+        {
+          label: "Utilidad ejercida",
+          value: utilidad,
+          class: utilidad >= 0 ? "positive" : "negative"
+        }
+      ];
+      document.getElementById("dashboard-cards").innerHTML = cards.map(card => `
+        <div class="dashboard-card ${card.class}">
+          <div class="card-label">${card.label}</div>
+          <div class="card-value">$ ${card.value.toLocaleString("es-MX",{minimumFractionDigits:2})}</div>
+        </div>
+      `).join("");
+      document.getElementById("dashboard-cards").style.display = "flex";
+    }
+
+    function renderComparativo() {
+      if (!excelData.length) return;
+      renderDashboardCards();
+      if (!modoDetalle) {
+        // Modo todos los proyectos
+        let proyectosFiltrados = filtroSinTijuana
+          ? proyectos.filter(p => !/tijuana/i.test(p.proyecto))
+          : proyectos;
+        const proyectosUnicos = [...new Set(proyectosFiltrados.map(p => p.proyecto))];
+        let labels = proyectosUnicos;
+        let dataA = [], dataB = [], diffs = [];
+        let colA = "", colB = "";
+        const tipos = {
+          ingreso_ejercido: "ingresos ingreso ejercido",
+          ingreso_presupuesto: "ingresos presupuesto",
+          egreso_ejercido: "egresos egreso ejercido",
+          egreso_presupuesto: "egresos presupuesto"
+        };
+        labels.forEach(proy => {
+          const filas = proyectosFiltrados.filter(p => p.proyecto === proy);
+          let ingreso = getValor(filas, tipos.ingreso_ejercido);
+          let ingresoPres = getValor(filas, tipos.ingreso_presupuesto);
+          let egreso = getValor(filas, tipos.egreso_ejercido);
+          let egresoPres = getValor(filas, tipos.egreso_presupuesto);
+          let utilidad = ingreso - egreso;
+          let a = 0, b = 0, diff = 0;
+          if (tipoComparativo === "ingreso_vs_presupuesto") {
+            a = ingreso; b = ingresoPres;
+            diff = a - b;
+            colA = "Ingreso ejercido"; colB = "Ingreso presupuesto";
+          } else if (tipoComparativo === "ingreso_vs_egreso") {
+            a = ingreso; b = egreso;
+            diff = a - b;
+            colA = "Ingreso ejercido"; colB = "Egreso ejercido";
+          } else if (tipoComparativo === "egreso_vs_presupuesto") {
+            a = egreso; b = egresoPres;
+            diff = b - a; // Presupuesto - Ejercido
+            colA = "Egreso ejercido"; colB = "Egreso presupuesto";
+          } else if (tipoComparativo === "utilidad") {
+            a = utilidad; b = 0;
+            diff = a;
+            colA = "Utilidad"; colB = "";
+          }
+          dataA.push(a);
+          dataB.push(b);
+          diffs.push(diff);
+        });
+        // Ordenar
+        let idxs = labels.map((_,i)=>i);
+        idxs.sort((i,j) => filtroOrden==="desc" ? diffs[j]-diffs[i] : diffs[i]-diffs[j]);
+        labels = idxs.map(i=>labels[i]);
+        dataA = idxs.map(i=>dataA[i]);
+        dataB = idxs.map(i=>dataB[i]);
+        diffs = idxs.map(i=>diffs[i]);
+        renderChart(labels, dataA, dataB, colA, colB);
+        renderTable(labels, dataA, dataB, diffs, colA, colB);
+      } else {
+        // Modo detalle de un proyecto
+        const proyecto = getProyectoSeleccionado();
+        if (proyecto) {
+          renderDetalleProyecto(proyecto, true);
+        }
+      }
+    }
+
+    function renderDetalleProyecto(proyecto, reemplazarPrincipal = false) {
+      if (!proyecto) {
+        document.getElementById("detalle-proyecto").innerHTML = "";
+        if (reemplazarPrincipal) renderComparativo();
+        return;
+      }
+      const filas = proyectos.filter(p => p.proyecto === proyecto);
+      const tipos = {
+        ingreso_ejercido: "ingresos ingreso ejercido",
+        ingreso_presupuesto: "ingresos presupuesto",
+        egreso_ejercido: "egresos egreso ejercido",
+        egreso_presupuesto: "egresos presupuesto"
+      };
+      let rows = [];
+      let chartLabel = "";
+      let chartData = [];
+      if (detalleTipo === "ingreso") {
+        chartLabel = "Ingreso ejercido";
+        chartData = meses.map(m => getValorMes(filas, tipos.ingreso_ejercido, m.name));
+        meses.forEach((m, idx) => {
+          rows.push(`<tr><td>${m.name.charAt(0).toUpperCase()+m.name.slice(1)}</td><td>$ ${chartData[idx].toLocaleString("es-MX",{minimumFractionDigits:2})}</td></tr>`);
+        });
+      } else if (detalleTipo === "egreso") {
+        chartLabel = "Egreso ejercido";
+        chartData = meses.map(m => getValorMes(filas, tipos.egreso_ejercido, m.name));
+        meses.forEach((m, idx) => {
+          rows.push(`<tr><td>${m.name.charAt(0).toUpperCase()+m.name.slice(1)}</td><td>$ ${chartData[idx].toLocaleString("es-MX",{minimumFractionDigits:2})}</td></tr>`);
+        });
+      } else if (detalleTipo === "utilidad") {
+        chartLabel = "Utilidad";
+        chartData = meses.map(m => {
+          let ingreso = getValorMes(filas, tipos.ingreso_ejercido, m.name);
+          let egreso = getValorMes(filas, tipos.egreso_ejercido, m.name);
+          return ingreso - egreso;
+        });
+        meses.forEach((m, idx) => {
+          rows.push(`<tr><td>${m.name.charAt(0).toUpperCase()+m.name.slice(1)}</td><td>$ ${chartData[idx].toLocaleString("es-MX",{minimumFractionDigits:2})}</td></tr>`);
+        });
+      }
+      // Si reemplazarPrincipal, muestra tabla y gráfica en el área principal
+      if (reemplazarPrincipal) {
+        // Reemplaza el área principal con el detalle, usando el mismo tamaño
+        document.getElementById("detalle-proyecto").innerHTML = `
+          <div class="comparativo-main" style="display:flex;">
+            <div class="comparativo-chart">
+              <canvas id="detalle-chart" height="320"></canvas>
+            </div>
+            <div class="comparativo-table">
+              <h3 style="margin-bottom:12px;">${chartLabel} mensual de "${proyecto}"</h3>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Mes</th>
+                    <th>${chartLabel}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${rows.join("")}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        `;
+      } else {
+        document.getElementById("detalle-proyecto").innerHTML = `
+          <div class="comparativo-table" style="margin-top:24px;">
+            <h3 style="margin-bottom:12px;">${chartLabel} mensual de "${proyecto}"</h3>
+            <table>
+              <thead>
+                <tr>
+                  <th>Mes</th>
+                  <th>${chartLabel}</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${rows.join("")}
+              </tbody>
+            </table>
+          </div>
+          <div class="comparativo-chart" style="margin-top:24px;">
+            <canvas id="detalle-chart" height="220"></canvas>
+          </div>
+        `;
+      }
+      const ctx = document.getElementById("detalle-chart").getContext("2d");
+      new Chart(ctx, {
+        type: "bar",
+        data: {
+          labels: meses.map(m=>m.name.charAt(0).toUpperCase()+m.name.slice(1)),
+          datasets: [
+            {
+              label: chartLabel,
+              data: chartData,
+              backgroundColor: "#FFD400"
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: { display: true },
+            title: { display: true, text: `${chartLabel} mensual de "${proyecto}"`, color: "#2E0060", font: { size: 18, weight: "bold" } },
+            tooltip: {
+              callbacks: {
+                label: ctx => "$ " + ctx.raw.toLocaleString("es-MX", {minimumFractionDigits:2})
+              }
+            }
+          },
+          animation: { duration: 900, easing: "easeOutBounce" },
+          scales: {
+            x: { ticks: { color: "#2E0060", font: { weight: "bold" } }, grid: { color: "#e0e3e8" } },
+            y: { beginAtZero: true, ticks: { color: "#2E0060", font: { weight: "bold" } }, grid: { color: "#e0e3e8" } }
+          }
+        }
+      });
+    }
+
+    function getValor(filas, tipoDato) {
+      // Busca la fila por tipo exacto y suma el mes seleccionado o todos
+      let total = 0;
+      filas.filter(f=>f.tipo === tipoDato).forEach(f=>{
+        if (selectedMes === "todos") {
+          meses.forEach(m=>{ total += parseFloat((f.datos[m.idx]||"0").toString().replace(/[^0-9.-]+/g,""))||0; });
+        } else {
+          const m = meses.find(m=>m.name===selectedMes);
+          if (m) total += parseFloat((f.datos[m.idx]||"0").toString().replace(/[^0-9.-]+/g,""))||0;
+        }
+      });
+      return total;
+    }
+
+    // Nuevo: obtener valor de un tipo y mes específico
+    function getValorMes(filas, tipoDato, mes) {
+      let total = 0;
+      filas.filter(f=>f.tipo === tipoDato).forEach(f=>{
+        const m = meses.find(mm=>mm.name===mes);
+        if (m) total += parseFloat((f.datos[m.idx]||"0").toString().replace(/[^0-9.-]+/g,""))||0;
+      });
+      return total;
+    }
+
+    let chartInstance = null;
+    function renderChart(labels, dataA, dataB, colA, colB) {
+      const ctx = document.getElementById("chart").getContext("2d");
+      if (chartInstance) chartInstance.destroy();
+      chartInstance = new Chart(ctx, {
+        type: "bar",
+        data: {
+          labels,
+          datasets: [
+            {
+              label: colA || "A",
+              data: dataA,
+              backgroundColor: "#FFD400",
+              borderRadius: 8,
+              borderSkipped: false
+            },
+            ...(colB ? [{
+              label: colB,
+              data: dataB,
+              backgroundColor: "#2E0060",
+              borderRadius: 8,
+              borderSkipped: false
+            }] : [])
+          ]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: { display: true },
+            title: {
+              display: true,
+              text: "Comparativo",
+              color: "#2E0060",
+              font: { size: 22, weight: "bold" }
+            },
+            tooltip: {
+              callbacks: {
+                label: ctx => {
+                  return "$ " + ctx.raw.toLocaleString("es-MX", {minimumFractionDigits:2});
+                }
+              }
+            }
+          },
+          animation: {
+            duration: 1200,
+            easing: "easeOutBounce"
+          },
+          scales: {
+            x: {
+              ticks: { color: "#2E0060", font: { weight: "bold" } },
+              grid: { color: "#e0e3e8" }
+            },
+            y: {
+              beginAtZero: true,
+              ticks: { color: "#2E0060", font: { weight: "bold" } },
+              grid: { color: "#e0e3e8" }
+            }
+          }
+        }
+      });
+    }
+
+    function renderTable(labels, dataA, dataB, diffs, colA, colB) {
+      const table = document.getElementById("tabla-comparativo");
+      let header = `<tr><th>Proyecto</th><th>${colA || "A"}</th>${colB ? `<th>${colB}</th>` : ""}<th>Diferencia</th></tr>`;
+      let rows = labels.map((label, i) => {
+        let diffColor = diffs[i] >= 0 ? "#00C48C" : "#FF4D4F";
+        return `<tr><td>${label}</td><td>$ ${dataA[i].toLocaleString("es-MX", {minimumFractionDigits:2})}</td>${colB ? `<td>$ ${dataB[i].toLocaleString("es-MX", {minimumFractionDigits:2})}</td>` : ""}<td style="color:${diffColor}; font-weight:700;">$ ${diffs[i].toLocaleString("es-MX", {minimumFractionDigits:2})}</td></tr>`;
+      }).join("");
+      table.innerHTML = `<thead>${header}</thead><tbody>${rows}</tbody>`;
+    }
+  </script>
+</body>
+</html>

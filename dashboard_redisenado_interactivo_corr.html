@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Depósitos Agosto — Dashboard por Zona (Rediseño)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root { --primary:#2E0060; --secondary:#FFD400; --accent:#00B2A9; --bg:#f6f7fb; --surface:#ffffff; --text:#1e1f2b; --muted:#585b70; --grid:#e7e9f0; --shadow:0 8px 32px rgba(46,0,96,.12); --radius:20px; }
+    * { box-sizing: border-box; }
+    body { margin:0; font-family:'Inter',system-ui; background:var(--bg); color:var(--text); }
+    .topbar { position:sticky; top:0; z-index:10; background:linear-gradient(90deg, rgba(46,0,96,.95), rgba(0,178,169,.95)); color:#fff; box-shadow:var(--shadow); }
+    .topbar-inner { max-width:1400px; margin:0 auto; padding:12px 20px; display:flex; justify-content:space-between; align-items:center; gap:12px; }
+    .brand h1 { margin:0; font-size:1.1rem; letter-spacing:.3px; color:#ffd400; }
+    .pill { background:rgba(255,255,255,.14); padding:6px 10px; border-radius:999px; }
+
+    .container { max-width:1400px; margin:20px auto 40px; padding:0 20px; }
+    .header { display:flex; align-items:center; gap:16px; background:linear-gradient(90deg, var(--primary) 60%, var(--accent) 100%); color:#fff; padding:18px; border-radius:var(--radius); border-bottom:6px solid var(--secondary); }
+    .header h2 { margin:0; }
+    .zone-badge { background:#fff; color:var(--primary); font-weight:800; padding:6px 10px; border-radius:999px; }
+
+    .controls { display:flex; gap:12px; align-items:end; flex-wrap:wrap; margin:14px 0; justify-content:space-between; }
+    .control-group { display:flex; gap:12px; align-items:end; flex-wrap:wrap; }
+    .controls select { padding:8px 10px; border-radius:10px; border:1.5px solid var(--primary); background:#fff; font-weight:600; color:var(--primary); }
+    .btn { border:none; padding:10px 14px; border-radius:12px; background:var(--primary); color:#fff; font-weight:700; cursor:pointer; box-shadow:var(--shadow); }
+    .btn.secondary { background:var(--accent); }
+    .btn:active { transform: translateY(1px); }
+
+    .kpis { display:grid; grid-template-columns:repeat(6,1fr); gap:12px; }
+    @media(max-width:1200px){ .kpis{ grid-template-columns:repeat(3,1fr) } }
+    @media(max-width:700px){ .kpis{ grid-template-columns:repeat(2,1fr) } }
+
+    .card { background:var(--surface); border-radius:16px; box-shadow:var(--shadow); padding:14px; }
+    .card h4 { margin:0; font-size:.9rem; color:var(--muted); }
+    .value { font-size:1.2rem; font-weight:800; }
+
+    .two-cols { display:grid; grid-template-columns: 1.25fr 1fr; gap:14px; align-items:start; }
+    @media(max-width:1100px){ .two-cols{ grid-template-columns:1fr } }
+
+    table { width:100%; border-collapse:separate; border-spacing:0; border-radius:12px; overflow:hidden; }
+    th,td { border:1px solid var(--grid); padding:8px; font-size:.94rem; }
+    th { background:var(--primary); color:#fff; text-align:center; position:sticky; top:0; z-index:1; }
+    td:first-child, th:first-child { text-align:left; font-weight:700; color:var(--primary); background:#f4f6fa; }
+    tr:nth-child(even) td { background:rgba(0,0,0,.02); }
+    tr.risk td { background:rgba(255,77,79,.08); }
+    tr:hover td { background:#fffdea; }
+
+    /* Panel derecho rediseñado: micro KPIs + tops con progress mini */
+    .side-block h4{margin:6px 0 8px;color:var(--primary)}
+    .micro-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:10px}
+    .micro-card{background:var(--surface);border:1px solid var(--grid);border-radius:12px;padding:8px;display:flex;flex-direction:column;align-items:center;gap:4px;box-shadow:var(--shadow)}
+    .micro-card canvas{width:84px!important;height:84px!important}
+    .micro-val{font-weight:800;font-size:1rem;margin-top:2px}
+    .micro-label{font-size:.78rem;color:var(--muted);text-align:center}
+
+    .rank-list{display:flex;flex-direction:column;gap:8px;margin:8px 0; max-height:300px; overflow:auto; padding-right:4px;}
+    .rank-item{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;padding:10px;border:1px dashed var(--grid);border-radius:12px;background:var(--surface);box-shadow:var(--shadow)}
+    .rank-name{font-weight:700;line-height:1.2}
+    .rank-value{font-weight:800;font-size:.9rem;color:#0a7f5a}
+    .rank-value.warn{color:#8a6d00}.rank-value.bad{color:#c62828}
+    .meter{height:8px;background:var(--grid);border-radius:999px;overflow:hidden; grid-column:1/-1}
+    .meter > i{display:block;height:100%;background:linear-gradient(90deg,#a7f3d0,#00c48c);}
+    .meter.warn > i{background:linear-gradient(90deg,#fff7cc,#ffd400)}
+    .meter.bad > i{background:linear-gradient(90deg,#ffcdd2,#ff4d4f)}
+
+    .badge { padding:4px 8px; border-radius:999px; font-size:.78rem; font-weight:700; }
+    .ok{ background:rgba(0,196,140,.14); color:#00c48c; }
+    .warn{ background:rgba(255,212,0,.18); color:#8a6d00; }
+    .bad{ background:rgba(255,77,79,.14); color:#ff4d4f; }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <div class="topbar-inner">
+      <div class="brand"><h1>Tablero de Depósitos — Agosto (Rediseño)</h1></div>
+      <div class="pill" id="clock">--</div>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="header">
+      <div>
+        <h2>Resumen por Zona</h2>
+        <div id="zona-pill" class="zone-badge">Zona: Todas</div>
+      </div>
+    </div>
+
+    <div class="controls">
+      <div class="control-group">
+        <div>
+          <label class="form-label">Zona</label><br/>
+          <select id="zonaSelect">
+            <option value="">Todas</option>
+            <option value="CDMX Noreste">CDMX Noreste</option>
+            <option value="CDMX Suroeste">CDMX Suroeste</option>
+            <option value="Zona Norte">Zona Norte</option>
+            <option value="Zona Sur">Zona Sur</option>
+          </select>
+        </div>
+        <div>
+          <label class="form-label">Ordenar tabla</label><br/>
+          <select id="ordenSelect">
+            <option value="alcanceProy">Alcance Proyección % (↓)</option>
+            <option value="alcanceActual">Alcance Actual % (↓)</option>
+            <option value="recolectado">Recolectado (↓)</option>
+          </select>
+        </div>
+        <div>
+          <label class="form-label">% Riesgo (Proyección <)</label><br/>
+          <select id="umbralRiesgo">
+            <option value="90">90%</option>
+            <option value="95" selected>95%</option>
+            <option value="100">100%</option>
+          </select>
+        </div>
+        <div>
+          <label class="form-label">Top de Proyectos por</label><br/>
+          <select id="topPor">
+            <option value="alcanceProy" selected>Alcance Proyección %</option>
+            <option value="recolectado">Recolectado</option>
+          </select>
+        </div>
+      </div>
+      <div class="control-group">
+        <button id="btnExport" class="btn">Exportar CSV</button>
+        <button id="btnReset" class="btn secondary">Restablecer filtros</button>
+      </div>
+    </div>
+
+    <!-- KPIs macro (añadidos 2 columnas) -->
+    <div class="kpis" id="kpis">
+      <!-- Se llena por JS -->
+    </div>
+
+    <div class="two-cols">
+      <div class="card">
+        <h4>Proyectos por zona</h4>
+        <div style="overflow:auto; max-height:560px;">
+          <table id="tabla">
+            <thead>
+              <tr>
+                <th>Proyecto</th>
+                <th>Zona</th>
+                <th>Recolectado</th>
+                <th>Depósitos</th>
+                <th>Ingreso Diario</th>
+                <th>Proyección</th>
+                <th>Presupuesto</th>
+                <th>Alcance Actual %</th>
+                <th>Alcance Proyección %</th>
+                <th>Estatus</th>
+              </tr>
+            </thead>
+            <tbody id="tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card side-block">
+        <div class="micro-kpis">
+          <div class="micro-card">
+            <canvas id="kpiDonutCumpl"></canvas>
+            <div class="micro-val" id="kpiValCumpl">--%</div>
+            <div class="micro-label">Proyección / Presupuesto</div>
+          </div>
+          <div class="micro-card">
+            <canvas id="kpiDonutOK"></canvas>
+            <div class="micro-val" id="kpiValOK">--%</div>
+            <div class="micro-label">Proyectos OK</div>
+          </div>
+          <div class="micro-card">
+            <canvas id="kpiDonutBrecha"></canvas>
+            <div class="micro-val" id="kpiValBrecha">--%</div>
+            <div class="micro-label">Faltante para 100%</div>
+            <div class="micro-label" id="kpiValBrechaMoney" style="margin-top:2px;"></div>
+          </div>
+        </div>
+
+        <h4>Top de Proyectos</h4>
+        <div id="topList" class="rank-list"></div>
+
+        <h4 style="margin-top:16px;">Proyectos en Riesgo</h4>
+        <div id="riskList" class="rank-list"></div>
+      </div>
+    </div>
+  </div>
+
+<script>
+// === Inyectar DATA del archivo original ===
+const DATA = [{"proyecto":"    ALAMOS  |  LOS ALAMOS LIFESTYLE CENTER","zona":"Zona Norte","recolectado":77871.55,"depositos":14,"diario":5562.253571,"proyeccion":172429.860714,"presupuesto":127146.0,"alcanceActual":61.245773,"alcanceProy":135.615639},{"proyecto":"    ANAHUAC  |  ANAHUAC","zona":"Zona Norte","recolectado":13349.14,"depositos":12,"diario":1112.428333,"proyeccion":34485.278333,"presupuesto":0.0,"alcanceActual":null,"alcanceProy":null},{"proyecto":"    BA APATZIN  |  BODEGA AURRERA APATZINGAN","zona":"Zona Norte","recolectado":21962.07,"depositos":17,"diario":1291.886471,"proyeccion":40048.480588,"presupuesto":null,"alcanceActual":null,"alcanceProy":null},{"proyecto":"    BA ZIT  |  BA ZITACUARO","zona":"Zona Norte","recolectado":202695.31,"depositos":17,"diario":11923.253529,"proyeccion":369620.859412,"presupuesto":274519.0,"alcanceActual":73.836532,"alcanceProy":134.643088},{"proyecto":"    BASPEDRITO  |  BODEGA AURRERA SAN PEDRITO","zona":"Zona Norte","recolectado":71951.83,"depositos":15,"diario":4796.788667,"proyeccion":148700.448667,"presupuesto":138302.0,"alcanceActual":52.025155,"alcanceProy":107.518654},{"proyecto":"    CINEHERMOS  |  CINEPOLIS HERMOSILLO","zona":"Zona Norte","recolectado":42483.26,"depositos":14,"diario":3034.518571,"proyeccion":94070.075714,"presupuesto":130000.0,"alcanceActual":32.679431,"alcanceProy":72.361597},{"proyecto":"    LEON  |  CINEPOLIS LEON","zona":"Zona Norte","recolectado":48382.76,"depositos":14,"diario":3455.911429,"proyeccion":107133.254286,"presupuesto":163338.0,"alcanceActual":29.621252,"alcanceProy":65.589914},{"proyecto":"    MORO  |  BA MOROLEON","zona":"Zona Norte","recolectado":135030.38,"depositos":17,"diario":7942.963529,"proyeccion":246231.869412,"presupuesto":168953.0,"alcanceActual":79.92186,"alcanceProy":145.739862},{"proyecto":"    MTIJUANA  |  MACRO PLAZA TIJUANA","zona":"Zona Norte","recolectado":1397694.42,"depositos":12,"diario":116474.535,"proyeccion":3610710.585,"presupuesto":null,"alcanceActual":null,"alcanceProy":null},{"proyecto":"    PASEO AKIA  |  PASEO AKIA","zona":"Zona Norte","recolectado":171836.2,"depositos":12,"diario":14319.683333,"proyeccion":443910.183333,"presupuesto":349695.0,"alcanceActual":49.138878,"alcanceProy":126.942102},{"proyecto":"    SUBMORELIA  |  SUBURBIA MORELIA","zona":"Zona Norte","recolectado":29357.76,"depositos":13,"diario":2258.289231,"proyeccion":70006.966154,"presupuesto":75603.0,"alcanceActual":38.831475,"alcanceProy":92.598133},{"proyecto":"    TACAMBARO  |  AURRERA TACAMBARO","zona":"Zona Norte","recolectado":32679.31,"depositos":17,"diario":1922.312353,"proyeccion":59591.682941,"presupuesto":64797.0,"alcanceActual":50.433369,"alcanceProy":91.966731},{"proyecto":"    URUAPAN  |  URUAPAN","zona":"Zona Norte","recolectado":41806.04,"depositos":17,"diario":2459.178824,"proyeccion":76234.543529,"presupuesto":64037.0,"alcanceActual":65.284195,"alcanceProy":119.04765},{"proyecto":"    AZCAPOTZAL  |  walmart azcapotzalco","zona":"CDMX Noreste","recolectado":220762.07,"depositos":14,"diario":15768.719286,"proyeccion":488830.297857,"presupuesto":579031.0,"alcanceActual":38.126123,"alcanceProy":84.422129},{"proyecto":"    CARRIZAL  |  COMBO CARRIZAL","zona":"Zona Sur","recolectado":2275.86,"depositos":11,"diario":206.896364,"proyeccion":6413.787273,"presupuesto":530725.0,"alcanceActual":0.428821,"alcanceProy":1.208495},{"proyecto":"    COMBO  |  COMBO CUAUTITLAN","zona":"CDMX Noreste","recolectado":235825.0,"depositos":17,"diario":13872.058824,"proyeccion":430033.823529,"presupuesto":567891.0,"alcanceActual":41.526455,"alcanceProy":75.724712},{"proyecto":"    CUAUTITLAN  |  SAMS CUAUTITLAN","zona":"CDMX Noreste","recolectado":187548.28,"depositos":15,"diario":12503.218667,"proyeccion":387599.778667,"presupuesto":335698.0,"alcanceActual":55.868155,"alcanceProy":115.460854},{"proyecto":"    FERROCARRI  |  BA FERROCARRIL HIDALGO","zona":"CDMX Noreste","recolectado":62403.03,"depositos":16,"diario":3900.189375,"proyeccion":120905.870625,"presupuesto":150813.0,"alcanceActual":41.377753,"alcanceProy":80.169396},{"proyecto":"    INSURGENTE  |  BODEGA AURRERA INSURGENTES","zona":"CDMX Noreste","recolectado":47204.31,"depositos":17,"diario":2776.724118,"proyeccion":86078.447647,"presupuesto":86786.0,"alcanceActual":54.391618,"alcanceProy":99.184716},{"proyecto":"    SAMSRAZA  |  SAMS LA RAZA","zona":"CDMX Noreste","recolectado":76870.69,"depositos":16,"diario":4804.418125,"proyeccion":148936.961875,"presupuesto":323363.0,"alcanceActual":23.772259,"alcanceProy":46.058752},{"proyecto":"    SATELITE  |  walmart satelite","zona":"CDMX Noreste","recolectado":152925.0,"depositos":16,"diario":9557.8125,"proyeccion":296292.1875,"presupuesto":348358.0,"alcanceActual":43.898805,"alcanceProy":85.053935},{"proyecto":"    TEPEYAC  |  PLAZA TEPEYAC","zona":"CDMX Noreste","recolectado":1086545.69,"depositos":16,"diario":67909.105625,"proyeccion":2105182.274375,"presupuesto":1965762.0,"alcanceActual":55.273512,"alcanceProy":107.092429},{"proyecto":"    WALBVISTA  |  WALMART BUENAVISTA","zona":"CDMX Noreste","recolectado":226699.28,"depositos":17,"diario":13335.251765,"proyeccion":413392.804706,"presupuesto":437144.0,"alcanceActual":51.859177,"alcanceProy":94.566734},{"proyecto":"    WPIRULES  |  WALMART PIRULES","zona":"CDMX Noreste","recolectado":359643.83,"depositos":17,"diario":21155.519412,"proyeccion":655821.101765,"presupuesto":435529.0,"alcanceActual":82.576322,"alcanceProy":150.580352},{"proyecto":"    AEROPUERTO  |  Walmart Aeropuerto","zona":"CDMX Suroeste","recolectado":378398.55,"depositos":17,"diario":22258.738235,"proyeccion":690020.885294,"presupuesto":631133.0,"alcanceActual":59.955437,"alcanceProy":109.330503},{"proyecto":"    CENTENARIO  |  CENTENARIO","zona":"CDMX Suroeste","recolectado":105458.62,"depositos":17,"diario":6203.448235,"proyeccion":192306.895294,"presupuesto":210083.0,"alcanceActual":50.19855,"alcanceProy":91.538533},{"proyecto":"    CHURUBUSCO  |  PORTAL CHURUBUSCO","zona":"CDMX Suroeste","recolectado":322203.45,"depositos":17,"diario":18953.144118,"proyeccion":587547.467647,"presupuesto":968068.0,"alcanceActual":33.283142,"alcanceProy":60.692789},{"proyecto":"    HORACIO  |  WE HORACIO","zona":"CDMX Suroeste","recolectado":57507.28,"depositos":17,"diario":3382.781176,"proyeccion":104866.216471,"presupuesto":128363.0,"alcanceActual":44.800511,"alcanceProy":81.69505},{"proyecto":"    MARIANO  |  BA MARIANO ESCOBEDO","zona":"CDMX Suroeste","recolectado":63788.62,"depositos":15,"diario":4252.574667,"proyeccion":131829.814667,"presupuesto":155656.0,"alcanceActual":40.980508,"alcanceProy":84.69305},{"proyecto":"    PATIO PEDR  |  PLAZA PATIO PEDREGAL MEXICO","zona":"CDMX Suroeste","recolectado":98355.17,"depositos":17,"diario":5785.598235,"proyeccion":179353.545294,"presupuesto":214912.0,"alcanceActual":45.765323,"alcanceProy":83.454412},{"proyecto":"    SC TLALPAN  |  WALMART SUPER CENTER TLALPAN","zona":"CDMX Suroeste","recolectado":285460.04,"depositos":16,"diario":17841.2525,"proyeccion":553078.8275,"presupuesto":551964.0,"alcanceActual":51.717148,"alcanceProy":100.201975},{"proyecto":"    TACUBAYA  |  BA TACUBAYA","zona":"CDMX Suroeste","recolectado":44862.79,"depositos":17,"diario":2638.987647,"proyeccion":81808.617059,"presupuesto":111212.0,"alcanceActual":40.339882,"alcanceProy":73.560962},{"proyecto":"    WEPERIFERI  |  WALMAR EXPRESS PERIFERICO","zona":"CDMX Suroeste","recolectado":171977.93,"depositos":17,"diario":10116.348824,"proyeccion":313606.813529,"presupuesto":262073.0,"alcanceActual":65.622147,"alcanceProy":119.663916},{"proyecto":"    BA COMITAN  |  BA COMITAN","zona":"Zona Sur","recolectado":100363.79,"depositos":17,"diario":5903.752353,"proyeccion":183016.322941,"presupuesto":182443.0,"alcanceActual":55.011039,"alcanceProy":100.314248},{"proyecto":"    BLVD5MAY  |  CINEPOLIS 5 DE MAYO","zona":"Zona Sur","recolectado":176436.21,"depositos":16,"diario":11027.263125,"proyeccion":341845.156875,"presupuesto":455599.0,"alcanceActual":38.726207,"alcanceProy":75.032025},{"proyecto":"    DORADA 1  |  PLAZA DORADA 1","zona":"Zona Sur","recolectado":328983.62,"depositos":17,"diario":19351.977647,"proyeccion":599911.307059,"presupuesto":604845.0,"alcanceActual":54.391393,"alcanceProy":99.184305},{"proyecto":"    DORADA2  |  PLAZA DORADA II","zona":"Zona Sur","recolectado":543719.4,"depositos":17,"diario":31983.494118,"proyeccion":991488.317647,"presupuesto":935171.0,"alcanceActual":58.141174,"alcanceProy":106.022141},{"proyecto":"    LAS TORRES  |  LAS TORRES","zona":"Zona Sur","recolectado":23679.31,"depositos":13,"diario":1821.485385,"proyeccion":56466.046923,"presupuesto":35656.0,"alcanceActual":66.41045,"alcanceProy":158.36338},{"proyecto":"    PAROLI  |  PAROLI","zona":"Zona Sur","recolectado":200191.38,"depositos":16,"diario":12511.96125,"proyeccion":387870.79875,"presupuesto":326303.0,"alcanceActual":61.351376,"alcanceProy":118.868291},{"proyecto":"    SC SAN MAN  |  SC SAN MANUEL","zona":"Zona Sur","recolectado":428914.55,"depositos":17,"diario":25230.267647,"proyeccion":782138.297059,"presupuesto":713801.0,"alcanceActual":60.088813,"alcanceProy":109.573718},{"proyecto":"    SCOAXACA  |  SAMS CLUB OAXACA","zona":"Zona Sur","recolectado":231238.0,"depositos":17,"diario":13602.235294,"proyeccion":421669.294118,"presupuesto":429724.0,"alcanceActual":53.810818,"alcanceProy":98.125609},{"proyecto":"    SIMPATRIOS  |  SIMBOLOS PATRIOS OAXACA","zona":"Zona Sur","recolectado":143835.35,"depositos":17,"diario":8460.902941,"proyeccion":262287.991176,"presupuesto":247517.0,"alcanceActual":58.111301,"alcanceProy":105.967667},{"proyecto":"    SUPVHS  |  SUPERAMA VILLAHERMOSA","zona":"Zona Sur","recolectado":90474.62,"depositos":17,"diario":5322.036471,"proyeccion":164983.130588,"presupuesto":158507.0,"alcanceActual":57.079258,"alcanceProy":104.085706},{"proyecto":"    TLAXCALA  |  ESTACIONAMIENTO TLAXCALA","zona":"Zona Sur","recolectado":279267.24,"depositos":17,"diario":16427.484706,"proyeccion":509252.025882,"presupuesto":355221.0,"alcanceActual":78.617886,"alcanceProy":143.362027}];
+
+// reloj
+const clock = document.getElementById('clock');
+setInterval(()=> { const d=new Date(); clock.textContent=d.toLocaleString('es-MX',{dateStyle:'medium', timeStyle:'short'}); }, 1000);
+
+// helpers
+const money = (v)=> '$ ' + Number(v||0).toLocaleString('es-MX',{minimumFractionDigits:2});
+const pct = (v)=> (v==null?'-': (Number(v).toFixed(1)+'%'));
+
+// estado UI
+let selectedZona = "";
+let umbralRiesgo = 95;
+let topKey = 'alcanceProy';
+let ordenarPor = 'alcanceProy';
+
+function drawDonut(instRef, canvasId, valuePct, color){
+  const ctx = document.getElementById(canvasId)?.getContext('2d');
+  if(!ctx) return null;
+  if(instRef && typeof instRef.destroy==='function') instRef.destroy();
+  const val = Math.max(0, Math.min(100, Number(valuePct||0)));
+  const rest = 100 - val;
+  return new Chart(ctx, {
+    type: 'doughnut',
+    data: { datasets: [{ data: [val, rest], backgroundColor: [color, '#e7e9f0'], borderWidth: 0 }] },
+    options: { cutout: '70%', plugins: { legend: { display:false }, tooltip:{enabled:false} } }
+  });
+}
+
+document.getElementById('zonaSelect').addEventListener('change', e=>{ selectedZona = e.target.value.trim(); render(); });
+document.getElementById('umbralRiesgo').addEventListener('change', e=>{ umbralRiesgo = Number(e.target.value); render(); });
+document.getElementById('topPor').addEventListener('change', e=>{ topKey = e.target.value; render(); });
+document.getElementById('ordenSelect').addEventListener('change', e=>{ ordenarPor = e.target.value; render(); });
+document.getElementById('btnReset').addEventListener('click', ()=>{ selectedZona=""; topKey='alcanceProy'; ordenarPor='alcanceProy'; umbralRiesgo=95; 
+  document.getElementById('zonaSelect').value="";
+  document.getElementById('topPor').value="alcanceProy";
+  document.getElementById('ordenSelect').value="alcanceProy";
+  document.getElementById('umbralRiesgo').value="95";
+  render();
+});
+
+document.getElementById('btnExport').addEventListener('click', exportCSV);
+
+let donutCumpl=null, donutOK=null, donutBrecha=null;
+
+// ==== NUEVOS KPIs macro ====
+function setKPIs(rows) {
+  // sumas generales
+  const totalRecolectado = rows.reduce((a,b)=>a+(b.recolectado||0),0);
+  const totalPres = rows.reduce((a,b)=>a+(b.presupuesto||0),0);
+  const totalProy = rows.reduce((a,b)=>a+(b.proyeccion||0),0);
+  const proyectos = rows.length;
+
+  // % Proyección vs Presupuesto: SOLO con proyectos con presupuesto > 0
+  const withBudget = rows.filter(r => (r.presupuesto||0) > 0);
+  const presW = withBudget.reduce((a,b)=>a+(b.presupuesto||0),0);
+  const proyW = withBudget.reduce((a,b)=>a+(b.proyeccion||0),0);
+  const cumplProy = presW>0 ? (proyW/presW*100) : 0;
+
+  // % proyectos OK sobre umbral
+  const okCount = withBudget.filter(r => (r.alcanceProy||0) >= umbralRiesgo).length;
+  const okPct = withBudget.length>0 ? (okCount/withBudget.length*100) : 0;
+
+  // ingreso diario promedio (sobre registros con diario>0)
+  const diarios = rows.map(r=>Number(r.diario||0)).filter(v=>v>0);
+  const promDiario = diarios.length>0 ? diarios.reduce((a,b)=>a+b,0)/diarios.length : 0;
+
+  const conPresupuestoPct = proyectos>0 ? (withBudget.length/proyectos*100) : 0;
+  const riesgoCount = withBudget.filter(r=> (r.alcanceProy||0) < umbralRiesgo).length;
+  const riesgoPct = withBudget.length>0 ? (riesgoCount/withBudget.length*100) : 0;
+
+  const k = document.getElementById('kpis');
+  k.innerHTML = `
+    <div class="card"><h4>Ingresos Totales</h4><div class="value">${money(totalRecolectado)}</div></div>
+    <div class="card"><h4>Proyección Mes</h4><div class="value">${money(totalProy)}</div></div>
+    <div class="card"><h4>Presupuesto</h4><div class="value">${money(totalPres)}</div></div>
+    <div class="card"><h4>% Proyección vs Presupuesto</h4><div class="value">${presW>0? cumplProy.toFixed(1)+'%':'-'}</div></div>
+    <div class="card"><h4>Proyectos activos</h4><div class="value">${proyectos}</div></div>
+    <div class="card"><h4>% con presupuesto</h4><div class="value">${proyectos>0?conPresupuestoPct.toFixed(1)+'%':'--'}</div></div>
+    <div class="card"><h4>Ingreso diario promedio</h4><div class="value">${money(promDiario)}</div></div>
+    <div class="card"><h4>% proyectos en riesgo</h4><div class="value">${withBudget.length>0?riesgoPct.toFixed(1)+'%':'--'}</div></div>
+  `;
+
+  // Micro-KPIs (donuts)
+  const brecha = Math.max(0, 100 - cumplProy);
+  const colorFor = (p) => p>=100 ? '#00C48C' : (p>=90 ? '#FFD400' : '#FF4D4F');
+  donutCumpl = drawDonut(donutCumpl, 'kpiDonutCumpl', cumplProy, colorFor(cumplProy));
+  donutOK    = drawDonut(donutOK,    'kpiDonutOK',    okPct,     colorFor(okPct));
+  donutBrecha= drawDonut(donutBrecha,'kpiDonutBrecha',brecha,    brecha>10 ? '#FF4D4F' : '#00C48C');
+
+  const el1=document.getElementById('kpiValCumpl'); if(el1) el1.textContent = (presW>0?cumplProy.toFixed(1):'--') + '%';
+  const el2=document.getElementById('kpiValOK'); if(el2) el2.textContent = (withBudget.length>0?okPct.toFixed(1):'--') + '%';
+  const el3=document.getElementById('kpiValBrecha'); if(el3) el3.textContent = (presW>0?brecha.toFixed(1):'--') + '%';
+  const el4=document.getElementById('kpiValBrechaMoney'); 
+  if(el4){ 
+    const missing = Math.max(0, presW - proyW); 
+    el4.textContent = presW>0 ? ('Faltante: $ ' + Number(missing).toLocaleString('es-MX', {minimumFractionDigits: 2})) : ''; 
+  }
+}
+
+function render() {
+  const zonaPill = document.getElementById('zona-pill');
+  zonaPill.textContent = 'Zona: ' + (selectedZona || 'Todas');
+
+  const rowsAll = DATA;
+  const rows = rowsAll.filter(r => !selectedZona || (r.zona||'').trim() === selectedZona);
+
+  setKPIs(rows);
+
+  // ordenar
+  const metric = ordenarPor;
+  const ordered = [...rows].sort((a,b)=> ((b[metric]??-1) - (a[metric]??-1)));
+
+  // tabla
+  const tbody = document.getElementById('tbody');
+  tbody.innerHTML = '';
+  ordered.forEach(r=>{
+    const riesgo = (r.presupuesto>0) && (r.alcanceProy!=null) && (r.alcanceProy < umbralRiesgo);
+    const tr = document.createElement('tr');
+    if (riesgo) tr.classList.add('risk');
+    tr.innerHTML = `
+      <td>${r.proyecto}</td>
+      <td>${r.zona}</td>
+      <td style="text-align:right">${money(r.recolectado)}</td>
+      <td style="text-align:center">${r.depositos}</td>
+      <td style="text-align:right">${money(r.diario)}</td>
+      <td style="text-align:right">${money(r.proyeccion)}</td>
+      <td style="text-align:right">${r.presupuesto==null?'-':money(r.presupuesto)}</td>
+      <td style="text-align:right">${pct(r.alcanceActual)}</td>
+      <td style="text-align:right">${pct(r.alcanceProy)}</td>
+      <td style="text-align:center"><span class="badge ${r.presupuesto==null||r.presupuesto<=0?'warn':(riesgo?'bad':'ok')}">${r.presupuesto==null||r.presupuesto<=0?'Sin presupuesto':(riesgo?'Riesgo':'OK')}</span></td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  // === Panel derecho: Top & Riesgo en formato tarjetas con barra mini ===
+  const validTop = ordered.filter(r=> r[topKey]!=null);
+  const top = validTop.slice(0,8);
+  const list = document.getElementById('topList');
+  list.innerHTML = top.map(t=>{ 
+    const val = topKey==='recolectado'? t.recolectado : t.alcanceProy;
+    const pctWidth = topKey==='recolectado' ? Math.min(100, (t.recolectado/Math.max(1, top[0].recolectado))*100) : Math.max(0, Math.min(100, val));
+    const cls = (topKey==='recolectado') ? '' : (val>=95? '' : (val>=90? 'warn' : 'bad'));
+    const label = topKey==='recolectado'? money(val) : (Number(val).toFixed(1)+'%');
+    return `
+      <div class="rank-item">
+        <div class="rank-name" title="${t.proyecto}">${t.proyecto}</div>
+        <div class="rank-value ${cls}">${label}</div>
+        <div class="meter ${cls}"><i style="width:${pctWidth}%"></i></div>
+      </div>`; 
+  }).join('');
+
+  const risk = ordered.filter(r=> (r.presupuesto>0) && (r.alcanceProy!=null) && (r.alcanceProy < umbralRiesgo))
+                      .sort((a,b)=> (a.alcanceProy - b.alcanceProy)).slice(0,8);
+  const rlist = document.getElementById('riskList');
+  rlist.innerHTML = risk.length? risk.map(t=> `
+      <div class="rank-item">
+        <div class="rank-name" title="${t.proyecto}">${t.proyecto}</div>
+        <div class="rank-value bad">${Number(t.alcanceProy).toFixed(1)}%</div>
+        <div class="meter bad"><i style="width:${Math.max(0, Math.min(100, t.alcanceProy))}%"></i></div>
+      </div>`).join('') : '<div class="rank-item"><div class="rank-name">Sin riesgos</div></div>';
+}
+
+function exportCSV(){
+  const rowsAll = DATA.filter(r => !selectedZona || (r.zona||'').trim() === selectedZona);
+  const header = ["Proyecto","Zona","Recolectado","Depósitos","Ingreso Diario","Proyección","Presupuesto","Alcance Actual %","Alcance Proyección %","Estatus"];
+  const csvRows = [header.join(",")];
+  rowsAll.forEach(r=>{
+    const riesgo = (r.presupuesto>0) && (r.alcanceProy!=null) && (r.alcanceProy < umbralRiesgo);
+    const status = r.presupuesto==null||r.presupuesto<=0?'Sin presupuesto':(riesgo?'Riesgo':'OK');
+    const vals = [
+      `"${String(r.proyecto).replaceAll('"','""')}"`,
+      `"${String(r.zona).replaceAll('"','""')}"`,
+      r.recolectado,
+      r.depositos,
+      r.diario,
+      r.proyeccion,
+      (r.presupuesto==null?"":r.presupuesto),
+      (r.alcanceActual==null?"":Number(r.alcanceActual).toFixed(1)),
+      (r.alcanceProy==null?"":Number(r.alcanceProy).toFixed(1)),
+      status
+    ];
+    csvRows.push(vals.join(","));
+  });
+  const blob = new Blob([csvRows.join("\n")],{type:"text/csv;charset=utf-8;"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = "dashboard_zonas_export.csv";
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// Inicializar
+document.getElementById('zonaSelect').value = "";
+render();
+</script>
+
+</body>
+</html>

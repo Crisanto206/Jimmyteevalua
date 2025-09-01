@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>KPI de Vacantes y Entrevistas</title>
+  <link rel="stylesheet" href="styles.css">
+  <script type="module" src="./js/kpi.js"></script>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <a href="index.html"><img src="logo.jpg" alt="AccessOne Logo" style="height:48px;border-radius:12px;"></a>
+      <h1>KPI de Vacantes y Entrevistas</h1>
+      <div id="userBar" style="margin-left:auto;"></div>
+    </header>
+    <div class="card">
+      <div id="kpiFilters">
+        <label>
+          Proyecto:
+          <select id="kpiProyectoSelect"><option value="">Todos</option></select>
+        </label>
+        <label>
+          Rango de fechas:
+          <input type="date" id="kpiFechaInicio">
+          <input type="date" id="kpiFechaFin">
+        </label>
+        <label>
+          Estatus:
+          <select id="kpiEstatusSelect">
+            <option value="">Todos</option>
+            <option value="Abierto">Abierto</option>
+            <option value="Cubierto">Cubierto</option>
+            <option value="Cerrado">Cerrado</option>
+          </select>
+        </label>
+        <button id="kpiFiltrarBtn">Filtrar</button>
+      </div>
+      <div id="kpiDashboard"></div>
+    </div>
+  </div>
+</body>
+</html>

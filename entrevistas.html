@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Registro de Entrevistas RH</title>
+  <link rel="stylesheet" href="styles.css">
+  <script type="module" src="./js/entrevistas.js"></script>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <a href="index.html"><img src="logo.jpg" alt="AccessOne Logo" style="height:48px;border-radius:12px;"></a>
+      <h1>Registro de Entrevistas RH</h1>
+      <div id="userBar" style="margin-left:auto;"></div>
+    </header>
+    <div class="card">
+      <form id="entrevistaForm" autocomplete="off" enctype="multipart/form-data">
+        <label>
+          Nombre del candidato:
+          <input type="text" id="nombreCandidato" required>
+        </label>
+        <label>
+          Puesto solicitado:
+          <input type="text" id="puestoSolicitado" required>
+        </label>
+        <label>
+          Número de ticket:
+          <input type="text" id="ticketRH" required>
+        </label>
+        <label>
+          Adjuntar CV:
+          <input type="file" id="cvAdjunto" accept=".pdf,.doc,.docx">
+        </label>
+        <label>
+          Motivo por no ser viable:
+          <input type="text" id="motivoNoViable" placeholder="Ej: No cumple perfil, No se presentó, etc.">
+        </label>
+        <button type="submit" id="guardarEntrevistaBtn">Guardar Entrevista</button>
+      </form>
+      <hr>
+      <h2>Entrevistas Registradas</h2>
+      <div id="entrevistasList"></div>
+    </div>
+  </div>
+</body>
+<script src="./js/logo-fix.js"></script>
+</html>

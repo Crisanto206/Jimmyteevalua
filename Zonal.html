@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Zonal · Vacantes y Alertas</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root {
+      --primary: #2E0060;
+      --primary-700: #3a0077;
+      --secondary: #FFD400;
+      --bg: #f6f7fb;
+      --card: #ffffff;
+      --muted: #6b7280;
+      --gray: #e5e7eb;
+      --danger: #e03131;
+      --warning: #ffb100;
+      --success: #2eb67d;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); color: #1f2937; }
+    .container { max-width: 1280px; margin: 0 auto; padding: 20px; }
+    header {
+      display: flex; align-items: center; gap: 14px;
+      background: var(--card); padding: 14px 18px; border-radius: 12px;
+      border-bottom: 4px solid var(--secondary);
+      position: sticky; top: 0; z-index: 5;
+    }
+    header h1 { margin: 0; font-size: 1.35rem; color: var(--primary); letter-spacing: .3px; }
+    #userBar { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+    #userBar .email { color: var(--primary); font-weight: 700; }
+    #userBar button {
+      background: var(--primary); color: #fff; border: 0; border-radius: 8px;
+      padding: 8px 12px; font-weight: 800; cursor: pointer;
+    }
+    #userBar button:hover { background: var(--primary-700); }
+
+    /* Filtros + export */
+    .controls { display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 10px; margin-top: 14px; }
+    .controls .chips { grid-column: 1 / -1; display: flex; gap: 8px; flex-wrap: wrap; }
+    .chip {
+      border: 1px solid var(--primary); color: var(--primary);
+      padding: 6px 10px; border-radius: 999px; font-weight: 700; cursor: pointer;
+      user-select: none; font-size: .9rem; background: #fff;
+    }
+    .chip.active { background: var(--primary); color: #fff; }
+    .btn {
+      background: var(--primary); color: #fff; border: 0; border-radius: 10px;
+      padding: 10px 14px; font-weight: 900; cursor: pointer;
+    }
+    .btn:hover { background: var(--primary-700); }
+    input, select {
+      width: 100%; padding: 10px 12px; border: 1px solid var(--gray); border-radius: 10px; background: #fff;
+      font-size: .95rem;
+    }
+
+    /* Grid tarjetas */
+    .grid {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-top: 16px;
+    }
+    .card {
+      background: var(--card); border-radius: 12px; padding: 14px;
+      box-shadow: 0 8px 20px rgba(34, 34, 34, .06);
+      border: 1px solid #f0f0f0;
+    }
+    .head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+    .project { font-weight: 900; color: #111827; }
+    .status {
+      padding: 6px 10px; border-radius: 999px; font-weight: 900; color: #fff; font-size: .8rem;
+    }
+    .status.verde { background: var(--success); }
+    .status.ambar { background: var(--warning); color: #1f2937; }
+    .status.rojo { background: var(--danger); }
+
+    .row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 6px; }
+    .kpi {
+      background: #fafafa; border: 1px solid var(--gray); border-radius: 12px; padding: 10px; text-align: center;
+    }
+    .kpi .value { font-weight: 900; font-size: 1.15rem; }
+    .kpi small { display:block; color: var(--muted); margin-top: 4px; font-weight: 700; }
+
+    .roles { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+    .badge {
+      padding: 4px 8px; border-radius: 999px; border:1px solid var(--gray); background:#f6f7fb;
+      font-weight: 800; font-size: .8rem; color: #333;
+    }
+  .age-alert { padding: 6px 10px; border-radius: 999px; font-weight: 900; font-size: .8rem; color: #fff; }
+  .age-alert.ambar { background: var(--warning); color: #1f2937; }
+  .age-alert.rojo { background: var(--danger); }
+    .meta { color: var(--muted); font-size: .9rem; margin-top: 8px; }
+
+  /* heatmap and alerts removed */
+
+    .skeleton { height: 120px; border-radius: 12px; background: linear-gradient(90deg,#eee,#f6f6f6,#eee); background-size: 200% 100%; animation: shine 1.2s infinite linear; border: 1px solid var(--gray); }
+    @keyframes shine { to { background-position: -200% 0; } }
+
+    /* Toasts */
+    .toasts { position: fixed; top: 16px; right: 16px; display: flex; flex-direction: column; gap: 8px; z-index: 50; }
+    .toast { background: #111827; color: #fff; padding: 10px 12px; border-radius: 10px; font-weight: 800; box-shadow: 0 10px 30px rgba(0,0,0,.15); }
+    .toast.ok { background: #0f766e; }
+    .toast.err { background: #7a1b1b; }
+    .toast.warn { background: #b45309; }
+
+    @media (max-width: 1150px) { .grid { grid-template-columns: repeat(2, 1fr); } .controls { grid-template-columns: 1fr 1fr; } }
+    @media (max-width: 760px) { .grid { grid-template-columns: 1fr; } .alert-item { grid-template-columns: 1fr; } }
+  /* Zonal KPI pills */
+  .zonal-wrap { display:flex; gap:8px; margin-top:12px; overflow-x:auto; padding:8px 2px; }
+  .zpill { min-width:120px; background:#fff; border-radius:10px; padding:8px 10px; display:flex;flex-direction:column;gap:6px; align-items:flex-start; border:1px solid var(--gray); box-shadow:0 6px 14px rgba(17,24,39,.04); }
+  .zpill .name { font-weight:900; color:var(--primary); font-size:.95rem }
+  .zpill .meta { font-size:.85rem; color:var(--muted) }
+  .zpill .meter { width:100%; height:8px; background:#f3f4f6; border-radius:6px; overflow:hidden }
+  .zpill .meter > i { display:block; height:100%; width:0%; background:linear-gradient(90deg,#34d399,#10b981); }
+  .zpill.red { border-color: #fb7185; }
+  .zpill.yellow { border-color: #f59e0b; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <a href="index.html"><img src="logo.jpg" alt="AccessOne Logo" style="height:44px;border-radius:10px;"></a>
+      <h1>Zonal · Vacantes y Alertas</h1>
+      <div id="userBar"></div>
+    </header>
+
+    <!-- Filtros y export -->
+    <div class="controls">
+      <label>Buscar proyecto
+        <input type="text" id="q" placeholder="Escribe el nombre…">
+      </label>
+      <label>Rol
+        <select id="fRol">
+          <option value="ALL">Todos</option>
+          <option>Operativo Matutino</option>
+          <option>Operativo Vespertino</option>
+          <option>Operativo Nocturno</option>
+          <option>Supervisor</option>
+          <option>Gerente</option>
+        </select>
+      </label>
+      <label>Estado
+        <select id="fEstado">
+          <option value="ALL">Todos</option>
+          <option value="Abierta">Abierta</option>
+          <option value="Cerrada">Cerrada</option>
+        </select>
+      </label>
+      <button class="btn" id="btnExport">Exportar CSV</button>
+
+      <div class="chips" id="chips">
+        <div class="chip active" data-level="ALL">Todos</div>
+        <div class="chip" data-level="rojo">CRÍTICOS</div>
+        <div class="chip" data-level="ambar">Atención</div>
+        <div class="chip" data-level="verde">En control</div>
+      </div>
+    </div>
+
+  <!-- Grid de tarjetas -->
+    <div id="cards" class="grid">
+      <div class="skeleton"></div>
+      <div class="skeleton"></div>
+      <div class="skeleton"></div>
+    </div>
+  <!-- Zonal KPI pills (inserted dynamically) -->
+  <div id="zonalContainer"></div>
+  </div>
+
+  <!-- Toasts -->
+  <div class="toasts" id="toasts"></div>
+
+  <!-- Diagnostics overlay (hidden) -->
+  <div id="diagOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:120;padding:30px;">
+    <div style="max-width:940px;margin:40px auto;background:#fff;border-radius:12px;padding:18px;">
+      <h3 style="margin:0 0 8px;color:#111827">Diagnóstico de permisos</h3>
+      <p style="margin:0 0 8px;color:#6b7280">Esto muestra resultados de lectura para ayudar a identificar por qué la app muestra "Sin permisos".</p>
+      <pre id="diagPre" style="background:#f3f4f6;border-radius:8px;padding:10px;height:260px;overflow:auto;border:1px solid #e5e7eb"></pre>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
+        <button id="diagClose" class="btn" style="background:#6b7280">Cerrar</button>
+        <button id="diagUseMapping" class="btn" style="display:none">Continuar con mapping</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    // Firebase (mismo patrón)
+    import { auth, db } from "./js/firebase-config.js";
+    import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
+    import { doc, getDoc } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
+
+    // Estado
+    let currentUser = null;
+    let userProjects = [];
+  let projectSaiMap = {};
+    let data = []; // [{project, openCount, countsByRole, oldestDays, plantilla, prudenteTotal, slaTarget, status, meta, vacantes}]
+    let filters = { level: "ALL", rol: "ALL", estado: "ALL", q: "" };
+
+    // Helpers DOM
+    const $ = s => document.querySelector(s);
+    const el = (tag, attrs = {}, ...children) => { const n = document.createElement(tag); Object.entries(attrs||{}).forEach(([k,v])=> (k in n)? n[k]=v : n.setAttribute(k,v)); children.forEach(c=> n.appendChild(typeof c==="string"? document.createTextNode(c) : c)); return n; };
+    const toast = (m,t="ok")=>{ const box=$("#toasts"); const d=el("div",{class:`toast ${t}`},m); box.appendChild(d); setTimeout(()=>{d.style.opacity="0"},2500); setTimeout(()=>d.remove(),3200); };
+
+    // Utilidades
+    const roles = ["Operativo Matutino","Operativo Vespertino","Operativo Nocturno","Supervisor","Gerente"];
+  function normalizeRole(r){ return (r||"").toString().trim().replace(/\s+/g,' ').replace(/(^|\s)\w/g, c=>c.toUpperCase()); }
+    const pad = n => n<10? "0"+n : n;
+    function diasDesde(yyyy_mm_dd){ if(!yyyy_mm_dd) return 0; const f=new Date(yyyy_mm_dd+"T00:00:00"); const hoy=new Date(); return Math.max(0, Math.floor((hoy - f)/(1000*60*60*24))); }
+    function sum(obj){ return Object.values(obj||{}).reduce((a,b)=>a+(+b||0),0); }
+
+    // Semáforo por proyecto
+    // Reglas:
+    // - Rojo si: (open > prudenteTotal && oldestDays > slaTarget) OR open/plantilla >= 0.3
+    // - Ámbar si: open > prudenteTotal OR oldestDays >= slaTarget-2
+    // - Verde si: lo demás
+    function statusProyecto(open, plantilla, prudenteTotal, oldestDays, slaTarget){
+      const ratio = plantilla ? open / plantilla : 0;
+      if ((open > prudenteTotal && oldestDays > slaTarget) || ratio >= 0.3) return "rojo";
+      if (open > prudenteTotal || oldestDays >= Math.max(0, slaTarget-2)) return "ambar";
+      return "verde";
+    }
+
+    // Auth + carga
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) { window.location.href = "login.html"; return; }
+      currentUser = user;
+      renderUserBar(user);
+      try {
+        let uSnap = null;
+        try {
+          uSnap = await getDoc(doc(db, "users", user.uid));
+        } catch (e) {
+          console.debug('users doc read error', e && e.message ? e.message : e);
+        }
+
+        if (uSnap && uSnap.exists()) {
+          userProjects = Array.isArray(uSnap.data().assignedProjects) ? uSnap.data().assignedProjects : [];
+        } else {
+          // Fallback diagnostic path: try to read mapping and offer to continue with it if available
+          const diag = await runPermissionDiagnostics(user.uid);
+          if (diag.mappingAvailable) {
+            // Show overlay with results and button to continue with mapping
+            document.getElementById('diagPre').textContent = JSON.stringify(diag, null, 2);
+            document.getElementById('diagOverlay').style.display = 'block';
+            document.getElementById('diagUseMapping').style.display = 'inline-block';
+            // wire buttons
+            document.getElementById('diagClose').onclick = () => document.getElementById('diagOverlay').style.display = 'none';
+            document.getElementById('diagUseMapping').onclick = async () => {
+              document.getElementById('diagOverlay').style.display = 'none';
+              projectSaiMap = diag.mapping || {};
+              userProjects = Object.keys(projectSaiMap).sort();
+              toast('Continuando con mapping de proyectos', 'ok');
+              await loadAll(); bindControls(); renderAll();
+            };
+            return; // stop here until user chooses to continue
+          } else {
+            throw new Error('Sin permisos');
+          }
+        }
+
+        if (!userProjects.length) throw new Error('Sin proyectos asignados');
+
+        // Load optional project mapping like checklist/vacantes (already loaded in fallback but safe to call)
+        await loadProjectsFromDatabase();
+        await loadAll();
+        bindControls();
+        renderAll();
+      } catch (e) {
+        console.error(e);
+        alert("No tienes permisos configurados. Contacta al administrador.");
+        window.location.href = "login.html";
+      }
+    });
+
+    // Load projects mapping from proyectos_correspondencia/mapping or fallback project_scores/proyectos_mapping
+    async function loadProjectsFromDatabase(){
+      try{
+        let proyectos = {};
+        try{
+          const ref = doc(db, "proyectos_correspondencia", "mapping");
+          const snap = await getDoc(ref);
+          if(snap.exists()){
+            const data = snap.data();
+            Object.keys(data).forEach(k=>{ if(k!=='timestamp' && k!=='user' && k!=='lastUpdated' && k!=='updatedBy') proyectos[k]=data[k]; });
+          }
+        }catch(e){ console.debug('proyectos_correspondencia read error', e && e.message ? e.message : e); }
+        if(Object.keys(proyectos).length===0){
+          try{
+            const altRef = doc(db, "project_scores", "proyectos_mapping");
+            const altSnap = await getDoc(altRef);
+            if(altSnap.exists() && altSnap.data().mapping) proyectos = altSnap.data().mapping;
+          }catch(e){ console.debug('project_scores mapping read error', e && e.message ? e.message : e); }
+        }
+        if(Object.keys(proyectos).length>0){ projectSaiMap = proyectos; }
+      }catch(e){ console.error('error loading projects mapping', e); }
+    }
+
+    // Run read diagnostics to help debug permission issues. Returns an object with read results and mapping if available.
+    async function runPermissionDiagnostics(uid){
+      const out = { userRead: null, mappingRead: null, altMappingRead: null, mapping: null, mappingAvailable:false };
+      try{
+        try{
+          const uref = doc(db, "users", uid);
+          const usnap = await getDoc(uref);
+          out.userRead = usnap.exists()? { exists:true, data: usnap.data() } : { exists:false };
+        }catch(e){ out.userRead = { error: String(e && e.message ? e.message : e) }; }
+
+        try{
+          const mref = doc(db, "proyectos_correspondencia", "mapping");
+          const msnap = await getDoc(mref);
+          out.mappingRead = msnap.exists()? { exists:true, data: msnap.data() } : { exists:false };
+          if(msnap.exists()){
+            const d = msnap.data();
+            const proyectos = {};
+            Object.keys(d).forEach(k=>{ if(k!=='timestamp' && k!=='user' && k!=='lastUpdated' && k!=='updatedBy') proyectos[k]=d[k]; });
+            if(Object.keys(proyectos).length>0){ out.mapping = proyectos; out.mappingAvailable = true; }
+          }
+        }catch(e){ out.mappingRead = { error: String(e && e.message ? e.message : e) }; }
+
+        if(!out.mappingAvailable){
+          try{
+            const aref = doc(db, "project_scores", "proyectos_mapping");
+            const asnap = await getDoc(aref);
+            out.altMappingRead = asnap.exists()? { exists:true, data: asnap.data() } : { exists:false };
+            if(asnap.exists() && asnap.data().mapping){ out.mapping = asnap.data().mapping; out.mappingAvailable = true; }
+          }catch(e){ out.altMappingRead = { error: String(e && e.message ? e.message : e) }; }
+        }
+      }catch(e){ console.error('diagnostics failure', e); out.error = String(e && e.message? e.message : e); }
+      return out;
+    }
+
+    function renderUserBar(user){
+      const bar = $("#userBar"); bar.innerHTML="";
+      bar.append(
+        el("span",{class:"email"}, user.email||""),
+        el("button",{onclick: async()=>{ try{ await signOut(auth); window.location.href="login.html"; }catch(e){ toast("No se pudo cerrar sesión","err"); }}},"Cerrar sesión")
+      );
+    }
+
+    async function loadAll(){
+      // Lee project_scores/{Proyecto} uno por uno (respeta reglas)
+      data = [];
+      // normalize and dedupe userProjects to avoid reading same doc twice
+      userProjects = Array.from(new Set((userProjects||[]).map(s => (s||"").trim())));
+      const processedDocs = new Set();
+      for (const p of userProjects) {
+        const docName = projectSaiMap[p] || p;
+        if (processedDocs.has(docName)) continue; // avoid duplicate reads for same underlying SAI doc
+        processedDocs.add(docName);
+        const ref = doc(db,"project_scores", docName);
+        const snap = await getDoc(ref);
+        const docData = snap.exists()? snap.data() : {};
+        const vac = Array.isArray(docData.vacantes) ? docData.vacantes : [];
+
+        // Deduplicate vacantes inside a project by ticket/id to avoid double-counting
+        const uniqueVac = [];
+        const seenKeys = new Set();
+        for (const v of vac) {
+          const key = String((v && (v.ticket || v.id)) || JSON.stringify(v || {}));
+          if (!seenKeys.has(key)) { seenKeys.add(key); uniqueVac.push(v); }
+        }
+
+        // Filtramos abiertas/cerradas
+        const abiertas = uniqueVac.filter(v => (v.status||"Abierta") !== "Cerrada");
+  const counts = {};
+  roles.forEach(r => counts[r] = abiertas.filter(v => normalizeRole(v.role) === r).length);
+        const oldest = abiertas.length ? Math.max(...abiertas.map(v => diasDesde(v.fecha))) : 0;
+
+        // Metas (opcionales)
+        // plantilla_autorizada_total may be stored at doc root, or imported rows put plantillaAutorizada inside each vacante entry.
+        let plantilla = (typeof docData.plantilla_autorizada_total === "number") ? docData.plantilla_autorizada_total : null;
+        let plantillaSource = plantilla != null ? 'doc' : null;
+        if (plantilla == null) {
+          // Do NOT sum plantillaAutorizada across multiple vacantes.
+          // Rule:
+          // - collect distinct non-zero plantilla values from vacantes
+          // - if exactly one distinct value -> use that value
+          // - if multiple distinct values -> use the MAX of them (no summing)
+          const distinct = new Set();
+          for (const v of uniqueVac) {
+            const n = Number(v.plantillaAutorizada || v.plantilla_autorizada || 0) || 0;
+            if (n > 0) distinct.add(n);
+          }
+          if (distinct.size === 1) {
+            const only = Array.from(distinct)[0];
+            plantilla = only; plantillaSource = 'vac-single';
+          } else if (distinct.size > 1) {
+            const mx = Math.max(...Array.from(distinct));
+            plantilla = mx; plantillaSource = 'vac-max';
+          }
+        }
+        const porRol = docData.plantilla_autorizada_por_rol || null;
+        const prudenteRol = docData.vacantes_prudentes_por_rol || null;
+        const prudenteTotal = (prudenteRol? sum(prudenteRol) : (plantilla? Math.max(1, Math.round(plantilla*0.1)) : 3)); // fallback: 10% o 3
+        const slaTarget = (typeof docData.objetivo_sla_reclutamiento_dias === "number") ? docData.objetivo_sla_reclutamiento_dias : 7;
+
+  const st = statusProyecto(abiertas.length, plantilla||0, prudenteTotal, oldest, slaTarget);
+
+        data.push({
+          project: p,
+          vacantes: uniqueVac,
+          abiertas,
+          countsByRole: counts,
+          oldestDays: oldest,
+          plantilla,
+          plantillaSource,
+          porRol,
+          prudenteRol,
+          prudenteTotal,
+          slaTarget,
+          status: st
+        });
+      }
+      // Orden por criticidad
+      data.sort((a,b) => {
+        const rank = { rojo:0, ambar:1, verde:2 };
+        const ra = rank[a.status], rb = rank[b.status];
+        if (ra!==rb) return ra-rb;
+        return b.abiertas.length - a.abiertas.length;
+      });
+    }
+
+    function bindControls(){
+      $("#q").addEventListener("input", e => { filters.q = (e.target.value||"").toLowerCase(); renderAll(); });
+      $("#fRol").addEventListener("change", e => { filters.rol = e.target.value; renderAll(); });
+      $("#fEstado").addEventListener("change", e => { filters.estado = e.target.value; renderAll(); });
+
+      $("#chips").addEventListener("click", (e)=>{
+        const c = e.target.closest(".chip"); if(!c) return;
+        $("#chips").querySelectorAll(".chip").forEach(x=>x.classList.remove("active"));
+        c.classList.add("active");
+        filters.level = c.dataset.level || "ALL";
+        renderAll();
+      });
+
+      $("#btnExport").addEventListener("click", exportCSV);
+    }
+
+    function applyFilters(rows){
+      return rows.filter(r => {
+        if (filters.level!=="ALL" && r.status!==filters.level) return false;
+        if (filters.q && !r.project.toLowerCase().includes(filters.q)) return false;
+        // rol/estado filtran las vacantes antes de KPIs secundarios de la tarjeta
+        const vacs = r.vacantes.filter(v => {
+          const roleNorm = (v.role||"").trim();
+          if (filters.rol!=="ALL" && roleNorm!==filters.rol) return false;
+          if (filters.estado!="ALL" && (v.status||"Abierta")!==filters.estado) return false;
+          return true;
+        });
+        // si después del filtrado no hay nada, escondemos la tarjeta unless the filters are broad
+        return vacs.length || (filters.rol==="ALL" && filters.estado==="ALL");
+      });
+    }
+
+    function renderAll(){
+      // Tarjetas
+      const cards = $("#cards");
+      cards.innerHTML = "";
+      const filtered = applyFilters(data);
+
+      if (!filtered.length) {
+        cards.appendChild(el("div",{class:"card"}, el("div",{class:"meta"},"No hay proyectos con los filtros seleccionados.")));
+      }
+
+      filtered.forEach(row => {
+        const { project, abiertas, countsByRole, oldestDays, plantilla, prudenteTotal, slaTarget, status } = row;
+        const statusLbl = status[0].toUpperCase()+status.slice(1);
+        const kpi = (label, val) => el("div",{class:"kpi"}, el("div",{class:"value"}, String(val)), el("small",{}, label));
+
+        const roleBadges = roles
+          .map(r => ({r, c: countsByRole[r]||0}))
+          .filter(x => x.c>0)
+          .map(x => el("span",{class:"badge"}, `${x.r.split(" ")[1]||x.r}: ${x.c}`)); // abreviar
+
+        // Age alert pill (yellow if >=7 days, red if >10 days)
+        let ageAlert = null;
+        if (oldestDays > 10) ageAlert = el('div',{class:'age-alert rojo'}, `${oldestDays} d`);
+        else if (oldestDays >= 7) ageAlert = el('div',{class:'age-alert ambar'}, `${oldestDays} d`);
+
+        const rightHeadChildren = [];
+        if (ageAlert) rightHeadChildren.push(ageAlert);
+        rightHeadChildren.push(el("div",{class:`status ${status}`}, statusLbl));
+
+        const box = el("div",{class:"card"},
+          el("div",{class:"head"},
+            el("div",{class:"project"}, project),
+            el("div",{}, ...rightHeadChildren)
+          ),
+          el("div",{class:"row"},
+            kpi("Abiertas", abiertas.length),
+            kpi("Más antigua (días)", oldestDays),
+            kpi("Ratio vac/plant", plantilla? (Math.round((abiertas.length/(plantilla))*100))+"%" : "—"),
+            kpi("Plantilla autorizada", plantilla != null ? plantilla : "—")
+          ),
+          el("div",{class:"roles"}, ...roleBadges)
+        );
+        cards.appendChild(box);
+      });
+
+  // Zonal KPI pills
+  computeZonalKpis(filtered);
+    }
+
+    // Compute and render small zonal KPI pills. Uses plantilla if available; else fallback to unique ticket count.
+    function computeZonalKpis(rows){
+      const wrapParent = document.querySelector('.container');
+      // Ensure zonal wrap exists once (append into #zonalContainer)
+      let zonal = document.getElementById('zonalWrap');
+      if(!zonal){
+        zonal = el('div',{id:'zonalWrap', class:'zonal-wrap'});
+        const parent = document.getElementById('zonalContainer') || document.querySelector('.container');
+        parent.insertBefore(zonal, parent.firstChild);
+      }
+      zonal.innerHTML = '';
+      if(!rows || !rows.length) return;
+      rows.forEach(r => {
+        const plantilla = r.plantilla != null ? r.plantilla : (r.vacantes ? (new Set(r.vacantes.map(v=>String(v.ticket||''))).size || 0) : 0);
+        const abiertas = r.abiertas ? r.abiertas.length : 0;
+        // filledPercent = percent of plantilla covered (i.e., (plantilla - abiertas)/plantilla *100). If plantilla===0, set 100
+        const filled = plantilla>0 ? Math.round(((plantilla - abiertas)/plantilla)*100) : 100;
+        const ageFlag = (r.oldestDays>10)? 'red' : (r.oldestDays>=7)? 'yellow' : 'ok';
+        const plantillaLabel = plantilla != null ? `${plantilla} plantilla` : 'plantilla —';
+        const sourceLabel = r.plantillaSource ? (r.plantillaSource === 'doc' ? ' (doc)' : ' (calc)') : '';
+        const pill = el('div',{class:`zpill ${ageFlag==='red'?'red':ageFlag==='yellow'?'yellow':''}`},
+          el('div',{class:'name'}, r.project),
+          el('div',{class:'meta'}, `${abiertas} abiertas · ${plantillaLabel}${sourceLabel}`),
+          el('div',{class:'meter'}, el('i',{}))
+        );
+        const fill = pill.querySelector('.meter > i');
+        fill.style.width = `${Math.max(0, Math.min(100, filled))}%`;
+        if(filled<75) fill.style.background = 'linear-gradient(90deg,#fb7185,#ef4444)';
+        else if(filled<80) fill.style.background = 'linear-gradient(90deg,#fbbf24,#f59e0b)';
+        else fill.style.background = 'linear-gradient(90deg,#34d399,#10b981)';
+        zonal.appendChild(pill);
+      });
+    }
+
+  // heatmap and alerts removed; computeZonalKpis now inserts pills before the cards container
+
+    function exportCSV(){
+      // Construye CSV con métricas principales
+      const headers = ["Proyecto","Status","Abiertas","OldestDias","PrudenteTotal","Plantilla","SLAObjetivo","OpMat","OpVes","OpNoc","Supervisor","Gerente"];
+      const rows = applyFilters(data).map(r => ([
+        r.project,
+        r.status,
+        r.abiertas.length,
+        r.oldestDays,
+        r.prudenteTotal,
+        r.plantilla!=null? r.plantilla : "",
+        r.slaTarget,
+        r.countsByRole["Operativo Matutino"]||0,
+        r.countsByRole["Operativo Vespertino"]||0,
+        r.countsByRole["Operativo Nocturno"]||0,
+        r.countsByRole["Supervisor"]||0,
+        r.countsByRole["Gerente"]||0
+      ]));
+
+      const csv = [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
+      const blob = new Blob([csv], {type:"text/csv;charset=utf-8;"});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url; a.download = `zonal_export_${Date.now()}.csv`;
+      document.body.appendChild(a); a.click(); a.remove();
+      URL.revokeObjectURL(url);
+      toast("CSV exportado");
+    }
+  </script>
+</body>
+<script src="./js/logo-fix.js"></script>
+</html>

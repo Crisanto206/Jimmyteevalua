@@ -197,6 +197,14 @@
         <option value="11">Noviembre</option>
         <option value="12">Diciembre</option>
       </select>
+  <button onclick="debugDashboard()" style="margin-left: 10px; padding: 5px 10px; background: #007bff; color: white; border: none; border-radius: 4px;">🐛 Debug</button>
+
+  <!-- Project selector and date range for dashboard -->
+  <!-- Project selector removed per request; dates kept for filtering if needed -->
+  <label for="startDate" style="margin-left:12px; font-weight:700;color:var(--primary);">Desde:</label>
+  <input type="date" id="startDate" style="margin-left:6px;">
+  <label for="endDate" style="margin-left:8px; font-weight:700;color:var(--primary);">Hasta:</label>
+  <input type="date" id="endDate" style="margin-left:6px;">
     </div>
     <!-- Oculta el singleProjectView por defecto y muestra allProjectsView -->
     <div id="singleProjectView" style="display:none;">
@@ -234,57 +242,65 @@
   </div>
   <script type="module">
     import { auth, db } from "./js/firebase-config.js";
-    import { collection, query, where, getDocs, orderBy, Timestamp, doc, getDoc } 
+    import { collection, query, where, getDocs, orderBy, Timestamp, doc, getDoc, setDoc } 
       from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
     import { onAuthStateChanged, signOut }
       from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
 
-    // Lista completa de proyectos
-    const ALL_PROJECTS = [
-      "Adagio","Boulevard 5 de mayo","Buenavista","Centenario","Combo Aeropuerto",
-      "Combo Azcapotzalco","Combo Carrizal","Combo Cuautitlán","Combo Satélite",
-      "Comitán","Cuautitlán 1ero de mayo","Dorada I Dorada II","Galerías VHS",
-      "Hermosillo","Insurgentes Nte.","Kómplex","La Raza","León","Tijuana",
-      "Macroplaza Insurgentes Tijuana","Moroleon","Paroli","Patio Pedregal",
-      "Portal Churubusco","San Manuel","Símbolos Patrios","Suburbia","Tacámbaro",
-      "Tapachula","Tepeyac","Tlalpan","Tlaxcala","Uruapan","Vía San Ángel",
-      "Zitácuaro","Playa del Carmen","Paseo Akia","WE Periferico","Pirules",
-      "La Mangana","WE Horacio","Tacubaya","Mariano Escobedo","Ferrocarril Hidalgo",
-      "Sam´s Oaxaca","Plaza Alamos","San Pedrito"
-    ];
+    // Lista completa de proyectos (se cargará dinámicamente)
+    let ALL_PROJECTS = [];
+    
+    // Correspondencia proyecto checklist -> proyecto SAI (se cargará dinámicamente)
+    let projectSaiMap = {};
 
     let charts = {};
     let currentUser = null;
     let userProjects = [];
 
-    // Verificar autenticación y obtener proyectos asignados
-    onAuthStateChanged(auth, async user => {
-      if (!user) {
-        window.location.href = "login.html";
-        return;
+    // Cargar proyectos dinámicamente desde la base de datos
+    async function loadProjectsFromDatabase() {
+      try {
+        console.log('📊 Dashboard: Cargando proyectos directamente desde project_scores...');
+        
+        let proyectos = {};
+        
+        // Leer directamente los documentos de project_scores
+        const collectionRef = collection(db, "project_scores");
+        const querySnapshot = await getDocs(collectionRef);
+        
+        console.log('📊 Dashboard: Documentos encontrados en project_scores:', querySnapshot.size);
+        
+        querySnapshot.forEach((docSnap) => {
+          const docId = docSnap.id;
+          // Excluir documentos de metadata
+          if (docId !== 'proyectos_mapping' && docSnap.data().scores) {
+            // Usar el nombre del documento como clave y valor
+            proyectos[docId] = docId;
+            console.log(`📊 Dashboard: Proyecto encontrado: ${docId}`);
+          }
+        });
+        
+        console.log('📊 Dashboard: Proyectos extraídos:', Object.keys(proyectos));
+        
+        // Convertir a arrays
+        ALL_PROJECTS = Object.keys(proyectos).sort();
+        projectSaiMap = proyectos;
+        
+        console.log('🎯 Dashboard: ALL_PROJECTS final:', ALL_PROJECTS);
+        console.log('🗺️ Dashboard: projectSaiMap final:', projectSaiMap);
+        
+      } catch (error) {
+        console.error('💥 Dashboard: Error al cargar proyectos:', error);
+        // Fallback básico
+        ALL_PROJECTS = ["A5 TLAXCALA", "Adagio", "Boulevard 5 de mayo"];
+        projectSaiMap = {};
       }
-      currentUser = user;
-      // Obtener proyectos asignados del usuario
-      let userDoc = await getDoc(doc(db, "users", user.uid));
-      if (userDoc.exists()) {
-        const data = userDoc.data();
-        if (data.isAdmin || data.admin) {
-          userProjects = ALL_PROJECTS;
-        } else if (Array.isArray(data.assignedProjects)) {
-          userProjects = data.assignedProjects;
-        } else {
-          userProjects = [];
-        }
-      } else {
-        userProjects = [];
-      }
-      showAllProjects();
-    });
+    }
 
     // Nueva función de inicialización
     function initDashboard() {
       initCharts();
-      populateProjectSelect();
+      // project selector removed
       setDefaultDates();
     }
 
@@ -376,9 +392,11 @@
 
     // Load data from Firestore
     async function loadData() {
-      const projectId = document.getElementById('projectSelect').value;
+      console.log("📊 Dashboard: loadData iniciado");
+      // project selector removed: pick first available project
+      const projectId = (userProjects && userProjects.length>0) ? userProjects[0] : ((ALL_PROJECTS && ALL_PROJECTS.length>0) ? ALL_PROJECTS[0] : null);
       if (!projectId) {
-        alert("Selecciona un proyecto");
+        alert("No hay proyectos disponibles");
         return;
       }
 
@@ -386,33 +404,61 @@
         const startDate = document.getElementById('startDate').value;
         const endDate = document.getElementById('endDate').value;
 
-        // Obtener documento específico del proyecto
-        const docRef = doc(db, "project_scores", projectId);
-        const projectDoc = await getDoc(docRef);
+        // Usar el nombre SAI para buscar en Firebase (EXACTAMENTE igual que en checklist)
+        const projectSaiName = projectSaiMap[projectId] || projectId;
+        console.log(`📊 Dashboard: Cargando datos para: ${projectId} -> SAI: ${projectSaiName}`);
+
+        // Usar la misma lógica que checklist.html loadLastScores()
+        const ref = doc(db, "project_scores", projectSaiName);
+        console.log(`📊 Dashboard: Consultando Firebase: project_scores/${projectSaiName}`);
         
-        if (!projectDoc.exists()) {
-          alert("No hay datos para este proyecto");
+        const snap = await getDoc(ref);
+        console.log(`📄 Dashboard: Documento existe:`, snap.exists());
+        
+        if (!snap.exists()) {
+          console.log(`❌ Dashboard: Documento no existe para ${projectSaiName}`);
+          alert(`No hay registros previos para ${projectId} (${projectSaiName})`);
           return;
         }
-
-        // Obtener el array de scores y filtrar por fecha
-        const scores = projectDoc.data().scores || [];
-        const filteredScores = scores.filter(score => 
-          score.date >= startDate && 
-          score.date <= endDate
-        );
+        
+        const data = snap.data();
+        console.log(`📋 Dashboard: Datos del documento:`, data);
+        
+        if (!data.scores || !Array.isArray(data.scores)) {
+          console.log(`❌ Dashboard: No hay array de scores en el documento`);
+          alert(`No hay scores guardados para ${projectId} (${projectSaiName})`);
+          return;
+        }
+        
+        // Obtener las últimas 12 calificaciones (igual que checklist)
+        const allScores = data.scores; // Ya están ordenadas con la más reciente primero
+        console.log(`✅ Dashboard: Encontrados ${allScores.length} registros para ${projectSaiName}`);
+        
+        // Filtrar por fechas si se especificaron
+        let filteredScores = allScores;
+        if (startDate && endDate) {
+          filteredScores = allScores.filter(score => 
+            score.date >= startDate && 
+            score.date <= endDate
+          );
+          console.log(`📊 Dashboard: ${filteredScores.length} registros en el período ${startDate} - ${endDate}`);
+        } else {
+          // Si no hay filtro de fechas, tomar las últimas 12 (igual que checklist)
+          filteredScores = allScores.slice(0, 12);
+          console.log(`📊 Dashboard: Mostrando últimas ${filteredScores.length} calificaciones`);
+        }
 
         if (filteredScores.length === 0) {
-          alert("No hay datos para el período seleccionado");
+          alert(`No hay datos para el período seleccionado`);
           return;
         }
 
-        console.log("Datos encontrados:", filteredScores);
+        console.log("📊 Dashboard: Datos encontrados:", filteredScores);
         updateCharts(filteredScores);
 
-      } catch (err) {
-        console.error("Error loading data:", err);
-        alert("Error al cargar datos: " + err.message);
+      } catch (error) {
+        console.error("💥 Dashboard: Error al cargar datos:", error);
+        alert("Error al cargar datos: " + error.message);
       }
     }
 
@@ -458,17 +504,7 @@
       charts.incidencias.update();
     }
 
-    // Función para poblar el selector de proyectos
-    function populateProjectSelect() {
-      const select = document.getElementById('projectSelect');
-      select.innerHTML = '<option value="">Seleccionar Proyecto</option>';
-      ALL_PROJECTS.forEach(p => {
-        const opt = document.createElement('option');
-        opt.value = p;
-        opt.textContent = p;
-        select.appendChild(opt);
-      });
-    }
+  // Project selector removed: UI-driven project selection was removed per request
 
     // Función para establecer fechas por defecto
     function setDefaultDates() {
@@ -481,9 +517,62 @@
     }
 
     // Initialize on load
-    window.addEventListener('DOMContentLoaded', () => {
-      // Al cargar la página, muestra todos los proyectos automáticamente
-      showAllProjects();
+    window.addEventListener('DOMContentLoaded', async () => {
+      console.log('🚀 Dashboard: Iniciando aplicación...');
+      
+      // Primero inicializar charts y fechas
+      initCharts();
+      setDefaultDates();
+      
+      // Verificar autenticación PRIMERO (igual que checklist.html)
+      const unsubscribe = onAuthStateChanged(auth, async (user) => {
+        console.log('👤 Dashboard: onAuthStateChanged triggered, user:', user?.email || 'No user');
+        
+        if (!user) {
+          console.log('❌ Dashboard: No hay usuario autenticado, redirigiendo...');
+          window.location.href = "login.html";
+          return;
+        }
+        
+        currentUser = user;
+        console.log('� Dashboard: Usuario autenticado:', user.email);
+        
+        // Cargar proyectos DESPUÉS de autenticación (igual que checklist.html)
+        console.log('🚀 Dashboard: Iniciando carga de proyectos...');
+        await loadProjectsFromDatabase();
+        console.log('� Dashboard: Proyectos cargados, total ALL_PROJECTS:', ALL_PROJECTS.length);
+        
+        // Obtener proyectos asignados del usuario DESPUÉS de cargar ALL_PROJECTS
+        let userDoc = await getDoc(doc(db, "users", user.uid));
+        if (userDoc.exists()) {
+          const data = userDoc.data();
+          console.log('📋 Dashboard: Datos del usuario:', data);
+          
+          if (data.isAdmin || data.admin) {
+            userProjects = [...ALL_PROJECTS]; // Copiar array
+            console.log('👑 Dashboard: Usuario admin, acceso a todos los proyectos:', userProjects.length);
+          } else if (Array.isArray(data.assignedProjects)) {
+            userProjects = data.assignedProjects;
+            console.log('� Dashboard: Proyectos asignados:', userProjects);
+          } else {
+            userProjects = [];
+            console.log('❌ Dashboard: No hay proyectos asignados');
+          }
+        } else {
+          userProjects = [];
+          console.log('❌ Dashboard: Documento de usuario no existe');
+        }
+        
+        console.log('🎯 Dashboard: userProjects final:', userProjects);
+        
+  // Project selector removed; dashboard will use the first available project by default
+        
+        // Mostrar todos los proyectos automáticamente
+        showAllProjects();
+        
+        // Desuscribirse después de la primera ejecución
+        unsubscribe();
+      });
     });
 
     // Añadir nueva función para mostrar todos los proyectos
@@ -491,39 +580,72 @@
     filtroMes.addEventListener('change', () => showAllProjects());
 
     async function showAllProjects() {
+      console.log('🚀 Dashboard: showAllProjects iniciado');
+      console.log('📋 Dashboard: userProjects disponibles:', userProjects);
+      console.log('🗺️ Dashboard: projectSaiMap disponible:', Object.keys(projectSaiMap).length, 'entradas');
+      
       const container = document.getElementById('allProjectsView');
       const singleView = document.getElementById('singleProjectView');
       container.style.display = 'grid';
       singleView.style.display = 'none';
       container.innerHTML = '<div class="loading">Cargando proyectos...</div>';
 
+      if (!userProjects || userProjects.length === 0) {
+        console.log('❌ Dashboard: No hay userProjects disponibles');
+        container.innerHTML = '<div class="no-data">No hay proyectos disponibles. Verifica la configuración.</div>';
+        return;
+      }
+
       const mesSel = filtroMes.value;
       try {
         const projects = await Promise.all(
           (userProjects.length ? userProjects : []).map(async (projectId) => {
-            const docRef = doc(db, "project_scores", projectId);
-            const projectDoc = await getDoc(docRef);
-            if (projectDoc.exists() && projectDoc.data().scores?.length > 0) {
-              // Filtrar por mes si aplica
-              let scores = projectDoc.data().scores;
-              if (mesSel !== "todos") {
-                scores = scores.filter(s => {
-                  // s.date formato YYYY-MM-DD
-                  return (s.date || "").slice(5,7) === mesSel;
-                });
-              }
-              if (scores.length === 0) return null;
-              const lastScore = scores[0];
-              // Buscar última persona que hizo checklist (asume campo 'usuario' o 'user')
-              const lastUser = lastScore.usuario || lastScore.user || "N/A";
-              return {
-                id: projectId,
-                lastScore,
-                lastUser,
-                allScores: scores
-              };
+            // Usar el nombre SAI para buscar en Firebase (EXACTAMENTE igual que checklist)
+            const projectSaiName = projectSaiMap[projectId] || projectId;
+            console.log(`📊 Dashboard (showAll): Buscando ${projectId} -> SAI: ${projectSaiName}`);
+            
+            // Usar la misma lógica que checklist.html loadLastScores()
+            const ref = doc(db, "project_scores", projectSaiName);
+            const snap = await getDoc(ref);
+            
+            if (!snap.exists()) {
+              console.log(`❌ Dashboard: No existe documento para ${projectSaiName}`);
+              return null;
             }
-            return null;
+            
+            const data = snap.data();
+            if (!data.scores || !Array.isArray(data.scores) || data.scores.length === 0) {
+              console.log(`❌ Dashboard: No hay scores para ${projectSaiName}`);
+              return null;
+            }
+            
+            // Obtener las últimas 12 calificaciones (igual que checklist)
+            let scores = data.scores; // Ya están ordenadas con la más reciente primero
+            console.log(`✅ Dashboard: Encontrados ${scores.length} registros para ${projectSaiName}`);
+            
+            // Filtrar por mes si aplica
+            if (mesSel !== "todos") {
+              scores = scores.filter(s => {
+                // s.date formato YYYY-MM-DD
+                return (s.date || "").slice(5,7) === mesSel;
+              });
+            }
+            
+            if (scores.length === 0) {
+              console.log(`❌ Dashboard: No hay datos para el mes ${mesSel}`);
+              return null;
+            }
+            
+            const lastScore = scores[0]; // La más reciente
+            const lastUser = lastScore.user || lastScore.usuario || "N/A";
+            
+            return {
+              id: projectId, // Mantener el nombre del checklist para mostrar
+              saiName: projectSaiName, // Agregar el nombre SAI para referencia
+              lastScore,
+              lastUser,
+              allScores: scores.slice(0, 12) // Máximo 12 como en checklist
+            };
           })
         );
 
@@ -580,9 +702,27 @@
       `).join('');
       modal.style.display = "flex";
     };
+    
+    // Función de debugging
+    window.debugDashboard = function() {
+      console.log('🐛 === DEBUG DASHBOARD ===');
+      console.log('👤 currentUser:', currentUser?.email || 'No autenticado');
+      console.log('📋 userProjects:', userProjects);
+      console.log('📊 ALL_PROJECTS:', ALL_PROJECTS);
+      console.log('🗺️ projectSaiMap keys:', Object.keys(projectSaiMap));
+      console.log('🗺️ projectSaiMap:', projectSaiMap);
+      
+  // Verificar elementos DOM
+  const container = document.getElementById('allProjectsView');
+  console.log('🎯 allProjectsView exists:', !!container);
+      
+      alert('Debug info enviado a la consola. Abre DevTools (F12) para ver los detalles.');
+    };
+    
     // Make functions globally available
     window.showAllProjects = showAllProjects;
-    window.selectProject = selectProject;
+  // project selection UI and helper removed per request
   </script>
 </body>
+<script src="./js/logo-fix.js"></script>
 </html>

@@ -1,27 +1,183 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <title>Dashboard Financiero - AccessOne</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <!-- Chart.js for visualizations -->
+  <meta charset="UTF-8" />
+  <title>Dashboard Financiero — Rediseño Fusionado</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <!-- Firebase -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root { --primary:#2E0060; --secondary:#FFD400; --accent:#00B2A9; --bg:#f6f7fb; --surface:#ffffff; --text:#1e1f2b; --muted:#585b70; --grid:#e7e9f0; --shadow:0 8px 32px rgba(46,0,96,.12); --radius:20px; }
+    * { box-sizing: border-box; }
+    body { margin:0; font-family:'Inter',system-ui; background:var(--bg); color:var(--text); }
+    .topbar { position:sticky; top:0; z-index:10; background:linear-gradient(90deg, rgba(46,0,96,.95), rgba(0,178,169,.95)); color:#fff; box-shadow:var(--shadow); }
+    .topbar-inner { max-width:1400px; margin:0 auto; padding:10px 18px; display:flex; justify-content:space-between; align-items:center; gap:12px; }
+    .brand { display:flex; align-items:center; gap:12px; }
+    .brand img { height:40px; border-radius:8px; cursor:pointer; }
+    .brand h1 { margin:0; font-size:1.1rem; letter-spacing:.3px; color:#ffd400; }
+    .pill { background:rgba(255,255,255,.14); padding:6px 10px; border-radius:999px; }
+
+    .container { max-width:1400px; margin:18px auto 36px; padding:0 18px; }
+    .header { display:flex; align-items:center; gap:16px; background:linear-gradient(90deg, var(--primary) 60%, var(--accent) 100%); color:#fff; padding:18px; border-radius:var(--radius); border-bottom:6px solid var(--secondary); }
+    .header h2 { margin:0; }
+    .zone-badge { background:#fff; color:var(--primary); font-weight:800; padding:6px 10px; border-radius:999px; }
+
+    .controls { display:flex; gap:12px; align-items:end; flex-wrap:wrap; margin:14px 0; justify-content:space-between; }
+    .control-group { display:flex; gap:12px; align-items:end; flex-wrap:wrap; }
+    .controls select { padding:8px 10px; border-radius:10px; border:1.5px solid var(--primary); background:#fff; font-weight:600; color:var(--primary); }
+    .btn { border:none; padding:10px 14px; border-radius:12px; background:var(--primary); color:#fff; font-weight:700; cursor:pointer; box-shadow:var(--shadow); }
+    .btn.secondary { background:var(--accent); }
+    .btn:active { transform: translateY(1px); }
+
+    .kpis { display:grid; grid-template-columns:repeat(6,1fr); gap:12px; }
+    @media(max-width:1200px){ .kpis{ grid-template-columns:repeat(3,1fr) } }
+    @media(max-width:700px){ .kpis{ grid-template-columns:repeat(2,1fr) } }
+
+    .card { background:var(--surface); border-radius:16px; box-shadow:var(--shadow); padding:14px; }
+    .card h4 { margin:0; font-size:.9rem; color:var(--muted); }
+    .value { font-size:1.2rem; font-weight:800; }
+
+    .two-cols { display:grid; grid-template-columns: 1.25fr 1fr; gap:14px; align-items:start; }
+    @media(max-width:1100px){ .two-cols{ grid-template-columns:1fr } }
+
+    table { width:100%; border-collapse:separate; border-spacing:0; border-radius:12px; overflow:hidden; }
+    th,td { border:1px solid var(--grid); padding:8px; font-size:.94rem; }
+    th { background:var(--primary); color:#fff; text-align:center; position:sticky; top:0; z-index:1; }
+    td:first-child, th:first-child { text-align:left; font-weight:700; color:var(--primary); background:#f4f6fa; }
+    tr:nth-child(even) td { background:rgba(0,0,0,.02); }
+    tr.risk td { background:rgba(255,77,79,.08); }
+    tr:hover td { background:#fffdea; }
+
+    .side-block h4{margin:6px 0 8px;color:var(--primary)}
+    .micro-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:10px}
+    .micro-card{background:var(--surface);border:1px solid var(--grid);border-radius:12px;padding:8px;display:flex;flex-direction:column;align-items:center;gap:4px;box-shadow:var(--shadow)}
+    .micro-card canvas{width:84px!important;height:84px!important}
+    .micro-val{font-weight:800;font-size:1rem;margin-top:2px}
+    .micro-label{font-size:.78rem;color:var(--muted);text-align:center}
+
+    .rank-list{display:flex;flex-direction:column;gap:8px;margin:8px 0; max-height:300px; overflow:auto; padding-right:4px;}
+    .rank-item{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;padding:10px;border:1px dashed var(--grid);border-radius:12px;background:var(--surface);box-shadow:var(--shadow)}
+    .rank-name{font-weight:700;line-height:1.2}
+    .rank-value{font-weight:800;font-size:.9rem;color:#0a7f5a}
+    .rank-value.warn{color:#8a6d00}.rank-value.bad{color:#c62828}
+    .meter{height:8px;background:var(--grid);border-radius:999px;overflow:hidden; grid-column:1/-1}
+    .meter > i{display:block;height:100%;background:linear-gradient(90deg,#a7f3d0,#00c48c);} 
+    .meter.warn > i{background:linear-gradient(90deg,#fff7cc,#ffd400)}
+    .meter.bad > i{background:linear-gradient(90deg,#ffcdd2,#ff4d4f)}
+
+    .badge { padding:4px 8px; border-radius:999px; font-size:.78rem; font-weight:700; }
+    .ok{ background:rgba(0,196,140,.14); color:#00c48c; }
+    .warn{ background:rgba(255,212,0,.18); color:#8a6d00; }
+    .bad{ background:rgba(255,77,79,.14); color:#ff4d4f; }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">
+        <img src="logo.jpg" alt="AccessOne Logo" id="logo-accessone" title="Ir al inicio" />
+        <h1>Dashboard Financiero — Rediseño</h1>
+      </div>
+      <div class="pill" id="clock">--</div>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="header">
+      <div>
+        <h2>Resumen de Proyectos</h2>
+        <div id="zona-pill" class="zone-badge">Indicador: Utilidad</div>
+      </div>
+    </div>
+
+    <div class="controls">
+      <div class="control-group">
+        <div>
+          <label class="form-label">Indicador</label><br/>
+          <select id="selector-rubro">
+            <option value="utilidad">Utilidad</option>
+            <option value="ingreso">Ingreso Ejercido vs Presupuesto</option>
+            <option value="egreso">Egreso Ejercido vs Presupuesto</option>
+            <option value="todos">Calificación</option>
+          </select>
+        </div>
+        <div>
+          <label class="form-label">Mes</label><br/>
+          <select id="filtro-mes"><option value="todos">Todos</option></select>
+        </div>
+        <div>
+          <label class="form-label">Ordenar</label><br/>
+          <select id="ordenar">
+            <option value="desc">Mayor a menor</option>
+            <option value="asc">Menor a mayor</option>
+          </select>
+        </div>
+      </div>
+      <div class="control-group">
+        <button id="btnExport" class="btn">Exportar CSV</button>
+        <button id="btnComparativo" class="btn secondary">Ir a Comparativo vs 2024</button>
+        <button id="btnReset" class="btn secondary">Restablecer</button>
+      </div>
+    </div>
+
+    <!-- KPIs macro -->
+    <div class="kpis" id="kpis"></div>
+
+    <div class="two-cols">
+      <div class="card">
+        <h4>Detalle por proyecto</h4>
+        <div style="overflow:auto; max-height:560px;">
+          <table id="tabla">
+            <thead id="thead"></thead>
+            <tbody id="tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card side-block">
+        <div class="micro-kpis">
+          <div class="micro-card">
+            <canvas id="kpiDonutIngreso"></canvas>
+            <div class="micro-val" id="kpiValIngreso">--%</div>
+            <div class="micro-label">Ingreso / Presupuesto</div>
+          </div>
+          <div class="micro-card">
+            <canvas id="kpiDonutEgreso"></canvas>
+            <div class="micro-val" id="kpiValEgreso">--%</div>
+            <div class="micro-label">Egreso / Presupuesto</div>
+          </div>
+          <div class="micro-card">
+            <canvas id="kpiDonutCalif"></canvas>
+            <div class="micro-val" id="kpiValCalif">--</div>
+            <div class="micro-label">Calificación Promedio</div>
+          </div>
+        </div>
+
+        <h4>Top Proyectos</h4>
+        <div id="topList" class="rank-list"></div>
+
+  <h4 style="margin-top:16px;" id="risk-title">Proyectos en Riesgo</h4>
+        <div id="riskList" class="rank-list"></div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:14px;">
+      <h4>Gráfica</h4>
+      <canvas id="chart" height="320"></canvas>
+    </div>
+  </div>
+
+  <!-- Firebase + lógica de datos del dashboard financiero original -->
   <script type="module">
     import { doc, getDoc } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
     import { db } from './js/firebase-config.js';
 
-    // Redirección por click en logo según usuario autenticado
+    // ====== Rutas y navegación por logo (igual al original) ======
     document.addEventListener("DOMContentLoaded", () => {
       const logo = document.getElementById("logo-accessone");
       logo.onclick = () => {
-        // No hay auth aquí, solo intenta con localStorage/email si existe
         const email = (window.localStorage?.userEmail || "").toLowerCase();
-        if (
-          email === "csalcala@accessone.com.mx" ||
-          email === "valonzo@accessone.com.mx" ||
-          email === "jfernandez@accessone.com.mx"
-        ) {
+        if (["csalcala@accessone.com.mx","valonzo@accessone.com.mx","jfernandez@accessone.com.mx"].includes(email)) {
           window.location.href = "login-admin.html";
         } else {
           window.location.href = "index.html";
@@ -29,526 +185,471 @@
       };
     });
 
-    // Colores AccessOne
-    const COLORS = {
-      primary: "#2E0060",
-      secondary: "#FFD400",
-      accent: "#00B2A9",
-      green: "#00C48C",
-      red: "#FF4D4F",
-      gray: "#e0e3e8"
+    // ====== Estado ======
+    const COLORS = { primary:"#2E0060", secondary:"#FFD400", accent:"#00B2A9", green:"#00C48C", red:"#FF4D4F", gray:"#e0e3e8" };
+    let proyectos = {};           // { nombre: { ingresoEjercido:{meses...}, ingresoPresupuesto:{...}, egresoEjercido:{...}, egresoPresupuesto:{...} } }
+    let proyectosArray = [];      // arreglo plano para render
+    let currentView = "utilidad"; // utilidad|ingreso|egreso|todos
+    let selectedMes = "todos";    // mes seleccionado
+    let selectedZona = 'todos';
+
+    // Mapeo de proyectos -> zona / reglas especiales (usar llaves en minúsculas y sin espacios al final)
+    const PROJECT_ZONE_MAP = {
+      'walmart pirules': 'CDMX NORTE',
+      'los alamos': 'CDMX NORTE',
+      'via san angel': 'SUR',
+      'paseo akia': 'NORTE',
+      'villahermosa': 'SUR',
+      'a5 tlaxcala': 'SUR',
+      'uruapan': 'NORTE',
+      'paroli': 'SUR',
+      'w. buenavista': 'CDMX NORTE',
+      'blvd 5 de mayo': 'SUR',
+      'la raza': 'CDMX NORTE',
+      'zitacuaro': 'NORTE',
+      'moroleon': 'NORTE',
+      'centenario': 'CDMX SUR',
+      'sams cuautitlan': 'CDMX NORTE',
+      'tlalpan': 'CDMX SUR',
+      'plaza tepeyac': 'CDMX SUR',
+      'dorada 2': 'SUR',
+      'walmart aeropuerto': 'CDMX SUR',
+      'san manuel': 'SUR',
+      'w. comitan': 'SUR',
+      'sub. morelia': 'NORTE',
+      'dorada 1': 'SUR',
+      'simbolos patrios': 'SUR',
+      'ba mariano escobedo': 'CDMX SUR',
+      'we periferico': 'CDMX SUR',
+      'ba san pedrito': 'NORTE',
+      'ba insurgentes norte': 'CDMX NORTE',
+      'tacambaro': 'NORTE',
+      'walmart azcapotzalco': 'CDMX NORTE',
+      'c. hermosillo': 'NORTE',
+      'patio pedregal': 'CDMX SUR',
+      'walmart satelite': 'CDMX NORTE',
+      'ba tacubaya': 'CDMX SUR',
+      'combo cuautitlan': 'CDMX NORTE',
+      'portal churubusco': 'CDMX SUR',
+      'ba ferrocarril hidalgo': 'CDMX NORTE',
+      'we horacio': 'CDMX SUR',
+      'c. leon': 'NORTE',
+      'carrizal': 'SUR',
+      'sams club oaxaca': 'SUR',
+      'macro tijuana': 'NORTE',
+      'adagio': 'SUR',
+      'la mangana': 'NORTE',
+      'walmart las animas': 'ELIMINAR',
+      'anahuac': 'NORTE',
+      'playa del carmen': 'SUR',
+      'plaza ajusco sur': 'ELIMINAR',
+      'hermosillo': 'COMBINAR:c. hermosillo',
+      'tapachula': 'ELIMINAR',
+      'ba apatzingan': 'NORTE',
+      'plaza bella': 'SUR',
+      // si faltan proyectos, se mantendrán como vienen
     };
 
-    // Utilidad, Ingreso Ejercido vs Presupuestado, Egreso Ejercido vs Presupuestado
-    let proyectos = {};
-    let proyectosArray = [];
-    let currentView = "utilidad"; // utilidad | ingreso | egreso | todos
-
-    // Meses disponibles
-    const MESES = ['enero', 'febrero', 'marzo', 'abril'];
-    let selectedMes = "todos";
-
-    // DOM Ready
-    document.addEventListener("DOMContentLoaded", async () => {
-      // Agrega filtro de mes dinámicamente SOLO si no existe
-      const controls = document.querySelector('.dashboard-controls');
-      if (!document.getElementById('filtro-mes')) {
-        const mesLabel = document.createElement('label');
-        mesLabel.textContent = "Mes:";
-        const mesSelect = document.createElement('select');
-        mesSelect.id = "filtro-mes";
-        mesSelect.innerHTML = `<option value="todos" selected>Todos</option>` +
-          MESES.map(m => `<option value="${m}">${m.charAt(0).toUpperCase() + m.slice(1)}</option>`).join('');
-        mesLabel.appendChild(mesSelect);
-        controls.insertBefore(mesLabel, controls.children[2]);
-      }
-
-      await cargarDatos();
-      // Detecta meses dinámicamente
-      const mesesDetectados = obtenerMesesDisponibles(proyectos);
-      const mesSelect = document.getElementById('filtro-mes');
-      mesSelect.innerHTML = `<option value="todos" selected>Todos</option>` +
-        mesesDetectados.map(m => `<option value="${m}">${m.charAt(0).toUpperCase() + m.slice(1)}</option>`).join('') +
-        `<option value="total">Total</option>`;
-      selectedMes = "todos";
-      mesSelect.addEventListener("change", e => {
-        selectedMes = e.target.value;
-        renderDashboard();
-      });
-      renderDashboard();
-      document.getElementById("selector-rubro").addEventListener("change", e => {
-        currentView = e.target.value;
-        renderDashboard();
-      });
-      document.getElementById("ordenar").addEventListener("change", renderDashboard);
-      document.getElementById("btn-comparativo").addEventListener("click", () => {
-        window.location.href = "comparativo-corporativo.html";
-      });
-    });
-
-    // Detecta todos los meses presentes en los datos
-    function obtenerMesesDisponibles(proyectos) {
-      const mesesSet = new Set();
-      Object.values(proyectos).forEach(datos => {
-        ['ingresoEjercido', 'egresoEjercido', 'ingresoPresupuesto', 'egresoPresupuesto'].forEach(tipo => {
-          if (datos[tipo]) {
-            Object.keys(datos[tipo]).forEach(mes => {
-              if (mes !== 'total') mesesSet.add(mes);
-            });
-          }
+    // Helper: suma los objetos mensuales (ingreso/egreso/presupuesto)
+    function sumaDatosMensuales(target, source){
+      ['ingresoEjercido','egresoEjercido','ingresoPresupuesto','egresoPresupuesto'].forEach(key=>{
+        const s = source?.[key] || {};
+        if(!s) return;
+        if(!target[key]) target[key] = {};
+        Object.keys(s).forEach(m => {
+          const val = Number(s[m]||0);
+          target[key][m] = (Number(target[key][m]||0) + val);
         });
       });
-      // Ordena meses por el orden tradicional
-      const ordenMeses = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
-      const meses = Array.from(mesesSet);
-      meses.sort((a, b) => ordenMeses.indexOf(a) - ordenMeses.indexOf(b));
-      return meses;
     }
 
-    async function cargarDatos() {
-      const docSnap = await getDoc(doc(db, "estacionamientos", "datos_actuales"));
-      if (!docSnap.exists()) {
+    // Reloj UI
+    const clock = document.getElementById('clock');
+    setInterval(()=>{ const d=new Date(); clock.textContent=d.toLocaleString('es-MX',{dateStyle:'medium', timeStyle:'short'}); },1000);
+
+    // Utilidades formato
+    const money = (v)=> '$ ' + Number(v||0).toLocaleString('es-MX',{minimumFractionDigits:2});
+    const pct = (v)=> (isFinite(v)? (Number(v).toFixed(1)+'%') : '--');
+
+    // Donuts
+    function drawDonut(instRef, canvasId, valuePct, color){
+      const ctx = document.getElementById(canvasId)?.getContext('2d');
+      if(!ctx) return null;
+      if(instRef && typeof instRef.destroy==='function') instRef.destroy();
+      const val = Math.max(0, Math.min(100, Number(valuePct||0)));
+      const rest = 100 - val;
+      return new Chart(ctx, {
+        type: 'doughnut',
+        data: { datasets: [{ data: [val, rest], backgroundColor: [color, '#e7e9f0'], borderWidth: 0 }] },
+        options: { cutout: '70%', plugins: { legend: { display:false }, tooltip:{enabled:false} } }
+      });
+    }
+
+    let donutIngreso=null, donutEgreso=null, donutCalif=null;
+
+    // Detecta meses disponibles en Firestore
+    function obtenerMesesDisponibles(proyectos){
+      const mesesSet = new Set();
+      Object.values(proyectos).forEach(datos => {
+        ['ingresoEjercido','egresoEjercido','ingresoPresupuesto','egresoPresupuesto'].forEach(tipo => {
+          if (datos?.[tipo]) Object.keys(datos[tipo]).forEach(m => { if(m!=="total") mesesSet.add(m); });
+        });
+      });
+      const ordenMeses=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+      return Array.from(mesesSet).sort((a,b)=> ordenMeses.indexOf(a)-ordenMeses.indexOf(b));
+    }
+
+    // Carga Firestore (misma fuente del dashboard financiero)
+    async function cargarDatos(){
+      const snap = await getDoc(doc(db, "estacionamientos", "datos_actuales"));
+      if(!snap.exists()){
         alert("No hay datos guardados en la base de datos.");
         return;
       }
-      proyectos = docSnap.data().proyectos || {};
-      proyectosArray = Object.entries(proyectos)
-        .filter(([nombre]) => !nombre.toLowerCase().includes('corporativo'))
-        .map(([nombre, datos]) => {
-          // Calcula utilidad y calificaciones
-          const utilidad = (datos.ingresoEjercido.total || 0) - (datos.egresoEjercido.total || 0);
-          const ingresoEjercido = datos.ingresoEjercido.total || 0;
-          const ingresoPresupuesto = datos.ingresoPresupuesto.total || 0;
-          const egresoEjercido = datos.egresoEjercido.total || 0;
-          const egresoPresupuesto = datos.egresoPresupuesto.total || 0;
-          // Calificación simple: 1-10
-          let score = 0;
-          // Utilidad: mayor utilidad, mejor score
-          if (utilidad > 0) score += 3;
-          // Ingreso ejercido >= 95% del presupuestado
-          if (ingresoPresupuesto > 0 && ingresoEjercido / ingresoPresupuesto >= 0.95) score += 3;
-          // Egreso ejercido <= egreso presupuestado
-          if (egresoPresupuesto > 0 && egresoEjercido <= egresoPresupuesto) score += 3;
-          // Bonus si utilidad > 10% de ingreso ejercido
-          if (ingresoEjercido > 0 && utilidad / ingresoEjercido > 0.1) score += 1;
-          return {
-            nombre,
-            utilidad,
-            ingresoEjercido,
-            ingresoPresupuesto,
-            egresoEjercido,
-            egresoPresupuesto,
-            score
-          };
-        });
-    }
-
-    function renderDashboard() {
-      let arr = [...proyectosArray];
-      const ordenar = document.getElementById("ordenar").value;
-      let chartData = [];
-      let chartLabels = [];
-      let chartTitle = "";
-      let chartColors = [];
-      let tableHeaders = [];
-      let tableRows = [];
-
-      // Filtrado por mes
-      function getValueByMes(obj, mes) {
-        if (!obj) return 0;
-        if (mes === "todos") return obj.total || 0;
-        return obj[mes] || 0;
-      }
-
-      // Selección de rubro
-      if (currentView === "utilidad") {
-        arr = arr.map(p => {
-          const utilidad = getValueByMes(proyectos[p.nombre].ingresoEjercido, selectedMes) -
-                           getValueByMes(proyectos[p.nombre].egresoEjercido, selectedMes);
-          return { ...p, utilidad };
-        });
-        arr.sort((a, b) => b.utilidad - a.utilidad);
-        chartData = arr.map(p => p.utilidad);
-        chartLabels = arr.map(p => p.nombre);
-        chartTitle = selectedMes === "todos" ? "Utilidad por Proyecto (Total)" : `Utilidad por Proyecto (${selectedMes.charAt(0).toUpperCase() + selectedMes.slice(1)})`;
-        chartColors = arr.map(p => p.utilidad >= 0 ? COLORS.green : COLORS.red);
-        tableHeaders = ["Proyecto", "Utilidad"];
-        tableRows = arr.map(p => [p.nombre, "$ " + p.utilidad.toLocaleString("es-MX", {minimumFractionDigits:2})]);
-      } else if (currentView === "ingreso") {
-        arr = arr.map(p => {
-          const ejercido = getValueByMes(proyectos[p.nombre].ingresoEjercido, selectedMes);
-          const presup = getValueByMes(proyectos[p.nombre].ingresoPresupuesto, selectedMes);
-          return { ...p, ingresoEjercido: ejercido, ingresoPresupuesto: presup };
-        });
-        arr.sort((a, b) => ((b.ingresoEjercido / (b.ingresoPresupuesto || 1)) - (a.ingresoEjercido / (a.ingresoPresupuesto || 1))));
-        chartData = arr.map(p => p.ingresoEjercido / (p.ingresoPresupuesto || 1));
-        chartLabels = arr.map(p => p.nombre);
-        chartTitle = selectedMes === "todos" ? "Ingreso Ejercido vs Presupuestado (Total)" : `Ingreso Ejercido vs Presupuestado (${selectedMes.charAt(0).toUpperCase() + selectedMes.slice(1)})`;
-        chartColors = arr.map(p => (p.ingresoEjercido / (p.ingresoPresupuesto || 1)) >= 1 ? COLORS.green : COLORS.secondary);
-        tableHeaders = ["Proyecto", "Ingreso Ejercido", "Ingreso Presupuestado", "% Cumplimiento"];
-        tableRows = arr.map(p => [
-          p.nombre,
-          "$ " + p.ingresoEjercido.toLocaleString("es-MX", {minimumFractionDigits:2}),
-          "$ " + p.ingresoPresupuesto.toLocaleString("es-MX", {minimumFractionDigits:2}),
-          (p.ingresoPresupuesto ? ((p.ingresoEjercido / p.ingresoPresupuesto) * 100).toFixed(1) : "0") + "%"
-        ]);
-      } else if (currentView === "egreso") {
-        arr = arr.map(p => {
-          const ejercido = getValueByMes(proyectos[p.nombre].egresoEjercido, selectedMes);
-          const presup = getValueByMes(proyectos[p.nombre].egresoPresupuesto, selectedMes);
-          return { ...p, egresoEjercido: ejercido, egresoPresupuesto: presup };
-        });
-        arr.sort((a, b) => ((a.egresoEjercido / (a.egresoPresupuesto || 1)) - (b.egresoEjercido / (b.egresoPresupuesto || 1))));
-        chartData = arr.map(p => p.egresoEjercido / (p.egresoPresupuesto || 1));
-        chartLabels = arr.map(p => p.nombre);
-        chartTitle = selectedMes === "todos" ? "Egreso Ejercido vs Presupuestado (Total)" : `Egreso Ejercido vs Presupuestado (${selectedMes.charAt(0).toUpperCase() + selectedMes.slice(1)})`;
-        chartColors = arr.map(p => (p.egresoEjercido / (p.egresoPresupuesto || 1)) <= 1 ? COLORS.green : COLORS.red);
-        tableHeaders = ["Proyecto", "Egreso Ejercido", "Egreso Presupuestado", "% Gastado"];
-        tableRows = arr.map(p => [
-          p.nombre,
-          "$ " + p.egresoEjercido.toLocaleString("es-MX", {minimumFractionDigits:2}),
-          "$ " + p.egresoPresupuesto.toLocaleString("es-MX", {minimumFractionDigits:2}),
-          (p.egresoPresupuesto ? ((p.egresoEjercido / p.egresoPresupuesto) * 100).toFixed(1) : "0") + "%"
-        ]);
-      } else if (currentView === "todos") { // Calificación
-        arr = arr.map(p => {
-          const utilidad = getValueByMes(proyectos[p.nombre].ingresoEjercido, selectedMes) -
-                           getValueByMes(proyectos[p.nombre].egresoEjercido, selectedMes);
-          const ingresoEjercido = getValueByMes(proyectos[p.nombre].ingresoEjercido, selectedMes);
-          const ingresoPresupuesto = getValueByMes(proyectos[p.nombre].ingresoPresupuesto, selectedMes);
-          const egresoEjercido = getValueByMes(proyectos[p.nombre].egresoEjercido, selectedMes);
-          const egresoPresupuesto = getValueByMes(proyectos[p.nombre].egresoPresupuesto, selectedMes);
-          let score = 0;
-          if (utilidad > 0) score += 3;
-          if (ingresoPresupuesto > 0 && ingresoEjercido / ingresoPresupuesto >= 0.95) score += 3;
-          if (egresoPresupuesto > 0 && egresoEjercido <= egresoPresupuesto) score += 3;
-          if (ingresoEjercido > 0 && utilidad / ingresoEjercido > 0.1) score += 1;
-          return { ...p, utilidad, score };
-        });
-        // Ordenar por calificación y utilidad
-        arr.sort((a, b) => {
-          if (ordenar === "asc") {
-            if (a.score !== b.score) return a.score - b.score;
-            return a.utilidad - b.utilidad;
-          } else {
-            if (b.score !== a.score) return b.score - a.score;
-            return b.utilidad - a.utilidad;
-          }
-        });
-        chartData = arr.map(p => p.score);
-        chartLabels = arr.map(p => p.nombre);
-        chartTitle = selectedMes === "todos"
-          ? "Calificación por Proyecto"
-          : `Calificación por Proyecto (${selectedMes.charAt(0).toUpperCase() + selectedMes.slice(1)})`;
-        chartColors = arr.map(p => {
-          if (p.score >= 8) return COLORS.green;
-          if (p.score >= 5) return COLORS.secondary;
-          return COLORS.red;
-        });
-        tableHeaders = ["Proyecto", "Utilidad", "Calificación"];
-        tableRows = arr.map(p => [
-          p.nombre,
-          "$ " + p.utilidad.toLocaleString("es-MX", {minimumFractionDigits:2}),
-          p.score + " / 10"
-        ]);
-      }
-
-      // Ordenar asc/desc
-      if (ordenar === "asc") {
-        chartData.reverse();
-        chartLabels.reverse();
-        chartColors.reverse();
-        tableRows.reverse();
-      }
-
-      // Renderiza tabla
-      const table = document.getElementById("tabla-proyectos");
-      table.innerHTML = `
-        <thead>
-          <tr>${tableHeaders.map(h => `<th>${h}</th>`).join("")}</tr>
-        </thead>
-        <tbody>
-          ${tableRows.map(row => `<tr>${row.map(cell => `<td>${cell}</td>`).join("")}</tr>`).join("")}
-        </tbody>
-      `;
-
-      // Renderiza gráfico
-      renderChart(chartLabels, chartData, chartTitle, chartColors);
-    }
-
-    let chartInstance = null;
-    function renderChart(labels, data, title, colors) {
-      const ctx = document.getElementById("chart").getContext("2d");
-      if (chartInstance) chartInstance.destroy();
-      chartInstance = new Chart(ctx, {
-        type: "bar",
-        data: {
-          labels,
-          datasets: [{
-            label: title,
-            data,
-            backgroundColor: colors,
-            borderRadius: 8,
-            borderSkipped: false
-          }]
-        },
-        options: {
-          responsive: true,
-          plugins: {
-            legend: { display: false },
-            title: {
-              display: true,
-              text: title,
-              color: "#2E0060",
-              font: { size: 22, weight: "bold" }
-            },
-            tooltip: {
-              callbacks: {
-                label: ctx => {
-                  if (typeof ctx.raw === "number") {
-                    if (title.includes("Utilidad") || title.includes("Ingreso") || title.includes("Egreso")) {
-                      return "$ " + ctx.raw.toLocaleString("es-MX", {minimumFractionDigits:2});
-                    }
-                    return ctx.raw;
-                  }
-                  return ctx.raw;
-                }
-              }
-            }
-          },
-          animation: {
-            duration: 1200,
-            easing: "easeOutBounce"
-          },
-          scales: {
-            x: {
-              ticks: { color: "#2E0060", font: { weight: "bold" } },
-              grid: { color: "#e0e3e8" }
-            },
-            y: {
-              beginAtZero: true,
-              ticks: { color: "#2E0060", font: { weight: "bold" } },
-              grid: { color: "#e0e3e8" }
-            }
-          }
+      const raw = snap.data().proyectos || {};
+      // Aplicar reglas: eliminar o combinar
+      const cleaned = {};
+      Object.entries(raw).forEach(([nombre, datos])=>{
+        const key = (nombre||'').toString().trim().toLowerCase();
+        if (key.includes('corporativo')) return; // skip
+        const rule = PROJECT_ZONE_MAP[key];
+        if (rule && rule.startsWith('COMBINAR:')){
+          const target = rule.split(':')[1].trim().toLowerCase();
+          if (!cleaned[target]) cleaned[target] = JSON.parse(JSON.stringify(datos));
+          else sumaDatosMensuales(cleaned[target], datos);
+          return;
+        }
+        if (rule === 'ELIMINAR') return; // skip this project
+        if (rule){
+          // keep under normalized name
+          const norm = key;
+          if (!cleaned[norm]) cleaned[norm] = JSON.parse(JSON.stringify(datos));
+          else sumaDatosMensuales(cleaned[norm], datos);
+          // attach zona metadata later from PROJECT_ZONE_MAP when populating select
+        } else {
+          // keep as-is
+          cleaned[key] = JSON.parse(JSON.stringify(datos));
         }
       });
+
+      proyectos = cleaned;
+
+      // Construir proyectosArray (para render) y poblar zonas detectadas
+      proyectosArray = Object.keys(proyectos).map(k=> ({ nombre: k }));
+
+      // Zonas dinámicas a partir del map y proyectos
+      const zonasSet = new Set(['todos']);
+      Object.keys(proyectos).forEach(k=>{
+        const z = PROJECT_ZONE_MAP[k];
+        if (z && z !== 'ELIMINAR' && !z.startsWith('COMBINAR')) zonasSet.add(z);
+      });
+      // Insertar selector de zona si no existe
+      if (!document.getElementById('filtro-zona')){
+        const container = document.querySelector('.control-group');
+        const wrapper = document.createElement('div');
+        wrapper.innerHTML = `<label class="form-label">Zona</label><br/><select id="filtro-zona"></select>`;
+        container.insertBefore(wrapper, container.children[2] || null);
+      }
+      const zonaSel = document.getElementById('filtro-zona');
+      zonaSel.innerHTML = Array.from(zonasSet).map(z=>`<option value="${z}">${z}</option>`).join('');
+      zonaSel.addEventListener('change', e => { selectedZona = e.target.value; render(); });
+
+      // Meses a selector
+      const meses = obtenerMesesDisponibles(proyectos);
+      const sel = document.getElementById('filtro-mes');
+      sel.innerHTML = `<option value="todos" selected>Todos</option>` + meses.map(m=>`<option value="${m}">${m.charAt(0).toUpperCase()+m.slice(1)}</option>`).join('') + `<option value="total">Total</option>`;
+      selectedMes = 'todos';
+      render();
     }
+
+    // Accesor por mes
+    function getByMes(obj, mes){ if(!obj) return 0; if(mes==="todos"||mes==="total") return obj.total||0; return obj[mes]||0; }
+
+    // KPIs Macro y tablas
+    function setKPIs(rows){
+      // Ensure only one KPI container exists (in case template duplication occurred)
+      const allK = document.querySelectorAll('#kpis');
+      if(allK.length>1){
+        for(let i=1;i<allK.length;i++) allK[i].remove();
+      }
+      // Agregados por mes
+      const totIngreso = rows.reduce((a,b)=> a + getByMes(proyectos[b.nombre]?.ingresoEjercido, selectedMes), 0);
+      const totIngPres = rows.reduce((a,b)=> a + getByMes(proyectos[b.nombre]?.ingresoPresupuesto, selectedMes), 0);
+      const totEgreso  = rows.reduce((a,b)=> a + getByMes(proyectos[b.nombre]?.egresoEjercido, selectedMes), 0);
+      const totEgrPres = rows.reduce((a,b)=> a + getByMes(proyectos[b.nombre]?.egresoPresupuesto, selectedMes), 0);
+      const totUtilidad = totIngreso - totEgreso;
+
+      const ingresoPct = totIngPres>0 ? (totIngreso/totIngPres*100) : 0;
+      const egresoPct  = totEgrPres>0 ? (totEgreso/totEgrPres*100) : 0;
+
+      const conIngPres = rows.filter(r => getByMes(proyectos[r.nombre]?.ingresoPresupuesto, selectedMes) > 0).length;
+      const conEgrPres = rows.filter(r => getByMes(proyectos[r.nombre]?.egresoPresupuesto, selectedMes) > 0).length;
+      const califProm  = rows.length? (rows.reduce((a,b)=> a + calcScore(b.nombre),0)/rows.length) : 0;
+
+  const k=document.getElementById('kpis');
+  // clear before writing to avoid accidental duplicates
+  k.innerHTML = '';
+  // calcular proyectos en riesgo y exposición según el indicador activo
+  const isRiskRow = (r)=>{
+    const datos = proyectos[r.nombre]||{};
+    const ie = getByMes(datos.ingresoEjercido, selectedMes);
+    const ip = getByMes(datos.ingresoPresupuesto, selectedMes);
+    const ee = getByMes(datos.egresoEjercido, selectedMes);
+    const ep = getByMes(datos.egresoPresupuesto, selectedMes);
+    const util = ie - ee;
+    if(currentView==='ingreso') return (ip>0) && ((ie/ip) < 0.95);
+    if(currentView==='egreso') return (ep>0) && ((ee/ep) > 1);
+    if(currentView==='utilidad') return util < 0;
+    // todos (calificación): riesgo si puntuación baja
+    const s = calcScore(r.nombre); return s < 5;
+  };
+  const riesgosCount = rows.filter(isRiskRow).length;
+  // exposición monetaria (positivo) según indicador
+  const riesgosSum = rows.reduce((acc,r)=>{
+    const datos = proyectos[r.nombre]||{};
+    const ie = getByMes(datos.ingresoEjercido, selectedMes);
+    const ip = getByMes(datos.ingresoPresupuesto, selectedMes);
+    const ee = getByMes(datos.egresoEjercido, selectedMes);
+    const ep = getByMes(datos.egresoPresupuesto, selectedMes);
+    const util = ie - ee;
+    if(currentView==='ingreso') return acc + Math.max(0, ip - ie); // faltante de ingreso
+    if(currentView==='egreso') return acc + Math.max(0, ee - ep); // exceso de egreso
+    if(currentView==='utilidad') return acc + Math.max(0, -util); // suma de utilidades negativas
+    return acc; // para 'todos' no calculamos exposición monetaria
+  },0);
+
+  k.innerHTML = `
+        <div class="card"><h4>Ingreso Total</h4><div class="value">${money(totIngreso)}</div></div>
+        <div class="card"><h4>Egreso Total</h4><div class="value">${money(totEgreso)}</div></div>
+        <div class="card"><h4>Utilidad Total</h4><div class="value">${money(totUtilidad)}</div></div>
+        <div class="card"><h4>% Egreso vs Presupuesto</h4><div class="value">${totEgrPres>0?egresoPct.toFixed(1)+'%':'--'}</div></div>
+  <div class="card"><h4>Proyectos</h4><div class="value">${rows.length}</div></div>
+  <div class="card"><h4>Proyectos en Riesgo</h4><div class="value">${riesgosCount}</div></div>
+  <div class="card"><h4>Valor en Riesgo</h4><div class="value">${money(riesgosSum)}</div></div>
+  <div class="card"><h4>% Ingreso vs Presupuesto (Ingreso)</h4><div class="value">${totIngPres>0?ingresoPct.toFixed(1)+'%':'--'}</div></div>
+      `;
+
+      donutIngreso = drawDonut(donutIngreso,'kpiDonutIngreso', ingresoPct, ingresoPct>=100? '#00C48C' : (ingresoPct>=95? '#FFD400' : '#FF4D4F'));
+      donutEgreso  = drawDonut(donutEgreso,'kpiDonutEgreso', Math.min(100, egresoPct), egresoPct<=100? '#00C48C' : '#FF4D4F');
+      donutCalif   = drawDonut(donutCalif,'kpiDonutCalif', Math.min(100, califProm*10), '#00B2A9');
+      document.getElementById('kpiValIngreso').textContent = totIngPres>0? ingresoPct.toFixed(1)+'%':'--%';
+      document.getElementById('kpiValEgreso').textContent  = totEgrPres>0? egresoPct.toFixed(1)+'%':'--%';
+      document.getElementById('kpiValCalif').textContent   = rows.length? califProm.toFixed(1)+' / 10':'--';
+    }
+
+    function calcScore(nombre){
+      const datos = proyectos[nombre]||{};
+      const util = getByMes(datos.ingresoEjercido, selectedMes) - getByMes(datos.egresoEjercido, selectedMes);
+      const ie = getByMes(datos.ingresoEjercido, selectedMes);
+      const ip = getByMes(datos.ingresoPresupuesto, selectedMes);
+      const ee = getByMes(datos.egresoEjercido, selectedMes);
+      const ep = getByMes(datos.egresoPresupuesto, selectedMes);
+      let s=0; if(util>0) s+=3; if(ip>0 && ie/ip>=0.95) s+=3; if(ep>0 && ee<=ep) s+=3; if(ie>0 && util/ie>0.1) s+=1; return s;
+    }
+
+    // Render principal
+    let chartInstance=null;
+    function render(){
+      // Zona pill con indicador actual
+      const pill = document.getElementById('zona-pill');
+      const map = {utilidad:'Utilidad', ingreso:'Ingreso vs Presupuesto', egreso:'Egreso vs Presupuesto', todos:'Calificación'};
+      pill.textContent = 'Indicador: ' + map[currentView];
+
+      const rows = [...proyectosArray];
+      const ordenar = document.getElementById('ordenar').value;
+
+      // Aplicar filtro de zona
+      const filteredRows = rows.filter(r => {
+        if(!selectedZona || selectedZona==='todos') return true;
+        const key = (r.nombre||'').toLowerCase();
+        const z = PROJECT_ZONE_MAP[key];
+        if (!z) return false; // si no está en el mapa, ocultar por seguridad
+        return (z === selectedZona);
+      });
+
+      // Construcción de filas + datos chart según indicador
+      let chartData=[], chartLabels=[], chartTitle='', chartColors=[];
+
+      // Definir headers de tabla según indicador
+      let headers=[];
+      const body=[];
+
+      if(currentView==='utilidad'){
+        headers=["Proyecto","Ingreso","Egreso","Utilidad"]; 
+        filteredRows.forEach(r=>{
+          const ie=getByMes(proyectos[r.nombre]?.ingresoEjercido, selectedMes);
+          const ee=getByMes(proyectos[r.nombre]?.egresoEjercido, selectedMes);
+          const u=ie-ee;
+          const displayName = r.nombre.split(' ').map(w=> w.charAt(0).toUpperCase()+w.slice(1)).join(' ');
+          body.push([displayName, money(ie), money(ee), money(u)]);
+          chartLabels.push(displayName); chartData.push(u); chartColors.push(u>=0?COLORS.green:COLORS.red);
+        });
+        chartTitle = (selectedMes==='todos'||selectedMes==='total')? 'Utilidad por Proyecto (Total)' : `Utilidad por Proyecto (${selectedMes})`;
+        // Ordenar por utilidad
+        const idx=3; body.sort((a,b)=> (parseFloat(b[idx].replace(/[^\d.-]/g,'')) - parseFloat(a[idx].replace(/[^\d.-]/g,''))));
+      }
+      else if(currentView==='ingreso'){
+        headers=["Proyecto","Ingreso Ejercido","Ingreso Presupuesto","% Cumplimiento"]; 
+        filteredRows.forEach(r=>{
+          const ie=getByMes(proyectos[r.nombre]?.ingresoEjercido, selectedMes);
+          const ip=getByMes(proyectos[r.nombre]?.ingresoPresupuesto, selectedMes);
+          const ratio = ip>0? ie/ip : 0; 
+          const displayName = r.nombre.split(' ').map(w=> w.charAt(0).toUpperCase()+w.slice(1)).join(' ');
+          body.push([displayName, money(ie), money(ip), (ip? (ratio*100).toFixed(1):'0.0')+ '%']);
+          chartLabels.push(displayName); chartData.push(ratio); chartColors.push(ratio>=1?COLORS.green:COLORS.secondary);
+        });
+        chartTitle = (selectedMes==='todos'||selectedMes==='total')? 'Ingreso Ejercido vs Presupuesto (Total)' : `Ingreso Ejercido vs Presupuesto (${selectedMes})`;
+        // Ordenar por ratio desc
+        const idx=3; body.sort((a,b)=> (parseFloat(b[idx]) - parseFloat(a[idx])));
+      }
+      else if(currentView==='egreso'){
+        headers=["Proyecto","Egreso Ejercido","Egreso Presupuesto","% Gastado"]; 
+        filteredRows.forEach(r=>{
+          const ee=getByMes(proyectos[r.nombre]?.egresoEjercido, selectedMes);
+          const ep=getByMes(proyectos[r.nombre]?.egresoPresupuesto, selectedMes);
+          const ratio = ep>0? ee/ep : 0; 
+          const displayName = r.nombre.split(' ').map(w=> w.charAt(0).toUpperCase()+w.slice(1)).join(' ');
+          body.push([displayName, money(ee), money(ep), (ep? (ratio*100).toFixed(1):'0.0')+ '%']);
+          chartLabels.push(displayName); chartData.push(ratio); chartColors.push(ratio<=1?COLORS.green:COLORS.red);
+        });
+        chartTitle = (selectedMes==='todos'||selectedMes==='total')? 'Egreso Ejercido vs Presupuesto (Total)' : `Egreso Ejercido vs Presupuesto (${selectedMes})`;
+        // Ordenar por ratio asc (menor mejor)
+        const idx=3; body.sort((a,b)=> (parseFloat(a[idx]) - parseFloat(b[idx])));
+      }
+      else { // todos = calificación
+        headers=["Proyecto","Utilidad","Calificación (0-10)"]; 
+        filteredRows.forEach(r=>{
+          const ie=getByMes(proyectos[r.nombre]?.ingresoEjercido, selectedMes);
+          const ee=getByMes(proyectos[r.nombre]?.egresoEjercido, selectedMes);
+          const u=ie-ee; const s=calcScore(r.nombre);
+          const displayName = r.nombre.split(' ').map(w=> w.charAt(0).toUpperCase()+w.slice(1)).join(' ');
+          body.push([displayName, money(u), s+" / 10"]);
+          chartLabels.push(displayName); chartData.push(s); chartColors.push(s>=8?COLORS.green:(s>=5?COLORS.secondary:COLORS.red));
+        });
+        chartTitle = (selectedMes==='todos'||selectedMes==='total')? 'Calificación por Proyecto' : `Calificación por Proyecto (${selectedMes})`;
+        // Ordenar por calificación y utilidad
+        const idxS=2, idxU=1; body.sort((a,b)=>{
+          const sa=parseFloat(a[idxS]); const sb=parseFloat(b[idxS]);
+          if(sb!==sa) return sb-sa; // score desc
+          const ua=parseFloat(a[idxU].replace(/[^\d.-]/g,'')); const ub=parseFloat(b[idxU].replace(/[^\d.-]/g,''));
+          return ub-ua;
+        });
+      }
+
+      if(document.getElementById('ordenar').value==='asc') body.reverse(), chartData.reverse(), chartLabels.reverse(), chartColors.reverse();
+
+      // Head + body tabla
+      document.getElementById('thead').innerHTML = `<tr>${headers.map(h=>`<th>${h}</th>`).join('')}</tr>`;
+      document.getElementById('tbody').innerHTML = body.map(r=>`<tr>${r.map(c=>`<td>${c}</td>`).join('')}</tr>`).join('');
+
+  // KPIs macro + donuts (usar filas filtradas)
+  setKPIs(filteredRows);
+
+      // Panel lateral: Top y Riesgo
+      const list = document.getElementById('topList');
+      const riskList = document.getElementById('riskList');
+      // Top según indicador actual (8)
+      const parsed = body.map(row=>({ nombre: row[0], v: parseFloat(String(row[row.length-1]).replace('%','')) , util: parseFloat(String(row[1]||'0').replace(/[^\d.-]/g,'')) }));
+      let top=[];
+      if(currentView==='utilidad') top = parsed.sort((a,b)=> b.util - a.util).slice(0,8);
+      else if(currentView==='ingreso') top = parsed.sort((a,b)=> b.v - a.v).slice(0,8);
+      else if(currentView==='egreso') top = parsed.sort((a,b)=> a.v - b.v).slice(0,8); // menor % gastado mejor
+      else top = parsed.sort((a,b)=> b.v - a.v).slice(0,8);
+
+      list.innerHTML = top.map(t=>{
+        const label = (currentView==='utilidad')? money(t.util) : (isFinite(t.v)? t.v.toFixed(1)+'%':'--');
+        const meter = (currentView==='egreso')? Math.max(0, 100 - Math.min(100, t.v)) : Math.min(100, Math.max(0, t.v));
+        const cls = (currentView==='utilidad')? '' : ((currentView==='egreso')? (t.v<=100?'':'bad') : (t.v>=95?'':(t.v>=90?'warn':'bad')));
+        return `<div class="rank-item"><div class="rank-name" title="${t.nombre}">${t.nombre}</div><div class="rank-value ${cls}">${label}</div><div class="meter ${cls}"><i style="width:${meter}%"></i></div></div>`;
+      }).join('');
+
+      // Riesgo: Ingreso <95% del presupuesto (con presupuesto)
+      const riesgos = body
+        .map(r=>({ nombre:r[0], iepct: parseFloat(String(r[r.length-1]).replace('%','')), tiene:(currentView!=='ingreso')? (getByMes(proyectos[r[0]]?.ingresoPresupuesto, selectedMes)>0) : (parseFloat(String(r[2]).replace(/[^\d.-]/g,''))>0) }))
+        .filter(x=> x.tiene && (isFinite(x.iepct) && x.iepct < 95))
+        .sort((a,b)=> a.iepct - b.iepct)
+        .slice(0,8);
+      riskList.innerHTML = riesgos.length? riesgos.map(t=> `<div class="rank-item"><div class="rank-name" title="${t.nombre}">${t.nombre}</div><div class="rank-value bad">${t.iepct.toFixed(1)}%</div><div class="meter bad"><i style="width:${Math.max(0, Math.min(100, t.iepct))}%"></i></div></div>`).join('') : '<div class="rank-item"><div class="rank-name">Sin riesgos</div></div>';
+
+      // Chart
+      const ctx = document.getElementById('chart').getContext('2d');
+      if(chartInstance) chartInstance.destroy();
+      const dsLabel = chartTitle;
+      const dsData = chartData.map(v=> (currentView==='utilidad')? v : (typeof v==='number'? v : 0));
+      chartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: { labels: chartLabels, datasets: [{ label: dsLabel, data: dsData, backgroundColor: chartColors, borderRadius: 8, borderSkipped:false }] },
+        options: {
+          responsive:true,
+          plugins:{ legend:{display:false}, title:{display:true, text: chartTitle, color:'#2E0060', font:{size:22, weight:'bold'}}, tooltip:{callbacks:{ label: ctx => { const val = ctx.raw; if(currentView==='utilidad') return money(val); if(currentView==='egreso'|| currentView==='ingreso') return (val*100).toFixed(1)+'%'; return val; }}}},
+          scales:{ x:{ ticks:{ color:'#2E0060', font:{weight:'bold'}}, grid:{ color:'#e0e3e8' }}, y:{ beginAtZero:true, ticks:{ color:'#2E0060', font:{weight:'bold'}}, grid:{ color:'#e0e3e8' }}}
+        }
+      });
+      // Recompute Top/Risk from filteredRows to ensure filters affect these lists
+      try{
+        const list = document.getElementById('topList');
+        const riskList = document.getElementById('riskList');
+        const utilArr = filteredRows.map(r=>{
+          const key = r.nombre;
+          const datos = proyectos[key]||{};
+          const ie = getByMes(datos.ingresoEjercido, selectedMes);
+          const ip = getByMes(datos.ingresoPresupuesto, selectedMes);
+          const ee = getByMes(datos.egresoEjercido, selectedMes);
+          const ep = getByMes(datos.egresoPresupuesto, selectedMes);
+          const util = ie - ee;
+          const display = key.split(' ').map(w=> w.charAt(0).toUpperCase()+w.slice(1)).join(' ');
+          const isRisk = (currentView==='ingreso')? (ip>0 && (ie/ip)<0.95) : (currentView==='egreso')? (ep>0 && (ee/ep)>1) : (currentView==='utilidad')? (util<0) : (calcScore(key)<5);
+          return { nombre: display, util, ie, ip, ee, ep, isRisk };
+        });
+        const maxAbs = utilArr.length? Math.max(...utilArr.map(x=>Math.abs(x.util))) : 0.0001;
+        const top = utilArr.slice().sort((a,b)=> b.util - a.util).slice(0,8);
+        list.innerHTML = top.length? top.map(t=>{
+          const cls = t.util<0? 'bad' : '';
+          const pct = maxAbs? Math.min(100, Math.abs(t.util)/maxAbs*100) : 0;
+          return `<div class="rank-item"><div class="rank-name" title="${t.nombre}">${t.nombre}</div><div class="rank-value ${cls}">${money(t.util)}</div><div class="meter ${cls}"><i style="width:${pct}%"></i></div></div>`;
+        }).join('') : '<div class="rank-item"><div class="rank-name">Sin datos</div></div>';
+
+        const riesgos = utilArr.filter(x=> x.isRisk).sort((a,b)=> {
+          // order risk: by severity (for utilidad, more negative first; for ingreso/egreso by percent/absolute)
+          if(currentView==='utilidad') return a.util - b.util; // more negative first
+          if(currentView==='ingreso') return ( (a.ip? a.ip - a.ie : 0) - (b.ip? b.ip - b.ie : 0) ); // bigger missing first
+          if(currentView==='egreso') return ( (b.ee? b.ee - b.ep : 0) - (a.ee? a.ee - a.ep : 0) ); // bigger excess first
+          return a.util - b.util;
+        }).slice(0,8);
+        riskList.innerHTML = riesgos.length? riesgos.map(t=> {
+          const val = (currentView==='utilidad')? money(t.util) : (currentView==='ingreso')? ((t.ip? ((t.ie/t.ip)*100).toFixed(1)+'%':'--')) : (currentView==='egreso')? ((t.ep? ((t.ee/t.ep)*100).toFixed(1)+'%':'--')) : calcScore(t.nombre)+' / 10';
+          return `<div class="rank-item"><div class="rank-name" title="${t.nombre}">${t.nombre}</div><div class="rank-value bad">${val}</div><div class="meter bad"><i style="width:${maxAbs?Math.min(100, Math.abs(t.util)/maxAbs*100):0}%"></i></div></div>`;
+        }).join('') : '<div class="rank-item"><div class="rank-name">Sin riesgos</div></div>';
+      }catch(e){ console.warn('Top/Risk update failed', e); }
+    }
+
+    // Exportar CSV de la tabla visible
+    function exportCSV(){
+      const thead = Array.from(document.querySelectorAll('#thead th')).map(th=> th.textContent.trim());
+      const rows = Array.from(document.querySelectorAll('#tbody tr')).map(tr=> Array.from(tr.children).map(td=> '"'+String(td.textContent).replaceAll('"','""')+'"'));
+      const csv = [thead.join(','), ...rows.map(r=> r.join(','))].join('\n');
+      const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+      const url = URL.createObjectURL(blob); const a=document.createElement('a');
+      a.href=url; a.download='dashboard_financiero_export.csv'; a.click(); URL.revokeObjectURL(url);
+    }
+
+    // Controles UI
+    document.getElementById('selector-rubro').addEventListener('change', e=>{ currentView = e.target.value; render(); });
+    document.getElementById('filtro-mes').addEventListener('change', e=>{ selectedMes = e.target.value; render(); });
+    document.getElementById('ordenar').addEventListener('change', render);
+    document.getElementById('btnExport').addEventListener('click', exportCSV);
+    document.getElementById('btnComparativo').addEventListener('click', ()=> window.location.href='comparativo-corporativo.html');
+    document.getElementById('btnReset').addEventListener('click', ()=>{
+      document.getElementById('selector-rubro').value='utilidad';
+      document.getElementById('ordenar').value='desc';
+      selectedMes='todos'; if(document.getElementById('filtro-mes')) document.getElementById('filtro-mes').value='todos';
+      selectedZona='todos'; if(document.getElementById('filtro-zona')) document.getElementById('filtro-zona').value='todos';
+      currentView='utilidad'; render();
+    });
+
+    // Init
+    await cargarDatos();
   </script>
-  <style>
-    :root {
-      --primary: #2E0060;
-      --secondary: #FFD400;
-      --accent: #00B2A9;
-      --bg-light: #f4f6fa;
-      --bg-white: #fff;
-      --gray: #e0e3e8;
-      --text: #22223b;
-      --shadow: 0 4px 24px rgba(46,0,96,0.08);
-    }
-    body {
-      background: linear-gradient(135deg, #f4f6fa 0%, #e0e3e8 100%);
-      font-family: 'Montserrat', 'Segoe UI', Arial, sans-serif;
-      color: var(--text);
-      margin: 0;
-      min-height: 100vh;
-      background-image: url('pattern.svg'), linear-gradient(135deg, #f4f6fa 0%, #e0e3e8 100%);
-      background-repeat: repeat, no-repeat;
-      padding: 0;
-    }
-    .dashboard-container {
-      max-width: 1400px;
-      margin: 40px auto 0 auto;
-      background: var(--bg-white);
-      border-radius: 24px;
-      box-shadow: 0 8px 32px rgba(46,0,96,0.12);
-      padding: 36px 28px 28px 28px;
-      border: none;
-      animation: fadeIn 1.2s;
-    }
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(40px);}
-      to { opacity: 1; transform: none;}
-    }
-    .dashboard-header {
-      display: flex;
-      align-items: center;
-      background: linear-gradient(90deg, #2E0060 60%, #00B2A9 100%);
-      color: #fff;
-      padding: 28px 36px;
-      border-radius: 24px 24px 0 0;
-      margin-bottom: 0;
-      border-bottom: 8px solid var(--secondary);
-      box-shadow: 0 4px 24px rgba(46,0,96,0.15);
-      animation: slideDown 1s;
-    }
-    @keyframes slideDown {
-      from { opacity: 0; transform: translateY(-40px);}
-      to { opacity: 1; transform: none;}
-    }
-    .dashboard-header img {
-      height: 64px;
-      margin-right: 28px;
-      filter: none;
-    }
-    .dashboard-header h1 {
-      font-size: 2.1em;
-      letter-spacing: 1.5px;
-      margin: 0;
-      font-weight: 800;
-      color: #FFD400;
-      text-shadow: 0 4px 16px rgba(46,0,96,0.10);
-    }
-    .dashboard-controls {
-      display: flex;
-      gap: 24px;
-      align-items: center;
-      margin: 32px 0 18px 0;
-      flex-wrap: wrap;
-      justify-content: flex-end;
-    }
-    .dashboard-controls label {
-      font-weight: 600;
-      color: var(--primary);
-      margin-right: 8px;
-    }
-    .dashboard-controls select {
-      font-size: 1em;
-      padding: 7px 12px;
-      border-radius: 8px;
-      border: 1.5px solid var(--primary);
-      background: #f9f9fb;
-      color: var(--primary);
-      outline: none;
-      font-weight: 600;
-      margin-right: 12px;
-      transition: border 0.2s;
-    }
-    .dashboard-controls select:focus {
-      border: 2px solid var(--accent);
-    }
-    .dashboard-main {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 32px;
-      margin-top: 18px;
-      align-items: flex-start;
-      justify-content: space-between;
-    }
-    .dashboard-chart {
-      flex: 1 1 600px;
-      min-width: 350px;
-      background: #fff;
-      border-radius: 18px;
-      box-shadow: 0 2px 12px rgba(46,0,96,0.06);
-      padding: 24px 18px 18px 18px;
-      margin-bottom: 18px;
-      animation: fadeIn 1.2s;
-    }
-    .dashboard-table {
-      flex: 1 1 500px;
-      min-width: 350px;
-      background: #fff;
-      border-radius: 18px;
-      box-shadow: 0 2px 12px rgba(46,0,96,0.06);
-      padding: 24px 18px 18px 18px;
-      margin-bottom: 18px;
-      animation: fadeIn 1.2s;
-      overflow-x: auto;
-    }
-    table {
-      border-collapse: separate;
-      border-spacing: 0;
-      width: 100%;
-      margin: 0;
-      table-layout: auto;
-      background: #fff;
-      border-radius: 18px;
-      box-shadow: 0 2px 12px rgba(46,0,96,0.06);
-      overflow: hidden;
-    }
-    th, td {
-      border: 1px solid var(--gray);
-      padding: 10px 6px;
-      vertical-align: top;
-      font-size: 0.97em;
-      text-align: right;
-      min-width: 90px;
-      max-width: 180px;
-      word-break: break-word;
-      transition: background 0.2s;
-    }
-    th {
-      background: var(--primary);
-      color: #fff;
-      font-size: 1em;
-      border: none;
-      text-align: center;
-      font-weight: 700;
-      position: sticky;
-      top: 0;
-      z-index: 2;
-    }
-    td:first-child, th:first-child {
-      text-align: left;
-      font-weight: 600;
-      background: #f4f6fa;
-      color: var(--primary);
-      min-width: 180px;
-      max-width: 260px;
-      font-size: 0.98em;
-    }
-    tr:nth-child(even) td {
-      background: #f9f9fb;
-    }
-    tr:hover td {
-      background: #ffe;
-      transition: background 0.2s;
-    }
-    @media (max-width: 1200px) {
-      .dashboard-main { flex-direction: column; }
-      .dashboard-chart, .dashboard-table { min-width: 0; width: 100%; }
-    }
-    @media (max-width: 900px) {
-      .dashboard-container { padding: 8px; }
-      .dashboard-header { flex-direction: column; align-items: flex-start; padding: 12px 6px; }
-      .dashboard-header img { height: 38px; margin-bottom: 10px; }
-      .dashboard-header h1 { font-size: 1em; }
-      .dashboard-controls { flex-direction: column; gap: 10px; }
-      th, td { font-size: 0.90em; padding: 5px 2px; }
-      td:first-child, th:first-child { min-width: 80px; max-width: 120px; }
-    }
-  </style>
-</head>
-<body>
-  <div class="dashboard-container">
-    <div class="dashboard-header">
-      <img src="logo.jpg" alt="AccessOne Logo" id="logo-accessone">
-      <h1>Dashboard Financiero de Proyectos</h1>
-    </div>
-    <div class="dashboard-controls">
-      <label>Indicador:</label>
-      <select id="selector-rubro">
-        <option value="utilidad">Utilidad</option>
-        <option value="ingreso">Ingreso Ejercido vs Presupuestado</option>
-        <option value="egreso">Egreso Ejercido vs Presupuestado</option>
-        <option value="todos">Calificación</option>
-      </select>
-      <label>Ordenar:</label>
-      <select id="ordenar">
-        <option value="desc">Mayor a menor</option>
-        <option value="asc">Menor a mayor</option>
-      </select>
-      <button id="btn-comparativo" style="background: linear-gradient(90deg, #FFD400 60%, #2E0060 100%); color: #fff; font-weight: 800; border-radius: 10px; padding: 10px 24px; font-size: 1.1em; box-shadow: 0 2px 8px #FFD40033; border: none; cursor: pointer; transition: background 0.2s, color 0.2s; margin-left: 18px;">Ir a Comparativo vs 2024</button>
-    </div>
-    <div class="dashboard-main">
-      <div class="dashboard-chart">
-        <canvas id="chart" height="320"></canvas>
-      </div>
-      <div class="dashboard-table">
-        <table id="tabla-proyectos"></table>
-      </div>
-    </div>
-  </div>
 </body>
+<script src="./js/logo-fix.js"></script>
 </html>

@@ -63,8 +63,8 @@
     }
     button.btn:hover { background: var(--primary-700); }
 
-  /* KPIs */
-  .kpis { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; }
+    /* KPIs */
+    .kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
     .kpi {
       background: #fafafa; border: 1px solid var(--gray); border-radius: 12px;
       padding: 12px; text-align: center;
@@ -180,12 +180,6 @@
           <div class="kpi"><div class="value" id="kpiMat">0</div><small>Operativo Matutino</small></div>
           <div class="kpi"><div class="value" id="kpiVes">0</div><small>Operativo Vespertino</small></div>
           <div class="kpi"><div class="value" id="kpiNoc">0</div><small>Operativo Nocturno</small></div>
-          <div class="kpi"><div class="value" id="kpiSupervisor">0</div><small>Supervisor</small></div>
-          <div class="kpi"><div class="value" id="kpiGerente">0</div><small>Gerente</small></div>
-        </div>
-        <div style="margin-top:8px;display:flex;gap:8px;align-items:center">
-          <div style="font-weight:900;color:var(--primary)" id="kpiPlantilla">Plantilla: —</div>
-          <div id="kpiPlantillaSource" style="color:var(--muted);font-weight:700"></div>
         </div>
 
         <div class="chips" id="roleChips" style="margin-top:10px;">
@@ -208,15 +202,6 @@
               <option value="Cerrada">Cerrada</option>
             </select>
           </label>
-        </div>
-
-        <hr style="margin:14px 0">
-        <h2>Importación masiva</h2>
-        <p style="margin:6px 0;color:var(--muted);font-size:.95rem">Pega filas con: Proyecto, Rol, Ticket, Fecha (YYYY-MM-DD), Plantilla Autorizada. Separadores: tab o múltiples espacios.</p>
-        <textarea id="bulkData" placeholder="Proyecto\tRol\tTicket\t2025-08-12\t5" style="width:100%;min-height:110px;padding:10px;border-radius:10px;border:1px solid var(--gray);background:#fff;margin-top:8px"></textarea>
-        <div style="display:flex;gap:8px;margin-top:8px">
-          <button id="btnBulkImport" class="btn">Importar masivamente</button>
-          <button id="btnClearBulk" class="btn" style="background:#f3f4f6;color:#111">Limpiar</button>
         </div>
       </div>
 
@@ -241,12 +226,11 @@
     import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
     import { doc, getDoc, setDoc, Timestamp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
 
-  // Estado
-  let currentUser = null;
-  let userProjects = [];
-  let currentProject = "";
-  let projectSaiMap = {}; // mapping checklist -> SAI name (if available)
-  let vacantesCache = []; // del proyecto actual
+    // Estado
+    let currentUser = null;
+    let userProjects = [];
+    let currentProject = "";
+    let vacantesCache = []; // del proyecto actual
     let filters = { role: "ALL", desde: "", hasta: "", busca: "", estado: "ALL" };
 
     // DOM helpers
@@ -292,8 +276,6 @@
         if (!userProjects.length) throw new Error("Sin proyectos asignados");
 
         buildProjectList();
-        // Load optional mapping like checklist (proyectos_correspondencia / project_scores/proyectos_mapping)
-        await loadProjectsFromDatabase();
         // Autoselección si hay uno
         if (userProjects.length === 1) {
           $("#project").value = userProjects[0];
@@ -352,101 +334,17 @@
       $("#formVac").addEventListener("submit", onRegister);
     }
 
-    // Load projects mapping (like checklist) from proyectos_correspondencia or project_scores/proyectos_mapping
-    async function loadProjectsFromDatabase(){
-      try{
-        let proyectos = {};
-        try{
-          const ref = doc(db, "proyectos_correspondencia", "mapping");
-          const snap = await getDoc(ref);
-          if(snap.exists()){
-            const data = snap.data();
-            Object.keys(data).forEach(k=>{ if(k!=='timestamp' && k!=='user' && k!=='lastUpdated' && k!=='updatedBy') proyectos[k]=data[k]; });
-          }
-        }catch(e){
-          // Firestore permission errors are common for optional mapping docs; keep console cleaner
-          if (e && e.code === 'permission-denied') {
-            console.debug('proyectos_correspondencia: permission-denied (current user has no read access)');
-          } else {
-            console.warn('no proyectos_correspondencia', e && e.message ? e.message : e);
-          }
-        }
-        if(Object.keys(proyectos).length===0){
-          try{
-            const altRef = doc(db, "project_scores", "proyectos_mapping");
-            const altSnap = await getDoc(altRef);
-            if(altSnap.exists() && altSnap.data().mapping) proyectos = altSnap.data().mapping;
-          }catch(e){ console.warn('no project_scores mapping', e.message); }
-        }
-        if(Object.keys(proyectos).length>0){ projectSaiMap = proyectos; userProjects = Object.keys(proyectos).sort(); buildProjectList(); }
-      }catch(e){ console.error('error loading projects', e); }
-    }
-
     async function refreshProjectData() {
       // skeletons
       const list = $("#list");
       list.innerHTML = ""; for (let i=0;i<3;i++) list.appendChild(el("div",{class:"skeleton"}));
 
-      // If no specific project is selected, load vacantes for all projects assigned to the user
-      if (!currentProject) {
-        try {
-          // map each assigned project to its SAI name (if mapping exists)
-            const projectKeys = Array.isArray(userProjects) ? userProjects.map(s=>s.trim()) : [];
-            // Avoid reading the same underlying SAI doc twice by mapping display->sai and deduping
-            const saiToDisplay = {};
-            projectKeys.forEach(p => { const sai = projectSaiMap[p] || p; if (!saiToDisplay[sai]) saiToDisplay[sai] = p; });
-            const sais = Object.keys(saiToDisplay);
-            const refs = sais.map(s => doc(db, "project_scores", s));
-            const snaps = await Promise.all(refs.map(r => getDoc(r)));
-            let combined = [];
-            snaps.forEach((snap, idx) => {
-              if (snap.exists() && Array.isArray(snap.data().vacantes)) {
-                const display = saiToDisplay[sais[idx]] || sais[idx];
-                const arr = snap.data().vacantes.map(v => ({ ...v, _projectDisplay: display }));
-                combined = combined.concat(arr);
-              }
-            });
-            // Deduplicate combined vacantes by ticket+fecha+role to avoid cross-project duplicates
-            const seen = new Set();
-            const dedup = [];
-            for (const v of combined) {
-              const key = `${String(v.ticket||'')}|${String(v.fecha||'')}|${normalizeRole(v.role||'')}`;
-              if (!seen.has(key)) { seen.add(key); dedup.push(v); }
-            }
-            combined = dedup;
-          // sort newest first by timestamp if available
-          combined.sort((a,b)=>{
-            const ta = a && a.at && typeof a.at.toMillis === 'function' ? a.at.toMillis() : 0;
-            const tb = b && b.at && typeof b.at.toMillis === 'function' ? b.at.toMillis() : 0;
-            return tb - ta;
-          });
-          if (combined.length > 1000) combined = combined.slice(0,1000);
-          vacantesCache = combined;
-        } catch (err) {
-          console.error('error loading vacantes for all projects', err);
-          vacantesCache = [];
-        }
-        renderList();
-        return;
-      }
+      if (!currentProject) { vacantesCache = []; renderList(); return; }
 
       try {
-        const projectSaiName = projectSaiMap[currentProject] || currentProject;
-        const ref = doc(db, "project_scores", projectSaiName);
+        const ref = doc(db, "project_scores", currentProject);
         const snap = await getDoc(ref);
         vacantesCache = (snap.exists() && Array.isArray(snap.data().vacantes)) ? snap.data().vacantes : [];
-        // compute plantilla for this project using same rule as Zonal (single-or-max)
-        const distinct = new Set();
-        for (const v of vacantesCache) {
-          const n = Number(v.plantillaAutorizada || v.plantilla_autorizada || 0) || 0;
-          if (n>0) distinct.add(n);
-        }
-        let plantillaVal = null; let plantillaSrc = null;
-        if (distinct.size === 1) { plantillaVal = Array.from(distinct)[0]; plantillaSrc = 'vac-single'; }
-        else if (distinct.size > 1) { plantillaVal = Math.max(...Array.from(distinct)); plantillaSrc = 'vac-max'; }
-        // expose for render
-        vacantesCache._plantilla = plantillaVal;
-        vacantesCache._plantillaSrc = plantillaSrc;
       } catch (err) {
         console.error(err);
         vacantesCache = [];
@@ -478,8 +376,7 @@
       };
 
       try {
-        const projectSaiName = projectSaiMap[p] || p;
-        const ref = doc(db, "project_scores", projectSaiName);
+        const ref = doc(db, "project_scores", p);
         const snap = await getDoc(ref);
         let vac = [];
         if (snap.exists() && Array.isArray(snap.data().vacantes)) vac = snap.data().vacantes;
@@ -503,76 +400,44 @@
 
     // Acciones item
     async function closeVacante(idx) {
-      // If a specific project is selected, operate on that document.
-      const vGlobal = vacantesCache[idx];
-      if (!vGlobal) return;
-      // Determine target project: if viewing a single project use currentProject, otherwise use embedded _projectDisplay or v.project
-      const targetProject = currentProject || vGlobal._projectDisplay || vGlobal.project;
-      if (!targetProject) return toast('Proyecto no identificado','err');
-      const projectSaiName = projectSaiMap[targetProject] || targetProject;
-      const ref = doc(db, "project_scores", projectSaiName);
+      const p = currentProject; if (!p) return;
+      const ref = doc(db, "project_scores", p);
       try {
         const snap = await getDoc(ref);
         let vac = (snap.exists() && Array.isArray(snap.data().vacantes)) ? snap.data().vacantes : [];
-        // Find the matching vacante by ticket, fecha and role (and at if available)
-        const matchIdx = vac.findIndex(x => {
-          if (!x) return false;
-          const sameTicket = String(x.ticket||'') === String(vGlobal.ticket||'');
-          const sameFecha = String(x.fecha||'') === String(vGlobal.fecha||'');
-          const sameRole = String(x.role||'') === String(vGlobal.role||'');
-          if (x.at && vGlobal.at && typeof x.at.toMillis === 'function' && typeof vGlobal.at.toMillis === 'function') {
-            return sameTicket && sameFecha && sameRole && x.at.toMillis() === vGlobal.at.toMillis();
-          }
-          return sameTicket && sameFecha && sameRole;
-        });
-        if (matchIdx === -1) return toast('No se encontró la vacante en el proyecto destino','err');
-        // Remove the matching entry
-        vac.splice(matchIdx, 1);
+        if (!vac[idx]) return;
+        vac[idx] = { ...vac[idx], status: "Cerrada" };
         await setDoc(ref, { vacantes: vac, vacantesLastUpdate: Timestamp.now() }, { merge: true });
-        toast("Vacante eliminada");
-        // Refresh the view to reflect changes across merged list
-        await refreshProjectData();
+        toast("Vacante cerrada");
+        vacantesCache = vac;
+        renderList();
       } catch (err) {
         console.error(err);
-        toast("No se pudo eliminar","err");
+        toast("No se pudo cerrar","err");
       }
     }
 
     async function duplicateVacante(idx) {
-      const vGlobal = vacantesCache[idx];
-      if (!vGlobal) return;
-      const targetProject = currentProject || vGlobal._projectDisplay || vGlobal.project;
-      if (!targetProject) return toast('Proyecto no identificado','err');
-      const projectSaiName = projectSaiMap[targetProject] || targetProject;
-      const ref = doc(db, "project_scores", projectSaiName);
+      const p = currentProject; if (!p) return;
+      const ref = doc(db, "project_scores", p);
       try {
         const snap = await getDoc(ref);
         let vac = (snap.exists() && Array.isArray(snap.data().vacantes)) ? snap.data().vacantes : [];
-        // Find the base entry in the project's array
-        const matchIdx = vac.findIndex(x => {
-          if (!x) return false;
-          const sameTicket = String(x.ticket||'') === String(vGlobal.ticket||'');
-          const sameFecha = String(x.fecha||'') === String(vGlobal.fecha||'');
-          const sameRole = String(x.role||'') === String(vGlobal.role||'');
-          if (x.at && vGlobal.at && typeof x.at.toMillis === 'function' && typeof vGlobal.at.toMillis === 'function') {
-            return sameTicket && sameFecha && sameRole && x.at.toMillis() === vGlobal.at.toMillis();
-          }
-          return sameTicket && sameFecha && sameRole;
-        });
-        if (matchIdx === -1) return toast('No se encontró la vacante en el proyecto destino','err');
-        const base = vac[matchIdx];
+        if (!vac[idx]) return;
+        const base = vac[idx];
         const copy = {
           ...base,
           fecha: todayMx(),
           at: Timestamp.now(),
           status: "Abierta",
-          ticket: (base.ticket || '') + "-D"
+          ticket: base.ticket + "-D" // simple marca para distinguir
         };
         vac.unshift(copy);
         if (vac.length > 300) vac = vac.slice(0,300);
         await setDoc(ref, { vacantes: vac, vacantesLastUpdate: Timestamp.now() }, { merge: true });
         toast("Vacante duplicada");
-        await refreshProjectData();
+        vacantesCache = vac;
+        renderList(true);
       } catch (err) {
         console.error(err);
         toast("No se pudo duplicar","err");
@@ -582,28 +447,17 @@
     // Render
     function renderList(scrollTop=false) {
       // KPIs
-  const abiertas = vacantesCache.filter(v => (v.status||"Abierta") !== "Cerrada");
-      // Debug: list distinct normalized roles for troubleshooting
-      try{
-        const distinctRoles = Array.from(new Set(vacantesCache.map(v=>normalizeRole(v.role||'')).filter(Boolean)));
-        console.debug('vacantes.roles:', distinctRoles);
-      }catch(e){/* ignore */}
-  $("#kpiTotal").textContent = abiertas.length;
-  $("#kpiMat").textContent = abiertas.filter(v => normalizeRole(v.role) === "Operativo Matutino").length;
-  $("#kpiVes").textContent = abiertas.filter(v => normalizeRole(v.role) === "Operativo Vespertino").length;
-  $("#kpiNoc").textContent = abiertas.filter(v => normalizeRole(v.role) === "Operativo Nocturno").length;
-  $("#kpiSupervisor").textContent = abiertas.filter(v => normalizeRole(v.role) === "Supervisor").length;
-  $("#kpiGerente").textContent = abiertas.filter(v => normalizeRole(v.role) === "Gerente").length;
-  // plantilla KPI for current project when selected
-  const pval = vacantesCache._plantilla || null;
-  $("#kpiPlantilla").textContent = `Plantilla: ${pval!=null? pval : '—'}`;
-  $("#kpiPlantillaSource").textContent = vacantesCache._plantillaSrc ? (vacantesCache._plantillaSrc === 'vac-single' ? '(vac)' : '(vac multi)') : '';
+      const abiertas = vacantesCache.filter(v => v.status !== "Cerrada");
+      $("#kpiTotal").textContent = abiertas.length;
+      $("#kpiMat").textContent = abiertas.filter(v => v.role === "Operativo Matutino").length;
+      $("#kpiVes").textContent = abiertas.filter(v => v.role === "Operativo Vespertino").length;
+      $("#kpiNoc").textContent = abiertas.filter(v => v.role === "Operativo Nocturno").length;
 
       const list = $("#list"); list.innerHTML = "";
 
       // Aplicar filtros
       const f = vacantesCache.filter(v => {
-        if (filters.role !== "ALL" && normalizeRole(v.role) !== filters.role) return false;
+        if (filters.role !== "ALL" && v.role !== filters.role) return false;
         if (filters.estado !== "ALL" && (v.status||"Abierta") !== filters.estado) return false;
         if (filters.busca && !(String(v.ticket||"").toLowerCase().includes(filters.busca))) return false;
         if (filters.desde && v.fecha && v.fecha < filters.desde) return false;
@@ -627,10 +481,7 @@
 
         const left = el("div", { class:"left" },
           el("div", { class:"title" }, `${v.ticket || "Sin ticket"}`),
-          el("div", { class:"meta" },
-            `${v.fecha || "s/fecha"} · ${edad} día(s) · ${v.user || ""}`,
-            el("div", { style: "margin-top:6px;" }, el("span", { class: "badge" }, v._projectDisplay || v.project || currentProject || "—"))
-          ),
+          el("div", { class:"meta" }, `${v.fecha || "s/fecha"} · ${edad} día(s) · ${v.user || ""}`),
           el("div", { class:"badges" },
             chip("role", v.role || "-"),
             chipStatus(v.status || "Abierta"),
@@ -669,51 +520,6 @@
       const hoy = new Date();
       return Math.max(0, Math.floor((hoy - f) / (1000*60*60*24)));
     }
-
-  // Normalize role strings to a canonical form used across the app
-  function normalizeRole(r){ return (r||"").toString().trim().replace(/\s+/g,' ').replace(/(^|\s)\w/g, c=>c.toUpperCase()); }
-
-    // Bulk import handler (parse 5 columns including plantillaAutorizada)
-    document.addEventListener('DOMContentLoaded', ()=>{
-      const importBtn = document.getElementById('btnBulkImport');
-      const clearBtn = document.getElementById('btnClearBulk');
-      if (!importBtn) return;
-      importBtn.addEventListener('click', async () => {
-        const raw = (document.getElementById('bulkData').value || '').trim();
-        if (!raw) return toast('Pega las filas a importar','warn');
-        const lines = raw.split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
-        const grouped = {}; // project -> entries[]
-        for (const line of lines) {
-          // split by tab or 2+ spaces or pipe/comma separators
-          const parts = line.split(/\t|\s{2,}|\s\|\s|\s,\s/).map(p=>p.trim()).filter(Boolean);
-          if (parts.length < 5) { console.warn('Fila inválida, se omitirá:', line); continue; }
-          const [project, role, ticket, fecha, plantillaRaw] = parts;
-          const plantilla = parseInt(String(plantillaRaw).replace(/[^0-9]/g,'')) || 0;
-          if (!grouped[project]) grouped[project] = [];
-          grouped[project].push({ project, role, ticket, fecha, plantillaAutorizada: plantilla, user: currentUser?.email || '', at: Timestamp.now(), status: 'Abierta' });
-        }
-
-        let total = 0;
-        for (const proj of Object.keys(grouped)) {
-          const sai = projectSaiMap[proj] || proj;
-          const ref = doc(db, 'project_scores', sai);
-          try {
-            const snap = await getDoc(ref);
-            let vac = (snap.exists() && Array.isArray(snap.data().vacantes)) ? snap.data().vacantes : [];
-            vac = [...grouped[proj], ...vac];
-            if (vac.length > 1000) vac = vac.slice(0,1000);
-            await setDoc(ref, { vacantes: vac, vacantesLastUpdate: Timestamp.now() }, { merge: true });
-            total += grouped[proj].length;
-          } catch (e) { console.error('Error guardando proyecto', sai, e); }
-        }
-
-        toast(`Importadas ${total} vacantes`);
-        document.getElementById('bulkData').value = '';
-        await refreshProjectData();
-      });
-      clearBtn && clearBtn.addEventListener('click', ()=>{ document.getElementById('bulkData').value = ''; });
-    });
   </script>
 </body>
-  <script src="./js/logo-fix.js"></script>
 </html>

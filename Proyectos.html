@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Administración de Proyectos</title>
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f6f7fb; margin:0; }
+    .container { max-width: 800px; margin: 20px auto; background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+    h1 { color:#2E0060; }
+    form { display:flex; gap:10px; margin-bottom:20px; flex-wrap:wrap; }
+    form input { flex:1; padding:10px; border:1px solid #e5e7eb; border-radius:8px; }
+    form button { padding:10px 16px; border:none; border-radius:8px; background:#2E0060; color:#fff; font-weight:700; cursor:pointer; }
+    table { width:100%; border-collapse:collapse; }
+    th, td { border:1px solid #e5e7eb; padding:8px; text-align:left; }
+    th { background:#f9fafb; }
+    td input { width:100%; box-sizing:border-box; padding:6px; border:1px solid #e5e7eb; border-radius:6px; }
+    td button { margin-right:4px; padding:6px 10px; border:none; border-radius:6px; cursor:pointer; font-weight:600; }
+    .save { background:#00B2A9; color:#fff; }
+    .delete { background:#e03131; color:#fff; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Mis Proyectos</h1>
+      <div id="userBar"></div>
+    </header>
+    <div class="card">
+      <div class="kpis">
+        <div>
+          <div class="muted">Total de proyectos asignados</div>
+          <div id="count" class="big">0</div>
+        </div>
+        <div class="controls">
+          <input type="text" id="q" placeholder="Filtrar por nombre…">
+          <button class="btn" id="btnExport">Exportar CSV</button>
+        </div>
+      </div>
+      <form id="addForm" style="margin-top:16px;display:flex;gap:10px;">
+        <input type="text" id="newProject" placeholder="Nuevo proyecto..." required />
+        <button class="btn" type="submit">Agregar</button>
+      </form>
+      <div id="list">
+        <div class="skeleton"></div>
+        <div class="skeleton"></div>
+        <div class="skeleton"></div>
+      </div>
+    </div>
+  </div>
+  <script type="module">
+    import { auth, db } from "./js/firebase-config.js";
+    import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
+    import { doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
+
+    let allProjects = [];
+    let userDocRef = null;
+
+    const $ = s => document.querySelector(s);
+    const el = (t, a = {}, ...c) => { const n = document.createElement(t); Object.entries(a).forEach(([k,v]) => k in n ? n[k]=v : n.setAttribute(k,v)); c.forEach(x => n.appendChild(typeof x === "string" ? document.createTextNode(x) : x)); return n; };
+
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) { window.location.href = "login.html"; return; }
+      renderUserBar(user);
+      userDocRef = doc(db, "users", user.uid);
+      try {
+        const u = await getDoc(userDocRef);
+        if (!u.exists()) throw new Error("Sin permisos");
+        allProjects = Array.isArray(u.data().assignedProjects) ? u.data().assignedProjects.slice().sort((a,b)=>a.localeCompare(b,'es')) : [];
+        renderList(allProjects);
+
+        $("#q").addEventListener("input", e => {
+          const term = (e.target.value || "").toLowerCase();
+          const filtered = allProjects.filter(p => p.toLowerCase().includes(term));
+          renderList(filtered);
+        });
+
+        $("#btnExport").addEventListener("click", () => {
+          const rows = ["Proyecto", ...allProjects].join("\n");
+          const blob = new Blob([rows], {type:"text/csv;charset=utf-8;"});
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url; a.download = `mis_proyectos_${Date.now()}.csv`;
+          document.body.appendChild(a); a.click(); a.remove();
+          URL.revokeObjectURL(url);
+        });
+
+      } catch (e) {
+        console.error(e);
+        alert("No tienes permisos configurados. Contacta al administrador.");
+        window.location.href = "login.html";
+      }
+    });
+
+    // Agregar proyecto
+    $("#addForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const newProject = $("#newProject").value.trim();
+      if (!newProject || allProjects.includes(newProject)) return;
+      allProjects.push(newProject);
+      await updateDoc(userDocRef, { assignedProjects: allProjects });
+      renderList(allProjects);
+      $("#newProject").value = "";
+    });
+
+    function renderUserBar(user){
+      const bar = $("#userBar"); bar.innerHTML = "";
+      bar.append(
+        el("span", { class: "email" }, user.email || ""),
+        el("button", { onclick: async () => { try { await signOut(auth); window.location.href = "login.html"; } catch(e){ alert("No se pudo cerrar sesión"); } } }, "Cerrar sesión")
+      );
+    }
+
+    function renderList(list) {
+      $("#count").textContent = list.length;
+      const box = $("#list"); box.innerHTML = "";
+
+      if (!list.length) {
+        box.appendChild(el("div", { class: "muted" }, "No hay proyectos para mostrar."));
+        return;
+      }
+
+      const ul = el("ul");
+      list.forEach((p, i) => {
+        const li = el("li", {},
+          el("input", {
+            type: "text",
+            value: p,
+            style: "flex:1;margin-right:8px;",
+            onchange: async function() {
+              const newValue = this.value.trim();
+              if (!newValue || allProjects.includes(newValue)) {
+                this.value = p;
+                return;
+              }
+              allProjects[i] = newValue;
+              await updateDoc(userDocRef, { assignedProjects: allProjects });
+              renderList(allProjects);
+            }
+          }),
+          el("span", { class: "tag" }, `#${i+1}`),
+          el("button", {
+            className: "btn",
+            style: "background:#e03131;color:#fff;margin-left:8px;",
+            onclick: async () => {
+              allProjects.splice(i, 1);
+              await updateDoc(userDocRef, { assignedProjects: allProjects });
+              renderList(allProjects);
+            }
+          }, "Eliminar")
+        );
+        ul.appendChild(li);
+      });
+      box.appendChild(ul);
+    }
+  </script>
+</body>
+</html>

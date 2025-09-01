@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Check List — Evaluación Zonas</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    /* Key styles copied from checklist (scoped) + mascot small */
+    .card { background: var(--bg-white); border-radius: 24px; box-shadow: 0 8px 32px rgba(46,0,96,0.12); padding: 32px; margin: 18px; }
+    .form-header { display:flex; gap:12px; align-items:center; flex-wrap:wrap }
+    .form-header label { display:flex; flex-direction:column; font-weight:600 }
+    .sticky-score { display:flex; align-items:center; gap:18px; padding:12px; background:#fffbe7; border-radius:12px; }
+    #totalValue { font-weight:900; font-size:1.4rem }
+    #mascotaContainer img{ width:64px; height:64px; border-radius:50%; object-fit:cover; box-shadow:0 2px 6px rgba(0,0,0,0.12); }
+  .ok-options { display:flex; gap:10px }
+  /* Style options as pill buttons like checklist */
+  .ok-options input[type="radio"] { display:none }
+  .ok-options span { display:inline-block; min-width:64px; text-align:center; padding:8px 12px; border-radius:12px; border:2px solid var(--primary); background:#f9f9fb; color:var(--primary); font-weight:700; cursor:pointer }
+  .ok-options input[type="radio"]:checked + span { background: linear-gradient(90deg, #2E0060 60%, #00B2A9 100%); color:#FFD400 }
+    .comment-col textarea{ min-height:64px }
+  </style>
+</head>
+<body>
+  <div class="container page">
+    <header>
+      <a id="logo-link" href="index.html" style="display:flex;align-items:center;text-decoration:none;">
+        <img src="logo.jpg" alt="AccessOne Logo" id="logo-accessone" style="height:44px">
+      </a>
+      <h1>Check List — Evaluación Zonas</h1>
+    </header>
+
+    <div class="card">
+      <div class="form-header">
+        <label>Zona:
+          <select id="zone">
+            <option>CDMX NORTE</option>
+            <option>CDMX SUR</option>
+            <option>NORTE</option>
+            <option>SUR</option>
+          </select>
+        </label>
+        <label>Fecha:
+          <input type="date" id="date" readonly disabled>
+        </label>
+        <label style="margin-left:auto">Gerente:
+          <input type="text" id="manager" readonly>
+        </label>
+        <button id="markPositiveBtn" type="button">Marcar Positivas</button>
+        <button id="logoutBtn" type="button">Cerrar Sesión</button>
+      </div>
+
+      <div class="sticky-score" style="margin-top:14px">
+        <div>
+          <div>Calificación:</div>
+          <div id="totalValue">0%</div>
+        </div>
+        <div id="gaugeContainer"><canvas id="gauge" width="140" height="70"></canvas></div>
+        <div id="mascotaContainer"><img id="mascotaImg" src="mascota_rojo.png" alt="Mascota"></div>
+      </div>
+
+      <div id="sections"></div>
+      <div id="lastScores" style="margin-top:18px"></div>
+
+      <div class="signatures" style="margin-top:18px">
+        <div class="signature-line">Responsable de CheckList</div>
+        <div class="signature-line">Gerente del Proyecto</div>
+      </div>
+
+      <div style="margin-top:18px">
+        <button id="btn-guardar-calif" style="background:var(--primary);color:#fff;padding:10px 16px;border-radius:20px">Guardar calificación</button>
+      </div>
+    </div>
+
+    <audio id="keySound" src="key.mp3" preload="auto"></audio>
+  </div>
+
+  <script type="module">
+    import { auth, db } from './js/firebase-config.js';
+    import { onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js';
+    import { doc, getDoc, setDoc, Timestamp } from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js';
+
+    const QUESTIONS = [
+      'Las unidades están por arriba de 95 de calificación',
+      'Sus unidades estándar acuerdo al presupuesto en ingreso',
+      'Unidades de acuerdo al presupuesto de gastos',
+      'Entrega reportes en tiempo y forma',
+      'Supervisa los reportes vs servidor',
+      'Visita sus unidades por lo menos una vez al mes',
+      'Envía sus check list con observaciones y da seguimiento a sus pendientes',
+      'Brinda apoyo a sus gerentes en caso de alguna contingencia',
+      'Coordina los permisos y licencias de sus unidades y brinda seguimiento',
+      'Da seguimiento puntual a la mesa de ayuda, retroalimenta tickets',
+      'Planifica mantenimientos y faenas de limpieza',
+      'Establece objetivos claros a sus gerentes y da retroalimentacion sobre metas y estados financieros',
+      'Revisa los datos de rendimiento',
+      'Prepara en tiempo y forma las presentaciones de su zona',
+      'Es participativo en las reuniones',
+      'Aplica buenos criterios de evaluación a los gerentes',
+      'Cuida a su equipo',
+      'Entrena a su equipo',
+      'Fomenta la innovación',
+      'Contesta llamadas a sus gerentes',
+      'Da seguimiento puntual a las necesidades de sus proyectos',
+      'Verifica que los descuentos de seguridad se envíen en tiempo y forma y pasen a descuento'
+    ];
+
+  // No hay items tratados como "negativos" en esta página: todas las preguntas consideran 'Sí' como respuesta positiva
+  const negativeLabels = [];
+
+    function createSections(){
+      const container = document.getElementById('sections'); container.innerHTML = '';
+      const d = document.createElement('details'); d.open = true; const s = document.createElement('summary'); s.textContent = 'General'; d.appendChild(s);
+      const t = document.createElement('table'); t.style.width='100%';
+      const thead = document.createElement('thead'); thead.innerHTML = '<tr><th>Ítem</th><th>Comentario</th><th>Resultado</th></tr>'; t.appendChild(thead);
+      const tbody = document.createElement('tbody');
+      QUESTIONS.forEach((label, i)=>{
+        const tr = document.createElement('tr');
+        const tdItem = document.createElement('td'); tdItem.textContent = `${i+1}. ${label}`;
+        const tdComment = document.createElement('td'); tdComment.className = 'comment-col'; const ta = document.createElement('textarea'); ta.name = 'coment' + (i+1); tdComment.appendChild(ta);
+        const tdOk = document.createElement('td'); tdOk.className = 'ok-col'; const opts = ['Sí','No','No Aplica']; const wrap = document.createElement('div'); wrap.className='ok-options';
+        opts.forEach(v=>{ const lbl = document.createElement('label'); const r = document.createElement('input'); r.type='radio'; r.name = 'ok'+(i+1); r.value = v; r.addEventListener('change', updateTotal); const sp = document.createElement('span'); sp.textContent = v; lbl.appendChild(r); lbl.appendChild(sp); wrap.appendChild(lbl); });
+        tdOk.appendChild(wrap);
+        tr.appendChild(tdItem); tr.appendChild(tdComment); tr.appendChild(tdOk); tbody.appendChild(tr);
+      });
+      t.appendChild(tbody); d.appendChild(t); container.appendChild(d);
+      // char counters
+      container.querySelectorAll('textarea').forEach(ta=> ta.addEventListener('input', e=>{ /* no-op for now */ }));
+    }
+
+    function drawGauge(value){
+      const canvas = document.getElementById('gauge'); if(!canvas) return; const ctx = canvas.getContext('2d'); window.ctx = ctx;
+      const cX = canvas.width/2; const cY = canvas.height; const r = Math.min(cX, cY) - 6;
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      // draw three colored arcs: red (left), yellow (mid), green (right)
+      ctx.beginPath(); ctx.moveTo(cX,cY); ctx.arc(cX,cY,r,Math.PI, Math.PI + Math.PI/3, false); ctx.closePath(); ctx.fillStyle = '#ff4d4d'; ctx.fill();
+      ctx.beginPath(); ctx.moveTo(cX,cY); ctx.arc(cX,cY,r,Math.PI + Math.PI/3, Math.PI + 2*Math.PI/3, false); ctx.closePath(); ctx.fillStyle = '#ffcc00'; ctx.fill();
+      ctx.beginPath(); ctx.moveTo(cX,cY); ctx.arc(cX,cY,r,Math.PI + 2*Math.PI/3, 2*Math.PI, false); ctx.closePath(); ctx.fillStyle = '#00cc44'; ctx.fill();
+      // baseline semicircle outline
+      ctx.beginPath(); ctx.arc(cX,cY,r,Math.PI,2*Math.PI,false); ctx.lineWidth=2; ctx.strokeStyle='rgba(0,0,0,0.12)'; ctx.stroke();
+      // draw needle
+      const angle = Math.PI + (value/100)*Math.PI; const nx = cX + (r-12)*Math.cos(angle); const ny = cY + (r-12)*Math.sin(angle);
+      ctx.beginPath(); ctx.moveTo(cX,cY); ctx.lineTo(nx,ny); ctx.lineWidth = 4; ctx.strokeStyle = '#222'; ctx.stroke();
+      // center dot
+      ctx.beginPath(); ctx.arc(cX,cY,5,0,2*Math.PI); ctx.fillStyle='#222'; ctx.fill();
+    }
+
+    function getTodayMx(){ const now = new Date(); const mx = new Date(now.toLocaleString('en-US',{timeZone:'America/Mexico_City'})); return mx.toISOString().slice(0,10); }
+
+    function updateTotal(){
+      let sum=0; const rows = Array.from(document.querySelectorAll('#sections table tbody tr'));
+      const firstCount = Math.min(5, rows.length); const restCount = Math.max(0, rows.length-firstCount);
+      const wFirst = firstCount? 25/firstCount:0; const wRest = restCount?75/restCount:0;
+      let allPositive = true; let evaluableCount = 0;
+      rows.forEach((r,idx)=>{
+        const label = r.children[0].textContent||''; const num = idx+1;
+        const sel = r.querySelector(`input[name="ok${num}"]:checked`); const val = sel? sel.value : null;
+        const isNeg = negativeLabels.some(rx=>rx.test(label));
+        // desired positive value depends on whether the item is negative
+        const desired = isNeg ? 'No' : 'Sí';
+        if(val === null){ allPositive = false; }
+        else if(val !== desired){ allPositive = false; }
+        if(val !== null){ evaluableCount++; }
+        const w = idx<firstCount? wFirst: wRest;
+        if(isNeg){ if(val === 'Sí') sum -= w; else if(val === 'No' || val === 'No Aplica') sum += w; }
+        else { if(val === 'Sí' || val === 'No Aplica') sum += w; }
+      });
+      // If every evaluable answer matches the desired positive value, show 100%
+      let total;
+      if(evaluableCount > 0 && allPositive) total = 100;
+      else total = Math.max(0, Math.min(100, sum));
+      document.getElementById('totalValue').textContent = total.toFixed(2) + '%';
+      drawGauge(total);
+      const img = document.getElementById('mascotaImg'); if(img){ if(total<=40) img.src='mascota_rojo.png'; else if(total<=75) img.src='mascota_amarillo.png'; else img.src='mascota_verde.png'; }
+    }
+
+    window.updateTotal = updateTotal;
+
+  function markAllPositive(){ Array.from(document.querySelectorAll('#sections table tbody tr')).forEach((r,idx)=>{ const label = r.children[0].textContent||''; const isNeg = negativeLabels.some(rx=>rx.test(label)); const desired = isNeg?'No':'Sí'; const radio = r.querySelector(`input[value="${desired}"]`); if(radio) radio.checked=true; }); updateTotal(); }
+
+    // Auth and UI init
+    let currentUser = null;
+    onAuthStateChanged(auth, user=>{ if(!user) return window.location.href='login.html'; currentUser = user; document.getElementById('date').value = getTodayMx(); createSections(); drawGauge(0); loadLastScores(); });
+    document.getElementById('logoutBtn').addEventListener('click', async ()=>{ await signOut(auth); window.location.href='login.html'; });
+
+  async function saveScore(){ const zone = document.getElementById('zone').value; if(!zone) return alert('Selecciona una zona'); const fecha = document.getElementById('date').value || getTodayMx(); const scoreObj = { date: fecha, user: currentUser ? currentUser.email : 'anon', at: Timestamp.now(), staff: {}, metrics: {} }; const answers = {}; Array.from(document.querySelectorAll('#sections table tbody tr')).forEach((r,i)=>{ const label = r.children[0].textContent||''; const num=i+1; const sel = r.querySelector(`input[name="ok${num}"]:checked`); const comment = r.querySelector('textarea')? r.querySelector('textarea').value.trim() : ''; answers[num] = { label, result: sel? sel.value : '', comment }; }); scoreObj.answers = answers; scoreObj.total = parseFloat(document.getElementById('totalValue').textContent) || 0; const docId = 'evaluaciones_zonas_' + zone; const ref = doc(db,'project_scores',docId); const snap = await getDoc(ref); let arr = []; if(snap.exists() && Array.isArray(snap.data().scores)) arr = snap.data().scores; arr.unshift(scoreObj); if(arr.length>12) arr = arr.slice(0,12); await setDoc(ref, { scores: arr }, { merge: true }); alert(`Calificación guardada para ${zone}`); loadLastScores(); }
+
+    async function loadLastScores(){ const zone = document.getElementById('zone').value; const box = document.getElementById('lastScores'); box.innerHTML = `<b>Últimas 12 evaluaciones de ${zone}:</b>`; if(!zone) return; try{ const docId = 'evaluaciones_zonas_' + zone; const ref = doc(db,'project_scores',docId); const snap = await getDoc(ref); if(!snap.exists()){ box.innerHTML += '<br><i>No hay registros previos</i>'; return; } const data = snap.data(); if(!data.scores || !Array.isArray(data.scores) || data.scores.length===0){ box.innerHTML += '<br><i>No hay registros</i>'; return; } const arr = data.scores; const tbl = document.createElement('table'); tbl.style.width='100%'; tbl.style.marginTop='10px'; const thead = document.createElement('thead'); thead.innerHTML = '<tr><th>Fecha</th><th>Usuario</th><th>Calificación</th><th>Detalle</th></tr>'; tbl.appendChild(thead); const tbody = document.createElement('tbody'); arr.forEach(s=>{ const tr = document.createElement('tr'); const td1 = document.createElement('td'); td1.textContent = (s.date||'').toString().slice(0,10); const td2 = document.createElement('td'); td2.textContent = s.user||''; const td3 = document.createElement('td'); td3.textContent = ((s.total||0).toFixed(2) + '%'); const td4 = document.createElement('td'); const btn = document.createElement('button'); btn.type='button'; btn.textContent='Ver'; btn.addEventListener('click', ()=> showScoreDetail(s)); td4.appendChild(btn); tr.appendChild(td1); tr.appendChild(td2); tr.appendChild(td3); tr.appendChild(td4); tbody.appendChild(tr); }); tbl.appendChild(tbody); box.appendChild(tbl); }catch(err){ console.error(err); box.innerHTML += '<br><i>Error al cargar historial: '+err.message+'</i>'; } }
+
+    function showScoreDetail(scoreObj){ const w = window.open('','_blank','width=800,height=600'); w.document.write('<h2>Detalle</h2>'); w.document.write(`<b>Fecha:</b> ${scoreObj.date||''}<br><b>Usuario:</b> ${scoreObj.user||''}<br><b>Calificación:</b> ${(scoreObj.total||0).toFixed(2)}%<hr>`); for(const k in scoreObj.answers){ const a = scoreObj.answers[k]; w.document.write(`<b>${a.label}:</b> ${a.result||'-'}<br><i>${a.comment||''}</i><hr>`); } }
+
+    // Attach events
+    document.getElementById('markPositiveBtn').addEventListener('click', markAllPositive);
+    document.getElementById('btn-guardar-calif').addEventListener('click', saveScore);
+    document.getElementById('zone').addEventListener('change', ()=> loadLastScores());
+
+  </script>
+  <script src="./js/logo-fix.js"></script>
+</body>
+</html>

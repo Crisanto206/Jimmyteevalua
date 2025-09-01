@@ -447,7 +447,8 @@
           Proyecto:
           <input type="text" id="project" list="projectList" placeholder="Escribe para filtrar..." autocomplete="off" required readonly onfocus="this.removeAttribute('readonly');" onblur="this.setAttribute('readonly','readonly');">
         </label>
-        <button id="searchBtn" type="button">Buscar</button>
+  <button id="searchBtn" type="button">Buscar</button>
+  <button id="markPositiveBtn" type="button">Marcar Positivas</button>
         <label>
           Fecha:
           <input type="date" id="date" readonly disabled>
@@ -564,56 +565,11 @@
       "La Mangana","WE Horacio","Tacubaya","Mariano Escobedo","Ferrocarril Hidalgo",
       "Sam´s Oaxaca","Plaza Alamos","San Pedrito"
     ];
-    // Mapeo proyecto -> gerente
-    const projectManagerMap = {
-      "Adagio": "CARLOS BRUNO VALENCIA RAMÍREZ",
-      "Boulevard 5 de mayo": "CÁNDIDO FCO. RUBÉN BECERRIL MARAVILLAS",
-      "Buenavista": "DORIAN GUADALUPE NIETO VÁZQUEZ",
-      "Centenario": "ÁNGEL ELOY TRUJILLO SARABIA",
-      "Combo Aeropuerto": "DAVID BARRIOS PIÑA",
-      "Combo Azcapotzalco": "ISMAEL VENTURA",
-      "Combo Carrizal": "CALEB JAFHET MALDONADO MENDEZ",
-      "Combo Cuautitlán": "ESTEFABIA RUBIO",
-      "Combo Satélite": "JAQUELIN ALVARADO ALVARADO",
-      "Comitán": "GLADIS DEL ROSARIO MALDONADO RAMÍREZ",
-      "Cuautitlán 1ero de mayo": "EDWIN ISSAC HERNANDEZ RODRIGUEZ",
-      "Dorada I Dorada II": "RICARDO FABRE JUAREZ",
-      "Galerías VHS": "SIN ASIGNACION",
-      "Hermosillo": "HECTOR ISAAC COTA MEDINA",
-      "Insurgentes Nte.": "ZULEYMA GONZAGA CUEVAS",
-      "Kómplex": "SELENE ARIZBETH BONILLA HERNANDEZ",
-      "La Raza": "MARÍA ELENA HERNÁNDEZ GARCÍA",
-      "León": "LAURA PATRICIA MUJICA HERNANDEZ",
-      "Tijuana": "ELIAS RAMIREZ VARGAS",
-      "Macroplaza Insurgentes Tijuana": "JUAN JOSÉ LOPEZ CASTELLANOS",
-      "Moroleon": "MARIA ALEJANDRA NAVA OSORIO",
-      "Paroli": "FRANCISCO JAVIER RUBIO ISLAS",
-      "Patio Pedregal": "SIN ASIGNACION",
-      "Portal Churubusco": "MAYRA DELGADO PEÑA",
-      "San Manuel": "JACQUELINE RAMÍREZ SANDOVAL",
-      "Símbolos Patrios": "JESÚS MANUEL ZURITA PALACIOS",
-      "Suburbia": "JOSE EDUARDO GUTIERREZ ABURTO",
-      "Tacámbaro": "KISAI PALOMA BALLESTEROS VILLALOBOS",
-      "Tapachula": "RODRIGO VILLEGAS MOLINA",
-      "Tepeyac": "LESLIE MICHELLE AYALA RODRIGUEZ",
-      "Tlalpan": "IVÁN IBÁÑEZ RODRIGUEZ",
-      "Tlaxcala": "ANGÉLICA PLAZA HERNÁNDEZ",
-      "Uruapan": "GIANFRANCO VALLADAREZ VALENCIA",
-      "Vía San Ángel": "RAUL MARTINEZ RUGERIO",
-      "Zitácuaro": "JULIO CESAR OROZCO ESQUIVEL",
-      "Playa del Carmen": "SIN ASIGNACION",
-      "Paseo Akia": "JOSE MANUEL PARDO ESQUIVEL",
-      "WE Periferico": "ALBERTO GONZALEZ CAMPUZANO",
-      "Pirules": "CRUZ GABRIELA HERNANDEZ AVILEZ",
-      "La Mangana": "MANUELA MORENO RAMIREZ",
-      "WE Horacio": "RICARDO DANIEL DIAZ URAGA",
-      "Tacubaya": "ALBERTO MARTIN LOPEZ DEL RAZO",
-      "Mariano Escobedo": "SIN ASIGNACION",
-      "Ferrocarril Hidalgo": "LESLIE MICHELLE AYALA RODRIGUEZ",
-      "Sam´s Oaxaca": "JULIO CÉSAR ZURITA PALACIOS",
-      "Plaza Alamos": "JUAN LOPEZ GARCIA",
-      "San Pedrito": "YARENI EMILY AHUMADA RUELAS"
-    };
+    // Mapeo proyecto -> gerente (se cargará dinámicamente)
+    let projectManagerMap = {};
+    
+    // Correspondencia proyecto checklist -> proyecto SAI (se cargará dinámicamente)
+    let projectSaiMap = {};
 
     // Patrones de preguntas negativas (responder "Sí" penaliza)
     const negativeLabels = [
@@ -734,26 +690,39 @@
         return;
       }
       currentUser = user;
-      // Obtener proyectos asignados al usuario
+      
+      // Obtener proyectos dinámicamente desde la base de datos
+      console.log('🚀 Iniciando carga de proyectos...');
+      await loadProjectsFromDatabase();
+      console.log('📋 Proyectos cargados, total:', userProjects.length);
+      
+      // Verificar permisos del usuario
       const snap = await getDoc(doc(db, "users", user.uid));
       if (!snap.exists()) {
         alert("No tienes permisos configurados. Contacta al administrador.");
         window.location.href = "login.html";
         return;
       }
-      userProjects = snap.data().assignedProjects || [];
+      
       // Guardar si es admin para el logo
       window._isAdmin = !!(snap.data().isAdmin || snap.data().admin);
+      
       if (!Array.isArray(userProjects) || userProjects.length === 0) {
-        alert("No tienes proyectos asignados. Contacta al administrador.");
+        alert("No se pudieron cargar los proyectos. Verifica la configuración.");
+        console.error('❌ userProjects está vacío o no es array:', userProjects);
         window.location.href = "login.html";
         return;
       }
+      
+      console.log('✅ Construyendo lista de proyectos...');
       buildProjectList();
+      
       if (userProjects.length === 1) {
         document.getElementById('project').value = userProjects[0];
         assignManager();
       }
+      
+      console.log('🎉 Inicialización completada exitosamente');
     });
 
     // Genera el datalist SOLO con los proyectos permitidos del usuario
@@ -765,6 +734,122 @@ function buildProjectList() {
     option.value = p;
     datalist.appendChild(option);
   });
+}
+
+// Cargar proyectos dinámicamente desde la base de datos
+async function loadProjectsFromDatabase() {
+  try {
+    console.log('Cargando proyectos desde la base de datos...');
+    
+    let proyectos = {};
+    let fuente = '';
+    
+    // Intentar desde proyectos_correspondencia primero (misma lógica que ingreso-tiendas)
+    try {
+      console.log('Intentando leer desde proyectos_correspondencia...');
+      const ref = doc(db, "proyectos_correspondencia", "mapping");
+      const snap = await getDoc(ref);
+      
+      if (snap.exists()) {
+        const data = snap.data();
+        // Filtrar campos de metadata como timestamp, user, etc.
+        Object.keys(data).forEach(key => {
+          if (key !== 'timestamp' && key !== 'user' && key !== 'lastUpdated' && key !== 'updatedBy') {
+            proyectos[key] = data[key];
+          }
+        });
+        
+        if (Object.keys(proyectos).length > 0) {
+          fuente = 'proyectos_correspondencia';
+          console.log('✅ Proyectos cargados desde proyectos_correspondencia:', Object.keys(proyectos).length);
+        }
+      }
+    } catch (error) {
+      console.log('❌ Error al leer proyectos_correspondencia:', error.message);
+    }
+    
+    // Si no encontró datos, buscar en la ubicación alternativa
+    if (Object.keys(proyectos).length === 0) {
+      try {
+        console.log('Intentando leer desde project_scores (alternativa)...');
+        const altRef = doc(db, "project_scores", "proyectos_mapping");
+        const altSnap = await getDoc(altRef);
+        
+        if (altSnap.exists() && altSnap.data().mapping) {
+          proyectos = altSnap.data().mapping;
+          fuente = 'project_scores/proyectos_mapping';
+          console.log('✅ Proyectos cargados desde project_scores (alternativa):', Object.keys(proyectos).length);
+        }
+      } catch (altError) {
+        console.log('❌ Error al leer project_scores alternativa:', altError.message);
+      }
+    }
+    
+    console.log(`📊 Datos encontrados en ${fuente}:`, proyectos);
+    
+    // Convertir los nombres de checklist a array para userProjects
+    userProjects = Object.keys(proyectos).sort();
+    
+    // Guardar la correspondencia checklist -> SAI
+    projectSaiMap = proyectos;
+    
+    // Cargar gerentes desde la base de datos (si existe)
+    await loadProjectManagers();
+    
+    if (userProjects.length === 0) {
+      console.warn('⚠️ No se encontraron proyectos en la base de datos');
+      // Fallback: proyectos por defecto para que no se rompa el sistema
+      userProjects = [
+        "Combo Azcapotzalco",
+        "Adagio", 
+        "Boulevard 5 de mayo",
+        "Buenavista"
+      ];
+      console.log('🔄 Usando proyectos por defecto:', userProjects.length);
+    }
+    
+    console.log('🎯 Proyectos finales cargados:', userProjects);
+    console.log('🗺️ Mapeo checklist -> SAI:', projectSaiMap);
+    
+  } catch (error) {
+    console.error('💥 Error crítico al cargar proyectos:', error);
+    // Fallback en caso de error
+    userProjects = [
+      "Combo Azcapotzalco",
+      "Adagio", 
+      "Boulevard 5 de mayo",
+      "Buenavista"
+    ];
+    projectSaiMap = {};
+  }
+}
+
+// Cargar gerentes de proyectos desde la base de datos
+async function loadProjectManagers() {
+  try {
+    console.log('Cargando gerentes de proyectos...');
+    
+    const ref = doc(db, "project_managers", "mapping");
+    const snap = await getDoc(ref);
+    
+    if (snap.exists()) {
+      projectManagerMap = snap.data();
+      console.log('Gerentes cargados:', Object.keys(projectManagerMap).length);
+    } else {
+      console.log('No se encontró configuración de gerentes, usando valores por defecto');
+      // Mantener algunos valores por defecto para que funcione
+      projectManagerMap = {
+        "Combo Azcapotzalco": "ISMAEL VENTURA",
+        "Adagio": "CARLOS BRUNO VALENCIA RAMÍREZ",
+        "Boulevard 5 de mayo": "CÁNDIDO FCO. RUBÉN BECERRIL MARAVILLAS",
+        "Buenavista": "DORIAN GUADALUPE NIETO VÁZQUEZ"
+      };
+    }
+    
+  } catch (error) {
+    console.error('Error al cargar gerentes:', error);
+    projectManagerMap = {};
+  }
 }
     
 
@@ -931,22 +1016,35 @@ function buildProjectList() {
     // Actualiza calificación total y barra de progreso
     function updateTotal() {
       let sum = 0;
-      const evaluableCount = items.filter(l => !l.startsWith('--') && l !== 'Lámparas porcentaje').length;
-      const weight = 100 / evaluableCount;
-
+      // Obtener índices de preguntas evaluables (ignorar secciones y 'Lámparas porcentaje')
+      const evaluableIndexes = [];
       items.forEach((l, i) => {
-        if (!l.startsWith('--') && l !== 'Lámparas porcentaje') {
-          const num = i + 1;
-          const sel = document.querySelector(`input[name="ok${num}"]:checked`);
-          const val = sel ? sel.value : null;
-          const isNegative = negativeLabels.some(rx => rx.test(l));
+        if (!l.startsWith('--') && l !== 'Lámparas porcentaje') evaluableIndexes.push(i);
+      });
 
-          if (isNegative) {
-            if (val === 'Sí') sum -= weight;
-            else if (val === 'No' || val === 'No Aplica') sum += weight;
-          } else {
-            if (val === 'Sí' || val === 'No Aplica') sum += weight;
-          }
+      // Primeras 5 preguntas (si hay menos de 5, toman el 25% total igualmente)
+      const firstCount = Math.min(5, evaluableIndexes.length);
+      const restCount = Math.max(0, evaluableIndexes.length - firstCount);
+
+      // Pesos totales: primer bloque = 25%, resto = 75%
+      const weightFirst = firstCount > 0 ? 25 / firstCount : 0;
+      const weightRest = restCount > 0 ? 75 / restCount : 0;
+
+      evaluableIndexes.forEach((idx, order) => {
+        const l = items[idx];
+        const num = idx + 1;
+        const sel = document.querySelector(`input[name="ok${num}"]:checked`);
+        const val = sel ? sel.value : null;
+        const isNegative = negativeLabels.some(rx => rx.test(l));
+
+        const isInFirst = order < firstCount;
+        const w = isInFirst ? weightFirst : weightRest;
+
+        if (isNegative) {
+          if (val === 'Sí') sum -= w;
+          else if (val === 'No' || val === 'No Aplica') sum += w;
+        } else {
+          if (val === 'Sí' || val === 'No Aplica') sum += w;
         }
       });
 
@@ -966,6 +1064,31 @@ if (mascotaImg) {
 }
     }
     window.updateTotal = updateTotal; 
+
+    // Marcar todas las respuestas que dan positivo en la calificación
+    function markAllPositive() {
+      // Recorre cada ítem evaluable y marca la opción que representa positivo
+      items.forEach((l, i) => {
+        if (!l.startsWith('--') && l !== 'Lámparas porcentaje') {
+          const num = i + 1;
+          const isNegative = negativeLabels.some(rx => rx.test(l));
+          // Para preguntas 'negativas' marcar 'No' para evitar penalización
+          const desired = isNegative ? 'No' : 'Sí';
+          const radio = document.querySelector(`input[name="ok${num}"][value="${desired}"]`);
+          if (radio) radio.checked = true;
+        }
+      });
+
+      // Ajustar campos de lámparas a 0 para reflejar estado positivo
+      const totalInput = document.getElementById('lamps-total');
+      const fundidasInput = document.getElementById('lamps-fundidas');
+      if (totalInput) totalInput.value = '';
+      if (fundidasInput) fundidasInput.value = '';
+
+      updateTotal();
+    }
+
+    document.getElementById('markPositiveBtn').addEventListener('click', markAllPositive);
 
     // Dibuja el semicírculo y aguja en el gauge
     function drawGauge(value) {
@@ -1023,13 +1146,19 @@ function assignManager() {
   const projectInput = document.getElementById('project');
   const managerInput = document.getElementById('manager');
   const val = projectInput.value;
+  
+  console.log(`🎯 assignManager llamado con proyecto: "${val}"`);
+  console.log(`📋 userProjects disponibles:`, userProjects);
+  console.log(`🗺️ projectSaiMap actual:`, projectSaiMap);
 
   if (userProjects.includes(val)) {
     selectedProject = val;
     managerInput.value = projectManagerMap[val] || '';
     projectInput.readOnly = true; // Bloquea edición después de seleccionar
 
- 
+    console.log(`✅ Proyecto seleccionado: ${selectedProject}`);
+    console.log(`👤 Gerente asignado: ${projectManagerMap[val] || 'SIN ASIGNACION'}`);
+    console.log(`🔍 Cargando historial de calificaciones...`);
 
     loadLastScores();
     createSections();
@@ -1038,6 +1167,7 @@ function assignManager() {
     updateTotal();
     document.getElementById('date').value = getTodayMx();
   } else {
+    console.log(`❌ Proyecto "${val}" no encontrado en userProjects`);
     managerInput.value = '';
     selectedProject = '';
   }
@@ -1131,17 +1261,25 @@ function assignManager() {
       scoreObj.answers = calif;
       scoreObj.total = parseFloat(document.getElementById("totalValue").textContent) || 0;
 
-      // Guardar en Firestore
-      const ref = doc(db, "project_scores", selectedProject);
+      // Guardar en Firestore usando el nombre SAI correspondiente
+      const projectSaiName = projectSaiMap[selectedProject] || selectedProject;
+      console.log(`Guardando calificación para proyecto: ${selectedProject} -> SAI: ${projectSaiName}`);
+      
+      const ref = doc(db, "project_scores", projectSaiName);
       const snap = await getDoc(ref);
       let arr = [];
       if (snap.exists() && Array.isArray(snap.data().scores)) {
         arr = snap.data().scores;
       }
+      
+      // Agregar información adicional al score
+      scoreObj.checklistProject = selectedProject; // Nombre original del checklist
+      scoreObj.saiProject = projectSaiName; // Nombre en SAI
+      
       arr.unshift(scoreObj);
       if (arr.length > 12) arr = arr.slice(0, 12);
       await setDoc(ref, { scores: arr }, { merge: true });
-      alert("Calificación guardada.");
+      alert(`Calificación guardada para ${selectedProject} (${projectSaiName}).`);
       loadLastScores();
 
       // Actualizar displays de métricas
@@ -1154,41 +1292,83 @@ function assignManager() {
 
     // Mostrar las últimas 12 calificaciones guardadas (por proyecto)
     async function loadLastScores() {
+      console.log(`🔍 loadLastScores iniciado para selectedProject: "${selectedProject}"`);
+      console.log(`🗺️ projectSaiMap disponible:`, projectSaiMap);
+      
       const box = document.getElementById("lastScores");
-      box.innerHTML = '<b>Últimas 12 calificaciones de este proyecto:</b>';
-      if (!selectedProject) return;
-      const ref = doc(db, "project_scores", selectedProject);
-      const snap = await getDoc(ref);
-      if (!snap.exists() || !Array.isArray(snap.data().scores)) {
-        box.innerHTML += "<br><i>No hay registros previos.</i>";
+      if (!box) {
+        console.error(`❌ Elemento #lastScores no encontrado`);
         return;
       }
-      const arr = snap.data().scores;
-      box.innerHTML += `
-        <table style="margin-top:10px;width:100%;font-size:.95em">
-          <thead>
-            <tr>
-              <th>Fecha</th>
-              <th>Usuario</th>
-              <th>Calificación</th>
-              <th>Detalle</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${arr.map(s => `
+      
+      box.innerHTML = '<b>Últimas 12 calificaciones de este proyecto:</b>';
+      if (!selectedProject) {
+        console.log(`❌ No hay selectedProject`);
+        return;
+      }
+      
+      // Usar el nombre SAI para buscar las calificaciones (igual que en saveScore)
+      const projectSaiName = projectSaiMap[selectedProject] || selectedProject;
+      console.log(`🔍 Cargando historial para: ${selectedProject} -> SAI: ${projectSaiName}`);
+      
+      const ref = doc(db, "project_scores", projectSaiName);
+      console.log(`📊 Consultando Firebase: project_scores/${projectSaiName}`);
+      
+      try {
+        const snap = await getDoc(ref);
+        console.log(`📄 Documento existe:`, snap.exists());
+        
+        if (!snap.exists()) {
+          box.innerHTML += `<br><i>No hay registros previos para ${selectedProject} (${projectSaiName}).</i>`;
+          console.log(`❌ Documento no existe para ${projectSaiName}`);
+          return;
+        }
+        
+        const data = snap.data();
+        console.log(`📋 Datos del documento:`, data);
+        
+        if (!data.scores || !Array.isArray(data.scores)) {
+          box.innerHTML += `<br><i>No hay scores guardados para ${selectedProject} (${projectSaiName}).</i>`;
+          console.log(`❌ No hay array de scores en el documento`);
+          return;
+        }
+        
+        console.log(`✅ Encontrados ${data.scores.length} registros para ${projectSaiName}`);
+        
+        const arr = data.scores;
+        box.innerHTML += `
+          <table style="margin-top:10px;width:100%;font-size:.95em">
+            <thead>
               <tr>
-                <td>${(s.date||"").toString().slice(0,10)}</td>
-                <td>${s.user||""}</td>
-                <td>${(s.total||0).toFixed(2)}%</td>
-                <td>
-                  <button onclick='window.showScoreDetail(${JSON.stringify(s)})'>Ver</button>
-                </td>
+                <th>Fecha</th>
+                <th>Usuario</th>
+                <th>Calificación</th>
+                <th>Detalle</th>
               </tr>
-            `).join("")}
-          </tbody>
-        </table>
-      `;
+            </thead>
+            <tbody>
+              ${arr.map(s => `
+                <tr>
+                  <td>${(s.date||"").toString().slice(0,10)}</td>
+                  <td>${s.user||""}</td>
+                  <td>${(s.total||0).toFixed(2)}%</td>
+                  <td>
+                    <button onclick='window.showScoreDetail(${JSON.stringify(s)})'>Ver</button>
+                  </td>
+                </tr>
+              `).join("")}
+            </tbody>
+          </table>
+        `;
+        
+        console.log(`✅ Tabla de historial generada exitosamente`);
+        
+      } catch (error) {
+        console.error(`💥 Error al cargar historial:`, error);
+        box.innerHTML += `<br><i>Error al cargar registros: ${error.message}</i>`;
+      }
     }
+    
     // Ventana detalle para ver calificación completa
     window.showScoreDetail = function(scoreObj) {
       let w = window.open("", "_blank", "width=800,height=600");
@@ -1311,4 +1491,5 @@ window.addEventListener('DOMContentLoaded', () => {
     });
   </script>
 </body>
+  <script src="./js/logo-fix.js"></script>
 </html>

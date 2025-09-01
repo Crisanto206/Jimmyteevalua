@@ -35,13 +35,20 @@
       <p id="adminErrorMsg"></p>
       <p id="adminSuccessMsg"></p>
     </div>
+
+    <nav>
+      <!-- ...otros enlaces... -->
+      <a href="vacantes.html" class="menu-btn">Vacantes por Proyecto</a>
+      <a href="entrevistas.html" class="menu-btn">Registro de Entrevistas</a>
+      <a href="kpi.html" class="menu-btn">KPI de Vacantes</a>
+    </nav>
   </div>
 
   <script type="module">
     import { auth, db, firebaseConfig } from "./js/firebase-config.js";
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
     import { getAuth as getSecondaryAuth, createUserWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
-    import { doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
+    import { doc, setDoc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
 
     // Segunda instancia de Auth para no cerrar sesión de admin
     const secondaryApp  = initializeApp(firebaseConfig, "Secondary");
@@ -61,38 +68,38 @@
     btnManage.addEventListener("click", () => window.location.href = "gestionUsuarios.html");
     btnChecklist.addEventListener("click", () => window.location.href = "checklist.html");
 
-    // Array de proyectos
-    const ALL_PROJECTS = [
-      "Adagio","Boulevard 5 de mayo","Buenavista","Centenario","Combo Aeropuerto",
-      "Combo Azcapotzalco","Combo Carrizal","Combo Cuautitlán","Combo Satélite",
-      "Comitán","Cuautitlán 1ero de mayo","Dorada I Dorada II","Galerías VHS",
-      "Hermosillo","Insurgentes Nte.","Kómplex","La Raza","León","Tijuana",
-      "Macroplaza Insurgentes Tijuana","Moroleon","Paroli","Patio Pedregal",
-      "Portal Churubusco","San Manuel","Símbolos Patrios","Suburbia","Tacámbaro",
-      "Tapachula","Tepeyac","Tlalpan","Tlaxcala","Uruapan","Vía San Ángel",
-      "Zitácuaro","Playa del Carmen","Paseo Akia","WE Periferico","Pirules",
-      "La Mangana","WE Horacio","Tacubaya","Mariano Escobedo","Ferrocarril Hidalgo",
-      "Sam´s Oaxaca","Plaza Alamos","San Pedrito"
-    ];
+    // Nuevo: input para agregar proyecto
+    const addProjectInput = document.createElement("input");
+    addProjectInput.type = "text";
+    addProjectInput.placeholder = "Agregar nuevo proyecto";
+    addProjectInput.id = "addProjectInput";
+    addProjectInput.style.marginRight = "8px";
+    const addProjectBtn = document.createElement("button");
+    addProjectBtn.textContent = "Agregar Proyecto";
+    addProjectBtn.type = "button";
+    addProjectBtn.className = "btn";
+    projectContainer.parentNode.insertBefore(addProjectInput, projectContainer);
+    projectContainer.parentNode.insertBefore(addProjectBtn, projectContainer);
 
-    // Verificar sesión y rol admin
-    onAuthStateChanged(auth, async (user) => {
-      if (!user) {
-        window.location.href = "login-admin.html";
-        return;
-      }
-      const snap = await getDoc(doc(db, "users", user.uid));
-      if (!snap.exists() || snap.data().isAdmin !== true) {
-        window.location.href = "login-admin.html";
-        return;
-      }
-      loadingMsg.style.display = "none";
-      adminForm.style.display  = "block";
-
-      // Renderizar checkboxes
-      ALL_PROJECTS.forEach(proj => {
-        const lbl = document.createElement("label");
-        const cb  = document.createElement("input");
+    // Leer proyectos desde Firestore
+    let ALL_PROJECTS = [];
+    async function loadProjects() {
+      const snap = await getDoc(doc(db, "config", "projects"));
+      if (snap.exists() && Array.isArray(snap.data().list)) {
+        ALL_PROJECTS = snap.data().list;
+      } else {
+        // Si no existe, inicializa con la lista hardcodeada
+        ALL_PROJECTS = [
+          "Adagio","Boulevard 5 de mayo","Buenavista","Centenario","Combo Aeropuerto",
+          "Combo Azcapotzalco","Combo Carrizal","Combo Cuautitlán","Combo Satélite",
+          "Comitán","Cuautitlán 1ero de mayo","Dorada I Dorada II","Galerías VHS",
+          "Hermosillo","Insurgentes Nte.","Kómplex","La Raza","León","Tijuana",
+          "Macroplaza Insurgentes Tijuana","Moroleon","Paroli","Patio Pedregal",
+          "Portal Churubusco","San Manuel","Símbolos Patrios","Suburbia","Tacámbaro",
+          "Tapachula","Tepeyac","Tlalpan","Tlaxcala","Uruapan","Vía San Ángel",
+          "Zitácuaro","Playa del Carmen","Paseo Akia","WE Periferico","Pirules",
+          "La Mangana","WE Horacio","Tacubaya","Mariano Escobedo","Ferrocarril Hidalgo",
+          "Sam´s Oaxaca","Plaza Alamos","San Pedrito"
         cb.type  = "checkbox";
         cb.name  = "projectCheckbox";
         cb.value = proj;

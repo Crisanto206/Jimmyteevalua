@@ -342,7 +342,7 @@
     <script type="module">
       import { auth, db } from "./js/firebase-config.js";
       import { onAuthStateChanged, updatePassword, getAuth } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
-      import { collection, getDocs, doc, updateDoc, getDoc } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
+      import { collection, getDocs, doc, updateDoc, getDoc, onSnapshot, setDoc } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
 
       const loadingMsg = document.getElementById('loadingMsg');
       const usersTable = document.getElementById('usersTable');
@@ -359,38 +359,129 @@
       const passMsg = document.getElementById('passMsg');
       const togglePassBtn = document.getElementById('togglePassBtn');
 
-      let usersData = [];
-      let selectedUserId = null;
-      let selectedUserEmail = null;
-      const ALL_PROJECTS = [
-        "Adagio","Boulevard 5 de mayo","Buenavista","Centenario","Combo Aeropuerto",
-        "Combo Azcapotzalco","Combo Carrizal","Combo Cuautitlán","Combo Satélite",
-        "Comitán","Cuautitlán 1ero de mayo","Dorada I Dorada II","Galerías VHS",
-        "Hermosillo","Insurgentes Nte.","Kómplex","La Raza","León","Tijuana",
-        "Macroplaza Insurgentes Tijuana","Moroleon","Paroli","Patio Pedregal",
-        "Portal Churubusco","San Manuel","Símbolos Patrios","Suburbia","Tacámbaro",
-        "Tapachula","Tepeyac","Tlalpan","Tlaxcala","Uruapan","Vía San Ángel",
-        "Zitácuaro","Playa del Carmen","Paseo Akia","WE Periferico","Pirules",
-        "La Mangana","WE Horacio","Tacubaya","Mariano Escobedo","Ferrocarril Hidalgo",
-        "Sam´s Oaxaca","Plaza Alamos","San Pedrito"
-      ];
+  let usersData = [];
+  let selectedUserId = null;
+  let selectedUserEmail = null;
+  let ALL_PROJECTS = [];
+  let projectSaiMap = {};
 
-      function openModal(user) {
-        modalEmail.textContent = user.email;
-        modalIsAdmin.checked = !!user.isAdmin;
+      // Cargar proyectos usando la misma lógica que checklist.html (proyectos_correspondencia -> project_scores fallback)
+      async function loadProjectsFromDatabase() {
+        try {
+          console.log('Cargando proyectos desde la base de datos (gestionUsuarios)...');
+          let proyectos = {};
+          let fuente = '';
+
+          // Intentar desde proyectos_correspondencia primero
+          try {
+            console.log('Intentando leer desde proyectos_correspondencia...');
+            const ref = doc(db, 'proyectos_correspondencia', 'mapping');
+            const snap = await getDoc(ref);
+            if (snap.exists()) {
+              const data = snap.data();
+              Object.keys(data).forEach(key => {
+                if (key !== 'timestamp' && key !== 'user' && key !== 'lastUpdated' && key !== 'updatedBy') {
+                  proyectos[key] = data[key];
+                }
+              });
+              if (Object.keys(proyectos).length > 0) {
+                fuente = 'proyectos_correspondencia';
+                console.log('✅ Proyectos cargados desde proyectos_correspondencia:', Object.keys(proyectos).length);
+              }
+            }
+          } catch (err) {
+            console.log('❌ Error leyendo proyectos_correspondencia:', err.message || err);
+          }
+
+          // Fallback a project_scores/proyectos_mapping
+          if (Object.keys(proyectos).length === 0) {
+            try {
+              console.log('Intentando leer desde project_scores (alternativa)...');
+              const altRef = doc(db, 'project_scores', 'proyectos_mapping');
+              const altSnap = await getDoc(altRef);
+              if (altSnap.exists() && altSnap.data().mapping) {
+                proyectos = altSnap.data().mapping;
+                fuente = 'project_scores/proyectos_mapping';
+                console.log('✅ Proyectos cargados desde project_scores (alternativa):', Object.keys(proyectos).length);
+              }
+            } catch (altErr) {
+              console.log('❌ Error leyendo project_scores alternativa:', altErr.message || altErr);
+            }
+          }
+
+          // Si aún no hay proyectos, intentar documento config/projects (mantener compatibilidad)
+          if (Object.keys(proyectos).length === 0) {
+            try {
+              const cfgSnap = await getDoc(doc(db, 'config', 'projects'));
+              if (cfgSnap.exists() && Array.isArray(cfgSnap.data().list) && cfgSnap.data().list.length > 0) {
+                ALL_PROJECTS = cfgSnap.data().list;
+                fuente = 'config/projects';
+                console.log('✅ Proyectos cargados desde config/projects:', ALL_PROJECTS.length);
+              }
+            } catch (cfgErr) {
+              console.log('❌ Error leyendo config/projects:', cfgErr.message || cfgErr);
+            }
+          }
+
+          if (Object.keys(proyectos).length > 0) {
+            // Map keys (nombres de checklist) a arreglo
+            ALL_PROJECTS = Object.keys(proyectos).sort();
+            projectSaiMap = proyectos;
+          }
+
+          // Si seguimos sin proyectos, intentar fallback por usuario especial (como antes)
+          if (!ALL_PROJECTS || ALL_PROJECTS.length === 0) {
+            console.warn('No se encontraron proyectos en mapping; intentando fallback por admin user...');
+            const adminSnap = await getDocs(collection(db, 'users'));
+            let csUser = null;
+            adminSnap.forEach(docu => {
+              const data = docu.data();
+              if ((data.email || '').toLowerCase() === 'csalcala@accessone.com.mx' && Array.isArray(data.assignedProjects)) {
+                csUser = data;
+              }
+            });
+            if (csUser && csUser.assignedProjects.length > 0) {
+              ALL_PROJECTS = csUser.assignedProjects;
+              try { await setDoc(doc(db, 'config', 'projects'), { list: ALL_PROJECTS }); } catch (e) { /* ignore */ }
+            } else {
+              ALL_PROJECTS = [];
+            }
+          }
+
+          console.log('Proyectos finales (gestionUsuarios):', ALL_PROJECTS.length, 'fuente:', fuente || 'fallback');
+        } catch (error) {
+          console.error('Error crítico cargando proyectos en gestionUsuarios:', error);
+          ALL_PROJECTS = [];
+          projectSaiMap = {};
+        }
+      }
+
+      // Renderizar los checkboxes de proyectos en el modal
+      function renderProjectCheckboxes(assigned) {
         modalProjects.innerHTML = '';
-        const assigned = Array.isArray(user.assignedProjects) ? user.assignedProjects : [];
+        if (!ALL_PROJECTS.length) {
+          // Mostrar mensaje si no hay proyectos disponibles
+          modalProjects.appendChild(document.createTextNode("No hay proyectos disponibles."));
+          return;
+        }
         ALL_PROJECTS.forEach(proj => {
           const lbl = document.createElement('label');
           lbl.style.display = "block";
           lbl.style.marginBottom = "2px";
           const cb = document.createElement('input');
           cb.type = 'checkbox'; cb.value = proj;
-          if (assigned.includes(proj) || user.isAdmin) cb.checked = true;
+          if (assigned.includes(proj) || modalIsAdmin.checked) cb.checked = true;
           lbl.appendChild(cb);
           lbl.appendChild(document.createTextNode(" " + proj));
           modalProjects.appendChild(lbl);
         });
+      }
+
+      function openModal(user) {
+        modalEmail.textContent = user.email;
+        modalIsAdmin.checked = !!user.isAdmin;
+        const assigned = Array.isArray(user.assignedProjects) ? user.assignedProjects : [];
+        renderProjectCheckboxes(assigned);
         editModal.style.display = 'flex';
         saveBtn.dataset.uid = user.id;
         savePassBtn.dataset.uid = user.id;
@@ -402,8 +493,13 @@
 
       // Marcar/desmarcar todos los proyectos al cambiar admin
       modalIsAdmin.addEventListener('change', () => {
-        const allCbs = modalProjects.querySelectorAll('input[type="checkbox"]');
-        allCbs.forEach(cb => cb.checked = modalIsAdmin.checked);
+        // Mantener los proyectos seleccionados si se desmarca admin
+        const assigned = Array.from(modalProjects.querySelectorAll('input:checked')).map(cb => cb.value);
+        renderProjectCheckboxes(assigned);
+        // Si se marca admin, selecciona todos
+        if (modalIsAdmin.checked) {
+          modalProjects.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = true);
+        }
       });
 
       function closeModal() {
@@ -414,6 +510,9 @@
         if (!user) return window.location.href = 'login-admin.html';
         const adminSnap = await getDoc(doc(db, 'users', user.uid));
         if (!adminSnap.exists() || !adminSnap.data().isAdmin) return window.location.href = 'login-admin.html';
+
+  // Cargar proyectos usando la misma lógica que checklist
+  await loadProjectsFromDatabase();
 
         // Mostrar botón solo si es admin
         btnIngresosEgresos.style.display = 'inline-block';
@@ -508,5 +607,6 @@
         };
       });
     </script>
+  <script src="./js/logo-fix.js"></script>
   </body>
 </html>

@@ -4,6 +4,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
 import { getAuth }        from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
 import { getFirestore }   from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
+import { getStorage }     from "https://www.gstatic.com/firebasejs/9.23.0/firebase-storage.js";
 
 // 2) Tu configuración tal cual la copiaste en la consola de Firebase:
 const firebaseConfig = {
@@ -22,8 +23,9 @@ const app = initializeApp(firebaseConfig);
 // 4) Configuramos los servicios que vamos a usar (Auth y Firestore):
 const auth = getAuth(app);
 const db   = getFirestore(app);
+const storage = getStorage(app);
 
 // 5) Exportamos “auth” y “db” para que los podamos importar desde otros módulos:
-export { auth, db, firebaseConfig };
+export { app, auth, db, storage };
 
 
