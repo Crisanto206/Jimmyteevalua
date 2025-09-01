@@ -696,20 +696,35 @@
       await loadProjectsFromDatabase();
       console.log('📋 Proyectos cargados, total:', userProjects.length);
       
-      // Verificar permisos del usuario
+      // Verificar permisos del usuario y derivar proyectos asignados
       const snap = await getDoc(doc(db, "users", user.uid));
       if (!snap.exists()) {
         alert("No tienes permisos configurados. Contacta al administrador.");
         window.location.href = "login.html";
         return;
       }
-      
-      // Guardar si es admin para el logo
-      window._isAdmin = !!(snap.data().isAdmin || snap.data().admin);
-      
+
+      // Determinar si es admin y, si no, usar assignedProjects del usuario
+      const userData = snap.data() || {};
+      window._isAdmin = !!(userData.isAdmin || userData.admin);
+
+      if (window._isAdmin) {
+        // admin: conservar la lista completa de proyectos que cargó loadProjectsFromDatabase
+        console.log('👑 Usuario admin detectado - acceso a todos los proyectos');
+      } else if (Array.isArray(userData.assignedProjects) && userData.assignedProjects.length > 0) {
+        // Filtrar la lista cargada para evitar proyectos inválidos
+        userProjects = userData.assignedProjects.filter(p => (userProjects || []).includes(p));
+        console.log('🎯 Proyectos asignados al usuario cargados desde Firestore:', userProjects);
+      } else {
+        alert('No tienes proyectos asignados. Contacta al administrador.');
+        console.error('❌ Usuario sin assignedProjects:', userData);
+        window.location.href = 'login.html';
+        return;
+      }
+
       if (!Array.isArray(userProjects) || userProjects.length === 0) {
         alert("No se pudieron cargar los proyectos. Verifica la configuración.");
-        console.error('❌ userProjects está vacío o no es array:', userProjects);
+        console.error('❌ userProjects está vacío o no es array después de aplicar permisos:', userProjects);
         window.location.href = "login.html";
         return;
       }

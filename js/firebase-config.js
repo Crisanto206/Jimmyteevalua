@@ -26,6 +26,6 @@ const db   = getFirestore(app);
 const storage = getStorage(app);
 
 // 5) Exportamos “auth” y “db” para que los podamos importar desde otros módulos:
-export { app, auth, db, storage };
+export { app, auth, db, storage, firebaseConfig };
 
 

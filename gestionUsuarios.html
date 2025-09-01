@@ -301,6 +301,7 @@
         <h2>Gestión de Usuarios</h2>
       </div>
       <div class="actions-bar">
+        <button id="btn-add-user" style="background:linear-gradient(90deg,#00B2A9 60%,#FFD400 100%);color:#fff;">Agregar usuario</button>
         <button id="btn-ingresos-egresos" style="display:none;">Ingresos y Egresos</button>
       </div>
       <p id="loadingMsg" style="margin-left:32px;">Cargando usuarios…</p>
@@ -322,6 +323,9 @@
         <div style="margin-bottom:10px;">
           <label style="font-weight:700;color:#2E0060;">Correo:</label>
           <div id="modalEmail" style="font-size:1em;color:#00B2A9;font-weight:700;margin-bottom:6px;"></div>
+          <input id="modalEmailInput" type="email" placeholder="correo@dominio.com" style="width:100%;padding:8px;border-radius:8px;border:1.2px solid #e0e3e8;display:none;margin-top:6px;" />
+          <input id="modalInitialPass" type="password" placeholder="Contraseña inicial (opcional, crea Auth)" style="width:100%;padding:8px;border-radius:8px;border:1.2px solid #e0e3e8;display:none;margin-top:8px;font-size:0.98em;color:#2E0060;background:#fffbe7;" />
+          <div id="modalNote" style="font-size:0.92em;color:#ff4d4d;display:none;margin-top:6px;"></div>
         </div>
         <label style="margin-bottom:6px;"><input type="checkbox" id="modalIsAdmin"/> Administrador</label>
         <label style="margin-bottom:4px;">Proyectos asignados</label>
@@ -340,30 +344,37 @@
     </div>
 
     <script type="module">
-      import { auth, db } from "./js/firebase-config.js";
-      import { onAuthStateChanged, updatePassword, getAuth } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
-      import { collection, getDocs, doc, updateDoc, getDoc, onSnapshot, setDoc } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
+    import { auth, db, app } from "./js/firebase-config.js";
+    import { onAuthStateChanged, updatePassword, getAuth } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
+  import { collection, getDocs, doc, updateDoc, getDoc, onSnapshot, setDoc, addDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
+  import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-functions.js";
 
       const loadingMsg = document.getElementById('loadingMsg');
       const usersTable = document.getElementById('usersTable');
       const tbody = usersTable.querySelector('tbody');
       const editModal = document.getElementById('editModal');
-      const modalEmail = document.getElementById('modalEmail');
-      const modalIsAdmin = document.getElementById('modalIsAdmin');
-      const modalProjects = document.getElementById('modalProjects');
+  const modalEmail = document.getElementById('modalEmail');
+  const modalEmailInput = document.getElementById('modalEmailInput');
+  const modalNote = document.getElementById('modalNote');
+  const modalIsAdmin = document.getElementById('modalIsAdmin');
+  const modalProjects = document.getElementById('modalProjects');
       const closeBtn = editModal.querySelector('.close-btn');
       const saveBtn = editModal.querySelector('.save-btn:last-child');
       const btnIngresosEgresos = document.getElementById('btn-ingresos-egresos');
       const modalNewPass = document.getElementById('modalNewPass');
       const savePassBtn = document.getElementById('savePassBtn');
       const passMsg = document.getElementById('passMsg');
-      const togglePassBtn = document.getElementById('togglePassBtn');
+    const togglePassBtn = document.getElementById('togglePassBtn');
+  const modalInitialPass = document.getElementById('modalInitialPass');
+  const btnAddUser = document.getElementById('btn-add-user');
 
   let usersData = [];
   let selectedUserId = null;
   let selectedUserEmail = null;
   let ALL_PROJECTS = [];
   let projectSaiMap = {};
+
+  // ...existing code...
 
       // Cargar proyectos usando la misma lógica que checklist.html (proyectos_correspondencia -> project_scores fallback)
       async function loadProjectsFromDatabase() {
@@ -477,19 +488,7 @@
         });
       }
 
-      function openModal(user) {
-        modalEmail.textContent = user.email;
-        modalIsAdmin.checked = !!user.isAdmin;
-        const assigned = Array.isArray(user.assignedProjects) ? user.assignedProjects : [];
-        renderProjectCheckboxes(assigned);
-        editModal.style.display = 'flex';
-        saveBtn.dataset.uid = user.id;
-        savePassBtn.dataset.uid = user.id;
-        selectedUserId = user.id;
-        selectedUserEmail = user.email;
-        modalNewPass.value = "";
-        passMsg.textContent = "";
-      }
+  // ...existing code...
 
       // Marcar/desmarcar todos los proyectos al cambiar admin
       modalIsAdmin.addEventListener('change', () => {
@@ -520,6 +519,12 @@
           window.location.href = "Ingresos Egresos.html";
         };
 
+        // Show Add User button for admins and bind handler
+        if (btnAddUser) {
+          btnAddUser.style.display = 'inline-block';
+          btnAddUser.addEventListener('click', () => openAddModal());
+        }
+
         const snapshot = await getDocs(collection(db, 'users'));
         usersData = snapshot.docs.map(d => {
           const data = d.data();
@@ -534,29 +539,198 @@
             <td>${u.email}</td>
             <td>${u.isAdmin ? "Sí" : "No"}</td>
             <td>${u.assignedProjects.join(', ')}</td>
-            <td class="actions"><button data-id="${u.id}">Editar</button></td>
+            <td class="actions">
+              <button class="edit-btn" data-id="${u.id}">Editar</button>
+              <button class="delete-btn" data-id="${u.id}" data-email="${u.email}" style="background:linear-gradient(90deg,#ff4d4d 60%,#2E0060 100%);">Eliminar</button>
+            </td>
           `;
           tbody.appendChild(tr);
         });
-        tbody.querySelectorAll('button').forEach(btn => btn.addEventListener('click', e => {
+        tbody.querySelectorAll('.edit-btn').forEach(btn => btn.addEventListener('click', e => {
           const uid = e.target.dataset.id;
           const userObj = usersData.find(u => u.id === uid);
           openModal(userObj);
+        }));
+        tbody.querySelectorAll('.delete-btn').forEach(btn => btn.addEventListener('click', async e => {
+          const uid = e.target.dataset.id;
+          const email = e.target.dataset.email;
+          if (!confirm(`Eliminar usuario ${email}? Esto borrará su cuenta en Authentication si es posible y su documento en Firestore.`)) return;
+          try {
+            // Intentar callable deleteUser en Cloud Functions
+            try {
+              const functions = getFunctions(app);
+              const deleteUserCallable = httpsCallable(functions, 'deleteUser');
+              const res = await deleteUserCallable({ uid });
+              console.log('deleteUser callable result', res.data);
+            } catch (fnErr) {
+              console.warn('deleteUser callable no disponible o falló:', fnErr.message || fnErr);
+            }
+            // Siempre intentar eliminar el documento en Firestore
+            await deleteDoc(doc(db, 'users', uid));
+            alert('Usuario eliminado (Firestore). Si la eliminación en Authentication no fue posible, revisa la consola de Cloud Functions.');
+            location.reload();
+          } catch (err) {
+            console.error('Error eliminando usuario:', err);
+            alert('No se pudo eliminar el usuario: ' + (err.message || err));
+          }
         }));
       });
 
       closeBtn.addEventListener('click', closeModal);
 
       // Guardar cambios de usuario (proyectos/admin)
+      // Helper to determine protected admin email
+      const PROTECTED_ADMIN = 'csalcala@accessone.com.mx';
+
+      // Open modal in edit mode (existing user)
+      function openModal(user) {
+        modalEmail.textContent = user.email;
+        modalEmail.style.display = 'block';
+        modalEmailInput.style.display = 'none';
+  // ocultar campo de contraseña inicial en modo edición
+  if (modalInitialPass) modalInitialPass.style.display = 'none';
+        modalIsAdmin.checked = !!user.isAdmin;
+        const assigned = Array.isArray(user.assignedProjects) ? user.assignedProjects : [];
+        renderProjectCheckboxes(assigned);
+        editModal.style.display = 'flex';
+        saveBtn.dataset.uid = user.id;
+        saveBtn.dataset.mode = 'edit';
+        savePassBtn.dataset.uid = user.id;
+        selectedUserId = user.id;
+        selectedUserEmail = user.email;
+        modalNewPass.value = "";
+        passMsg.textContent = "";
+        // Protect the csalcala account from losing admin
+        if ((user.email || '').toLowerCase() === PROTECTED_ADMIN) {
+          modalIsAdmin.checked = true;
+          modalIsAdmin.disabled = true;
+          modalNote.style.display = 'block';
+          modalNote.textContent = 'Este usuario es administrador protegido y no se le puede remover el rol.';
+        } else {
+          modalIsAdmin.disabled = false;
+          modalNote.style.display = 'none';
+        }
+      }
+
+      // Open modal in add mode
+      function openAddModal() {
+        modalEmail.textContent = '';
+        modalEmail.style.display = 'none';
+        modalEmailInput.style.display = 'block';
+        modalEmailInput.value = '';
+  // mostrar campo para indicar contraseña inicial al crear usuario
+  if (modalInitialPass) { modalInitialPass.style.display = 'block'; modalInitialPass.value = ''; }
+        modalIsAdmin.checked = false;
+        modalIsAdmin.disabled = false;
+        modalNote.style.display = 'none';
+        renderProjectCheckboxes([]);
+        editModal.style.display = 'flex';
+        saveBtn.dataset.mode = 'add';
+        delete saveBtn.dataset.uid;
+        savePassBtn.dataset.uid = '';
+        selectedUserId = null;
+        selectedUserEmail = null;
+        modalNewPass.value = "";
+        passMsg.textContent = "";
+      }
+
+      // Save handler for both add and edit modes
       saveBtn.addEventListener('click', async () => {
-        const uid = saveBtn.dataset.uid;
-        const updated = {
-          isAdmin: modalIsAdmin.checked,
-          assignedProjects: Array.from(modalProjects.querySelectorAll('input:checked')).map(cb => cb.value)
-        };
-        await updateDoc(doc(db, 'users', uid), updated);
-        closeModal();
-        location.reload();
+        const mode = saveBtn.dataset.mode || 'edit';
+        // collect assigned projects
+        const assigned = Array.from(modalProjects.querySelectorAll('input:checked')).map(cb => cb.value);
+        // determine email
+        const email = (mode === 'add') ? (modalEmailInput.value || '').trim().toLowerCase() : (modalEmail.textContent || '').trim().toLowerCase();
+        if (!email) {
+          alert('Ingrese un correo válido.');
+          return;
+        }
+        // enforce protected admin
+        let isAdminVal = !!modalIsAdmin.checked;
+        if (email === PROTECTED_ADMIN) {
+          isAdminVal = true; // cannot remove admin
+        }
+
+        if (mode === 'edit') {
+          const uid = saveBtn.dataset.uid;
+          const updated = { isAdmin: isAdminVal, assignedProjects: assigned };
+          await updateDoc(doc(db, 'users', uid), updated);
+          closeModal();
+          location.reload();
+          return;
+        }
+
+        // add mode: try to find existing user doc by email (case-insensitive)
+        try {
+          const snap = await getDocs(collection(db, 'users'));
+          let found = null;
+          snap.forEach(d => {
+            const data = d.data();
+            if ((data.email || '').toLowerCase() === email) found = { id: d.id, data };
+          });
+
+      // Requerir contraseña inicial para crear la cuenta en Authentication
+      const initialPass = (modalInitialPass && modalInitialPass.value) ? modalInitialPass.value.trim() : null;
+      if (!initialPass) {
+        alert('Ingrese una contraseña inicial para crear la cuenta en Authentication.');
+        return;
+      }
+
+      if (initialPass) {
+            // Primero intentar callable (si existe en Cloud Functions)
+            try {
+              const functions = getFunctions(app);
+              const createUserCallable = httpsCallable(functions, 'createUser');
+              const result = await createUserCallable({ email, password: initialPass, isAdmin: isAdminVal, assignedProjects: assigned });
+              console.log('createUser function result:', result.data);
+              if (result.data && result.data.uid) {
+        await setDoc(doc(db, 'users', result.data.uid), { email, isAdmin: isAdminVal, assignedProjects: assigned }, { merge: true });
+                // contraseña suministrada por admin
+        closeModal(); location.reload(); return;
+              }
+            } catch (fnErr) {
+              console.warn('Callable createUser failed or not deployed:', fnErr.message || fnErr);
+              // continue to fallback below
+            }
+
+            // Fallback: intentar crear usuario con una segunda instancia de Auth (no cierra sesión del admin)
+            try {
+              // importar dinámicamente para evitar errores si no está exportado
+              const { initializeApp } = await import('https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js');
+              const { getAuth: getSecondaryAuth, createUserWithEmailAndPassword } = await import('https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js');
+              // firebaseConfig exportado desde js/firebase-config.js
+              const { firebaseConfig } = await import('./js/firebase-config.js');
+              const secondaryApp = initializeApp(firebaseConfig, 'SecondaryForCreate');
+              const secondaryAuth = getSecondaryAuth(secondaryApp);
+              const cred = await createUserWithEmailAndPassword(secondaryAuth, email, initialPass);
+              const newUid = cred.user.uid;
+              await setDoc(doc(db, 'users', newUid), { email, isAdmin: isAdminVal, assignedProjects: assigned });
+              // Sign out secondary auth so it doesn't persist
+              try { await secondaryAuth.signOut(); } catch(e){/* ignore */}
+              // delete the secondary app to clean up resources
+              try {
+                const { deleteApp } = await import('https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js');
+                await deleteApp(secondaryApp);
+              } catch(e) { /* ignore */ }
+              // contraseña suministrada por admin
+              closeModal(); location.reload(); return;
+            } catch (secErr) {
+              console.warn('Secondary auth create failed:', secErr.message || secErr);
+              alert('No se pudo crear la cuenta en Authentication automáticamente. Se creó solo el registro en Firestore.');
+            }
+          }
+
+          if (found) {
+            await updateDoc(doc(db, 'users', found.id), { isAdmin: isAdminVal, assignedProjects: assigned });
+          } else {
+            await addDoc(collection(db, 'users'), { email, isAdmin: isAdminVal, assignedProjects: assigned });
+          }
+          closeModal();
+          location.reload();
+        } catch (err) {
+          console.error('Error al agregar/actualizar usuario:', err);
+          alert('Error al guardar usuario: ' + (err.message || err));
+        }
       });
 
       // Mostrar/ocultar contraseña nueva
