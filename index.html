@@ -84,11 +84,14 @@
 
       // csalcala special
       if (email === 'csalcala@accessone.com.mx') document.getElementById('m-gestion').style.display = '';
-  // valonzo special - show Calificar zonales
-  if (email === 'valonzo@accessone.com.mx') document.getElementById('m-calificar-zonales').style.display = '';
+  // valonzo y jfernandez pueden calificar zonales
+  if (email === 'valonzo@accessone.com.mx' || email === 'jfernandez@accessone.com.mx') {
+    document.getElementById('m-calificar-zonales').style.display = '';
+  }
     });
   </script>
 
   <script src="./js/logo-fix.js"></script>
 </body>
 </html>
+
