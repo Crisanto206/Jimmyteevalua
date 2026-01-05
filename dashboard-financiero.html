@@ -2,177 +2,835 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <title>Dashboard Financiero — Rediseño Fusionado</title>
+  <title>Dashboard Financiero — AccessOne (Premium)</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- Font -->
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
   <style>
-    :root { --primary:#2E0060; --secondary:#FFD400; --accent:#00B2A9; --bg:#f6f7fb; --surface:#ffffff; --text:#1e1f2b; --muted:#585b70; --grid:#e7e9f0; --shadow:0 8px 32px rgba(46,0,96,.12); --radius:20px; }
-    * { box-sizing: border-box; }
-    body { margin:0; font-family:'Inter',system-ui; background:var(--bg); color:var(--text); }
-    .topbar { position:sticky; top:0; z-index:10; background:linear-gradient(90deg, rgba(46,0,96,.95), rgba(0,178,169,.95)); color:#fff; box-shadow:var(--shadow); }
-    .topbar-inner { max-width:1400px; margin:0 auto; padding:10px 18px; display:flex; justify-content:space-between; align-items:center; gap:12px; }
-    .brand { display:flex; align-items:center; gap:12px; }
-    .brand img { height:40px; border-radius:8px; cursor:pointer; }
-    .brand h1 { margin:0; font-size:1.1rem; letter-spacing:.3px; color:#ffd400; }
-    .pill { background:rgba(255,255,255,.14); padding:6px 10px; border-radius:999px; }
+    :root{
+      --primary:#2E0060;
+      --secondary:#FFD400;
+      --accent:#00B2A9;
 
-    .container { max-width:1400px; margin:18px auto 36px; padding:0 18px; }
-    .header { display:flex; align-items:center; gap:16px; background:linear-gradient(90deg, var(--primary) 60%, var(--accent) 100%); color:#fff; padding:18px; border-radius:var(--radius); border-bottom:6px solid var(--secondary); }
-    .header h2 { margin:0; }
-    .zone-badge { background:#fff; color:var(--primary); font-weight:800; padding:6px 10px; border-radius:999px; }
+      --bg:#f6f7fb;
+      --surface:#ffffff;
+      --text:#141522;
+      --muted:#5f637a;
 
-    .controls { display:flex; gap:12px; align-items:end; flex-wrap:wrap; margin:14px 0; justify-content:space-between; }
-    .control-group { display:flex; gap:12px; align-items:end; flex-wrap:wrap; }
-    .controls select { padding:8px 10px; border-radius:10px; border:1.5px solid var(--primary); background:#fff; font-weight:600; color:var(--primary); }
-    .btn { border:none; padding:10px 14px; border-radius:12px; background:var(--primary); color:#fff; font-weight:700; cursor:pointer; box-shadow:var(--shadow); }
-    .btn.secondary { background:var(--accent); }
-    .btn:active { transform: translateY(1px); }
+      --grid:#e7e9f0;
+      --shadow: 0 10px 30px rgba(46,0,96,.10);
+      --shadow2: 0 6px 18px rgba(46,0,96,.10);
+      --radius: 18px;
 
-    .kpis { display:grid; grid-template-columns:repeat(6,1fr); gap:12px; }
-    @media(max-width:1200px){ .kpis{ grid-template-columns:repeat(3,1fr) } }
-    @media(max-width:700px){ .kpis{ grid-template-columns:repeat(2,1fr) } }
+      --green:#00C48C;
+      --red:#FF4D4F;
+      --yellow:#FFD400;
+      --blueSoft: rgba(46,0,96,.06);
+      --greenSoft: rgba(0,196,140,.10);
+      --redSoft: rgba(255,77,79,.10);
+      --yellowSoft: rgba(255,212,0,.15);
 
-    .card { background:var(--surface); border-radius:16px; box-shadow:var(--shadow); padding:14px; }
-    .card h4 { margin:0; font-size:.9rem; color:var(--muted); }
-    .value { font-size:1.2rem; font-weight:800; }
+      --focus: 0 0 0 3px rgba(0,178,169,.20);
+    }
 
-    .two-cols { display:grid; grid-template-columns: 1.25fr 1fr; gap:14px; align-items:start; }
-    @media(max-width:1100px){ .two-cols{ grid-template-columns:1fr } }
+    *{ box-sizing:border-box; }
+    html,body{ height:100%; }
+    body{
+      margin:0;
+      font-family:'Inter',system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+      background:
+        radial-gradient(1200px 500px at 10% -10%, rgba(0,178,169,.10), transparent 60%),
+        radial-gradient(900px 450px at 90% 0%, rgba(255,212,0,.12), transparent 60%),
+        var(--bg);
+      color:var(--text);
+      overflow-x:hidden;
+    }
 
-    table { width:100%; border-collapse:separate; border-spacing:0; border-radius:12px; overflow:hidden; }
-    th,td { border:1px solid var(--grid); padding:8px; font-size:.94rem; }
-    th { background:var(--primary); color:#fff; text-align:center; position:sticky; top:0; z-index:1; }
-    td:first-child, th:first-child { text-align:left; font-weight:700; color:var(--primary); background:#f4f6fa; }
-    tr:nth-child(even) td { background:rgba(0,0,0,.02); }
-    tr.risk td { background:rgba(255,77,79,.08); }
-    tr:hover td { background:#fffdea; }
+    /* Topbar */
+    .topbar{
+      position:sticky;
+      top:0;
+      z-index:50;
+      background: linear-gradient(90deg, rgba(46,0,96,.96), rgba(0,178,169,.92));
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(8px);
+    }
+    .topbar-inner{
+      max-width: 1440px;
+      margin: 0 auto;
+      padding: 10px 18px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+    }
+    .brand{
+      display:flex;
+      align-items:center;
+      gap:12px;
+      min-width: 0;
+    }
+    .brand img{
+      height:42px;
+      border-radius:12px;
+      background:#fff;
+      padding:6px;
+      cursor:pointer;
+      box-shadow: 0 6px 16px rgba(0,0,0,.12);
+    }
+    .brand .title{
+      display:flex;
+      flex-direction:column;
+      gap:2px;
+      min-width: 0;
+    }
+    .brand h1{
+      margin:0;
+      font-size: 1.05rem;
+      font-weight: 900;
+      letter-spacing: .2px;
+      color: var(--secondary);
+      line-height:1.1;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+    .brand .subtitle{
+      font-size:.82rem;
+      color: rgba(255,255,255,.86);
+      font-weight: 600;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+    .top-actions{
+      display:flex;
+      align-items:center;
+      gap:10px;
+    }
+    .pill{
+      background: rgba(255,255,255,.14);
+      padding: 7px 10px;
+      border-radius: 999px;
+      color:#fff;
+      font-weight:700;
+      font-size:.85rem;
+      display:flex;
+      align-items:center;
+      gap:8px;
+      border: 1px solid rgba(255,255,255,.12);
+      box-shadow: 0 10px 18px rgba(0,0,0,.06);
+      white-space:nowrap;
+    }
 
-    .side-block h4{margin:6px 0 8px;color:var(--primary)}
-    .micro-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:10px}
-    .micro-card{background:var(--surface);border:1px solid var(--grid);border-radius:12px;padding:8px;display:flex;flex-direction:column;align-items:center;gap:4px;box-shadow:var(--shadow)}
-    .micro-card canvas{width:84px!important;height:84px!important}
-    .micro-val{font-weight:800;font-size:1rem;margin-top:2px}
-    .micro-label{font-size:.78rem;color:var(--muted);text-align:center}
+    /* Layout */
+    .container{
+      max-width: 1440px;
+      margin: 16px auto 40px;
+      padding: 0 18px;
+    }
 
-    .rank-list{display:flex;flex-direction:column;gap:8px;margin:8px 0; max-height:300px; overflow:auto; padding-right:4px;}
-    .rank-item{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;padding:10px;border:1px dashed var(--grid);border-radius:12px;background:var(--surface);box-shadow:var(--shadow)}
-    .rank-name{font-weight:700;line-height:1.2}
-    .rank-value{font-weight:800;font-size:.9rem;color:#0a7f5a}
-    .rank-value.warn{color:#8a6d00}.rank-value.bad{color:#c62828}
-    .meter{height:8px;background:var(--grid);border-radius:999px;overflow:hidden; grid-column:1/-1}
-    .meter > i{display:block;height:100%;background:linear-gradient(90deg,#a7f3d0,#00c48c);} 
-    .meter.warn > i{background:linear-gradient(90deg,#fff7cc,#ffd400)}
-    .meter.bad > i{background:linear-gradient(90deg,#ffcdd2,#ff4d4f)}
+    .hero{
+      display:flex;
+      align-items:stretch;
+      justify-content:space-between;
+      gap:14px;
+      border-radius: 24px;
+      background: linear-gradient(90deg, rgba(46,0,96,.98), rgba(0,178,169,.92));
+      border-bottom: 7px solid var(--secondary);
+      box-shadow: var(--shadow);
+      padding: 16px;
+      color:#fff;
+      overflow:hidden;
+      position:relative;
+    }
+    .hero:before{
+      content:"";
+      position:absolute;
+      inset:-40px -80px auto auto;
+      width:280px;
+      height:280px;
+      background: radial-gradient(circle at 40% 40%, rgba(255,212,0,.35), transparent 60%);
+      transform: rotate(18deg);
+      pointer-events:none;
+    }
+    .hero-left{
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+      min-width: 0;
+    }
+    .hero-left h2{
+      margin:0;
+      font-size:1.2rem;
+      font-weight:900;
+      letter-spacing:.2px;
+    }
+    .hero-meta{
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+      align-items:center;
+    }
+    .chip{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      border-radius:999px;
+      padding: 6px 10px;
+      background: rgba(255,255,255,.14);
+      border:1px solid rgba(255,255,255,.14);
+      font-weight:800;
+      font-size:.82rem;
+    }
+    .hero-right{
+      display:grid;
+      grid-template-columns: repeat(3, minmax(160px, 1fr));
+      gap:10px;
+      width: min(700px, 100%);
+      align-content:start;
+    }
+    @media(max-width: 1100px){
+      .hero{ flex-direction:column; }
+      .hero-right{ grid-template-columns: repeat(3, 1fr); }
+    }
+    @media(max-width: 640px){
+      .hero-right{ grid-template-columns: repeat(2, 1fr); }
+    }
 
-    .badge { padding:4px 8px; border-radius:999px; font-size:.78rem; font-weight:700; }
-    .ok{ background:rgba(0,196,140,.14); color:#00c48c; }
-    .warn{ background:rgba(255,212,0,.18); color:#8a6d00; }
-    .bad{ background:rgba(255,77,79,.14); color:#ff4d4f; }
+    .mini-kpi{
+      background: rgba(255,255,255,.12);
+      border: 1px solid rgba(255,255,255,.14);
+      border-radius: 16px;
+      padding: 10px 12px;
+      box-shadow: 0 10px 18px rgba(0,0,0,.08);
+      min-width: 0;
+    }
+    .mini-kpi .label{
+      font-size: .78rem;
+      opacity:.9;
+      font-weight:700;
+    }
+    .mini-kpi .val{
+      font-size: 1.05rem;
+      font-weight: 900;
+      margin-top: 2px;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+    .mini-kpi .delta{
+      margin-top: 4px;
+      font-size: .78rem;
+      font-weight: 800;
+      opacity:.95;
+    }
+    .delta.good{ color: #a7f3d0; }
+    .delta.bad{ color: #ffd1d1; }
+    .delta.warn{ color: #fff1b8; }
+
+    /* Controls bar */
+    .controls{
+      margin: 12px 0;
+      display:flex;
+      align-items:stretch;
+      justify-content:space-between;
+      gap:12px;
+      flex-wrap:wrap;
+      position: sticky;
+      top: 68px;
+      z-index: 40;
+    }
+    .controls-card{
+      background: rgba(255,255,255,.78);
+      border:1px solid rgba(46,0,96,.08);
+      border-radius: 18px;
+      box-shadow: var(--shadow2);
+      backdrop-filter: blur(10px);
+      padding: 10px;
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+      align-items:end;
+      width: 100%;
+    }
+    .control-group{
+      display:flex;
+      gap:10px;
+      align-items:end;
+      flex-wrap:wrap;
+    }
+    label.form-label{
+      font-size:.78rem;
+      color: var(--muted);
+      font-weight:800;
+      letter-spacing:.2px;
+    }
+    select, input[type="text"]{
+      padding: 9px 10px;
+      border-radius: 12px;
+      border: 1.5px solid rgba(46,0,96,.18);
+      background:#fff;
+      color: var(--primary);
+      font-weight: 800;
+      outline:none;
+      min-width: 190px;
+    }
+    select:focus, input[type="text"]:focus{ box-shadow: var(--focus); border-color: rgba(0,178,169,.50); }
+    input[type="text"]{ min-width: 240px; }
+
+    .btn{
+      border:none;
+      padding: 10px 14px;
+      border-radius: 14px;
+      font-weight: 900;
+      cursor:pointer;
+      box-shadow: var(--shadow2);
+      transition: transform .08s ease, filter .2s ease;
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      white-space:nowrap;
+    }
+    .btn:active{ transform: translateY(1px); }
+    .btn.primary{ background: var(--primary); color:#fff; }
+    .btn.accent{ background: var(--accent); color:#003c38; }
+    .btn.soft{ background: rgba(46,0,96,.08); color: var(--primary); border:1px solid rgba(46,0,96,.12); }
+    .btn.ghost{ background: transparent; color: var(--primary); border:1px solid rgba(46,0,96,.14); }
+
+    /* Cards and grids */
+    .grid-kpis{
+      display:grid;
+      grid-template-columns: repeat(8, 1fr);
+      gap: 12px;
+      margin-top: 12px;
+    }
+    @media(max-width: 1300px){ .grid-kpis{ grid-template-columns: repeat(4, 1fr);} }
+    @media(max-width: 760px){ .grid-kpis{ grid-template-columns: repeat(2, 1fr);} }
+
+    .card{
+      background: rgba(255,255,255,.92);
+      border: 1px solid rgba(46,0,96,.08);
+      border-radius: 18px;
+      box-shadow: var(--shadow);
+      padding: 14px;
+    }
+    .kpi-card{
+      position:relative;
+      overflow:hidden;
+      min-height: 94px;
+    }
+    .kpi-card:before{
+      content:"";
+      position:absolute;
+      inset: -30px -30px auto auto;
+      width: 90px;
+      height: 90px;
+      background: radial-gradient(circle at 35% 35%, rgba(0,178,169,.22), transparent 60%);
+      pointer-events:none;
+    }
+    .kpi-title{
+      margin:0;
+      font-size:.8rem;
+      color: var(--muted);
+      font-weight: 900;
+      letter-spacing:.2px;
+    }
+    .kpi-value{
+      margin-top:6px;
+      font-size: 1.2rem;
+      font-weight: 900;
+      color: var(--primary);
+      line-height:1.1;
+    }
+    .kpi-sub{
+      margin-top: 6px;
+      font-size: .78rem;
+      font-weight: 800;
+      color: var(--muted);
+    }
+
+    .layout{
+      display:grid;
+      grid-template-columns: 1.5fr 1fr;
+      gap: 12px;
+      margin-top: 12px;
+      align-items:start;
+    }
+    @media(max-width: 1100px){ .layout{ grid-template-columns: 1fr; } }
+
+    .section-title{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      margin-bottom: 10px;
+    }
+    .section-title h3{
+      margin:0;
+      font-size: 1rem;
+      font-weight: 900;
+      color: var(--primary);
+    }
+    .hint{
+      font-size: .78rem;
+      color: var(--muted);
+      font-weight: 700;
+    }
+
+    /* Table */
+    .table-wrap{
+      overflow:auto;
+      max-height: 600px;
+      border-radius: 16px;
+      border: 1px solid rgba(46,0,96,.10);
+    }
+    table{
+      width:100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      background:#fff;
+      font-size: .92rem;
+    }
+    thead th{
+      position: sticky;
+      top: 0;
+      z-index: 3;
+      background: linear-gradient(90deg, var(--primary), rgba(0,178,169,.92));
+      color:#fff;
+      padding: 10px;
+      text-align:center;
+      font-weight: 900;
+      border-bottom: 1px solid rgba(255,255,255,.18);
+      white-space: nowrap;
+    }
+    tbody td{
+      padding: 10px;
+      border-bottom: 1px solid var(--grid);
+      border-right: 1px solid var(--grid);
+      text-align:right;
+      white-space:nowrap;
+    }
+    tbody td:first-child{
+      position: sticky;
+      left: 0;
+      z-index: 2;
+      text-align:left;
+      font-weight: 900;
+      color: var(--primary);
+      background: #f4f6fb;
+      border-right: 1px solid rgba(46,0,96,.10);
+      min-width: 260px;
+      white-space: normal;
+    }
+    tbody tr:nth-child(even) td{ background: rgba(0,0,0,.012); }
+    tbody tr:hover td{ background: #fffdea; }
+
+    .status{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      gap:8px;
+      font-weight: 900;
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-size: .78rem;
+      white-space:nowrap;
+      border: 1px solid rgba(46,0,96,.10);
+    }
+    .status.ok{ background: var(--greenSoft); color: #0a7f5a; }
+    .status.warn{ background: var(--yellowSoft); color: #7a6000; }
+    .status.bad{ background: var(--redSoft); color: #b42318; }
+
+    /* Side panel */
+    .side-grid{
+      display:grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    .micro{
+      border-radius: 16px;
+      border: 1px solid rgba(46,0,96,.10);
+      background: rgba(255,255,255,.95);
+      box-shadow: var(--shadow2);
+      padding: 10px;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      gap:6px;
+      min-height: 130px;
+    }
+    .micro canvas{ width: 84px !important; height: 84px !important; }
+    .micro .mval{ font-weight: 900; color: var(--primary); }
+    .micro .mlabel{ font-size: .78rem; color: var(--muted); font-weight: 800; text-align:center; }
+
+    .rank-list{
+      display:flex;
+      flex-direction:column;
+      gap: 8px;
+      max-height: 320px;
+      overflow:auto;
+      padding-right: 4px;
+    }
+    .rank-item{
+      display:grid;
+      grid-template-columns: 1fr auto;
+      gap:10px;
+      align-items:center;
+      background:#fff;
+      border: 1px solid rgba(46,0,96,.10);
+      border-radius: 16px;
+      padding: 10px;
+      box-shadow: var(--shadow2);
+    }
+    .rank-name{
+      font-weight: 900;
+      color: var(--primary);
+      line-height: 1.15;
+      min-width: 0;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      white-space:nowrap;
+    }
+    .rank-meta{
+      display:flex;
+      flex-direction:column;
+      align-items:flex-end;
+      gap:4px;
+    }
+    .rank-value{
+      font-weight: 900;
+      font-size: .86rem;
+      color: #0a7f5a;
+      white-space:nowrap;
+    }
+    .rank-value.warn{ color:#7a6000; }
+    .rank-value.bad{ color:#b42318; }
+
+    .meter{
+      grid-column: 1 / -1;
+      height: 8px;
+      background: var(--grid);
+      border-radius: 999px;
+      overflow:hidden;
+      position:relative;
+    }
+    .meter i{
+      display:block;
+      height:100%;
+      width: 0%;
+      background: linear-gradient(90deg, rgba(0,196,140,.35), rgba(0,196,140,1));
+    }
+    .meter.warn i{ background: linear-gradient(90deg, rgba(255,212,0,.35), rgba(255,212,0,1)); }
+    .meter.bad i{ background: linear-gradient(90deg, rgba(255,77,79,.35), rgba(255,77,79,1)); }
+
+    /* Chart card */
+    .chart-card canvas{ max-height: 380px; }
+
+    /* Views */
+    .view{ display:none; }
+    .view.active{ display:block; }
+
+    /* Footer note */
+    .note{
+      margin-top: 10px;
+      font-size: .78rem;
+      color: var(--muted);
+      font-weight: 700;
+    }
   </style>
 </head>
+
 <body>
+  <!-- TOPBAR -->
   <div class="topbar">
     <div class="topbar-inner">
       <div class="brand">
         <img src="logo.jpg" alt="AccessOne Logo" id="logo-accessone" title="Ir al inicio" />
-        <h1>Dashboard Financiero — Rediseño</h1>
+        <div class="title">
+          <h1>Dashboard Financiero — AccessOne</h1>
+          <div class="subtitle" id="subtitle-top">Vista: 2025 (Actual)</div>
+        </div>
       </div>
-      <div class="pill" id="clock">--</div>
+
+      <div class="top-actions">
+        <div class="pill" id="clock">--</div>
+      </div>
     </div>
   </div>
 
   <div class="container">
-    <div class="header">
-      <div>
-        <h2>Resumen de Proyectos</h2>
-        <div id="zona-pill" class="zone-badge">Indicador: Utilidad</div>
-      </div>
-    </div>
-
-    <div class="controls">
-      <div class="control-group">
-        <div>
-          <label class="form-label">Indicador</label><br/>
-          <select id="selector-rubro">
-            <option value="utilidad">Utilidad</option>
-            <option value="ingreso">Ingreso Ejercido vs Presupuesto</option>
-            <option value="egreso">Egreso Ejercido vs Presupuesto</option>
-            <option value="todos">Calificación</option>
-          </select>
-        </div>
-        <div>
-          <label class="form-label">Mes</label><br/>
-          <select id="filtro-mes"><option value="todos">Todos</option></select>
-        </div>
-        <div>
-          <label class="form-label">Ordenar</label><br/>
-          <select id="ordenar">
-            <option value="desc">Mayor a menor</option>
-            <option value="asc">Menor a mayor</option>
-          </select>
-        </div>
-      </div>
-      <div class="control-group">
-        <button id="btnExport" class="btn">Exportar CSV</button>
-        <button id="btnComparativo" class="btn secondary">Ir a Comparativo vs 2024</button>
-        <button id="btnReset" class="btn secondary">Restablecer</button>
-      </div>
-    </div>
-
-    <!-- KPIs macro -->
-    <div class="kpis" id="kpis"></div>
-
-    <div class="two-cols">
-      <div class="card">
-        <h4>Detalle por proyecto</h4>
-        <div style="overflow:auto; max-height:560px;">
-          <table id="tabla">
-            <thead id="thead"></thead>
-            <tbody id="tbody"></tbody>
-          </table>
-        </div>
-      </div>
-
-      <div class="card side-block">
-        <div class="micro-kpis">
-          <div class="micro-card">
-            <canvas id="kpiDonutIngreso"></canvas>
-            <div class="micro-val" id="kpiValIngreso">--%</div>
-            <div class="micro-label">Ingreso / Presupuesto</div>
-          </div>
-          <div class="micro-card">
-            <canvas id="kpiDonutEgreso"></canvas>
-            <div class="micro-val" id="kpiValEgreso">--%</div>
-            <div class="micro-label">Egreso / Presupuesto</div>
-          </div>
-          <div class="micro-card">
-            <canvas id="kpiDonutCalif"></canvas>
-            <div class="micro-val" id="kpiValCalif">--</div>
-            <div class="micro-label">Calificación Promedio</div>
+    <!-- ===== VIEW: DASHBOARD 2025 ===== -->
+    <section id="view-dashboard" class="view active">
+      <div class="hero">
+        <div class="hero-left">
+          <h2>Resumen Ejecutivo</h2>
+          <div class="hero-meta">
+            <div class="chip" id="chip-zona">Zona: Todos</div>
+            <div class="chip" id="chip-mes">Mes: Todos</div>
+            <div class="chip" id="chip-indicador">Indicador: Utilidad</div>
           </div>
         </div>
 
-        <h4>Top Proyectos</h4>
-        <div id="topList" class="rank-list"></div>
-
-  <h4 style="margin-top:16px;" id="risk-title">Proyectos en Riesgo</h4>
-        <div id="riskList" class="rank-list"></div>
+        <div class="hero-right">
+          <div class="mini-kpi">
+            <div class="label">Utilidad total</div>
+            <div class="val" id="hero-utilidad">$ --</div>
+            <div class="delta" id="hero-utilidad-delta">—</div>
+          </div>
+          <div class="mini-kpi">
+            <div class="label">% Ingreso vs Presupuesto</div>
+            <div class="val" id="hero-ing-pct">--%</div>
+            <div class="delta" id="hero-ing-delta">—</div>
+          </div>
+          <div class="mini-kpi">
+            <div class="label">Proyectos en riesgo</div>
+            <div class="val" id="hero-riesgos">--</div>
+            <div class="delta" id="hero-var">$ -- valor en riesgo</div>
+          </div>
+        </div>
       </div>
-    </div>
 
-    <div class="card" style="margin-top:14px;">
-      <h4>Gráfica</h4>
-      <canvas id="chart" height="320"></canvas>
-    </div>
+      <!-- Controls -->
+      <div class="controls">
+        <div class="controls-card">
+          <div class="control-group">
+            <div>
+              <label class="form-label">Indicador</label><br/>
+              <select id="selector-rubro">
+                <option value="utilidad">Utilidad</option>
+                <option value="ingreso">Ingreso Ejercido vs Presupuesto</option>
+                <option value="egreso">Egreso Ejercido vs Presupuesto</option>
+                <option value="todos">Calificación</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="form-label">Zona</label><br/>
+              <select id="filtro-zona"><option value="todos">Todos</option></select>
+            </div>
+
+            <div>
+              <label class="form-label">Mes</label><br/>
+              <select id="filtro-mes"><option value="todos">Todos</option></select>
+            </div>
+
+            <div>
+              <label class="form-label">Ordenar</label><br/>
+              <select id="ordenar">
+                <option value="desc">Mayor a menor</option>
+                <option value="asc">Menor a mayor</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="form-label">Buscar proyecto</label><br/>
+              <input id="searchProyecto" type="text" placeholder="Ej. macro tijuana, azcapotzalco..." />
+            </div>
+          </div>
+
+          <div class="control-group" style="margin-left:auto;">
+            <button id="btnExport" class="btn soft">Exportar CSV</button>
+            <button id="btnComparativo" class="btn accent">Comparar 2024 vs 2025</button>
+            <button id="btnReset" class="btn primary">Restablecer</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- KPIs -->
+      <div class="grid-kpis" id="kpis"></div>
+
+      <!-- Main layout -->
+      <div class="layout">
+        <!-- Table -->
+        <div class="card">
+          <div class="section-title">
+            <h3>Detalle por proyecto</h3>
+            <div class="hint" id="tableHint">Semáforo: ✅ Bien • ⚠️ Atención • ❌ Riesgo</div>
+          </div>
+
+          <div class="table-wrap">
+            <table id="tabla">
+              <thead id="thead"></thead>
+              <tbody id="tbody"></tbody>
+            </table>
+          </div>
+
+          <div class="note">
+            Tip: filtra por zona/mes y usa la búsqueda para ubicar rápido un proyecto.
+          </div>
+        </div>
+
+        <!-- Side panel -->
+        <div class="card">
+          <div class="section-title">
+            <h3>Panel lateral</h3>
+            <div class="hint">Top & Riesgos</div>
+          </div>
+
+          <div class="side-grid">
+            <div class="micro">
+              <canvas id="kpiDonutIngreso"></canvas>
+              <div class="mval" id="kpiValIngreso">--%</div>
+              <div class="mlabel">Ingreso / Presupuesto</div>
+            </div>
+            <div class="micro">
+              <canvas id="kpiDonutEgreso"></canvas>
+              <div class="mval" id="kpiValEgreso">--%</div>
+              <div class="mlabel">Egreso / Presupuesto</div>
+            </div>
+            <div class="micro">
+              <canvas id="kpiDonutCalif"></canvas>
+              <div class="mval" id="kpiValCalif">--</div>
+              <div class="mlabel">Calificación promedio</div>
+            </div>
+          </div>
+
+          <div class="section-title">
+            <h3>Top proyectos</h3>
+            <div class="hint" id="topHint">según indicador</div>
+          </div>
+          <div id="topList" class="rank-list"></div>
+
+          <div class="section-title" style="margin-top:14px;">
+            <h3 id="risk-title">Proyectos en riesgo</h3>
+            <div class="hint" id="riskHint">prioridad alta</div>
+          </div>
+          <div id="riskList" class="rank-list"></div>
+        </div>
+      </div>
+
+      <!-- Chart -->
+      <div class="card chart-card" style="margin-top: 12px;">
+        <div class="section-title">
+          <h3>Gráfica</h3>
+          <div class="hint" id="chartHint">Auto: Top/Bottom si hay muchos proyectos</div>
+        </div>
+        <canvas id="chart" height="320"></canvas>
+      </div>
+    </section>
+
+    <!-- ===== VIEW: COMPARATIVO 2024 vs 2025 ===== -->
+    <section id="view-comparativo" class="view">
+      <div class="hero">
+        <div class="hero-left">
+          <h2>Comparativo Operaciones 2024 vs 2025</h2>
+          <div class="hero-meta">
+            <div class="chip" id="chip-comp-zona">Zona: Todos</div>
+            <div class="chip" id="chip-comp-mes">Mes: Global</div>
+            <div class="chip" id="chip-comp-rubro">Rubro: Utilidad</div>
+          </div>
+        </div>
+
+        <div class="hero-right">
+          <div class="mini-kpi">
+            <div class="label">Total 2024</div>
+            <div class="val" id="comp-kpi-2024">$ --</div>
+            <div class="delta" id="comp-kpi-2024-sub">—</div>
+          </div>
+          <div class="mini-kpi">
+            <div class="label">Total 2025</div>
+            <div class="val" id="comp-kpi-2025">$ --</div>
+            <div class="delta" id="comp-kpi-2025-sub">—</div>
+          </div>
+          <div class="mini-kpi">
+            <div class="label">Diferencia</div>
+            <div class="val" id="comp-kpi-diff">$ --</div>
+            <div class="delta" id="comp-kpi-diff-sub">—</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="controls">
+        <div class="controls-card">
+          <div class="control-group">
+            <div>
+              <label class="form-label">Zona</label><br/>
+              <select id="comp-zona"><option value="todos">Todos</option></select>
+            </div>
+
+            <div>
+              <label class="form-label">Proyecto</label><br/>
+              <select id="comp-proyecto"></select>
+            </div>
+
+            <div>
+              <label class="form-label">Rubro</label><br/>
+              <select id="comp-rubro"></select>
+            </div>
+
+            <div>
+              <label class="form-label">Mes</label><br/>
+              <select id="comp-mes"></select>
+            </div>
+
+            <div>
+              <label class="form-label">Rendimiento (2025)</label><br/>
+              <select id="comp-rend">
+                <option value="todos">Todos</option>
+                <option value="buen">Buen rendimiento</option>
+                <option value="malo">Mal rendimiento</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="form-label">Ordenar</label><br/>
+              <select id="comp-orden">
+                <option value="desc">Mayor a menor</option>
+                <option value="asc">Menor a mayor</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="control-group" style="margin-left:auto;">
+            <button id="btnBack" class="btn soft">Volver al Dashboard</button>
+            <button id="btnCompReset" class="btn primary">Restablecer</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="layout" style="grid-template-columns: 1.2fr 1fr;">
+        <div class="card chart-card">
+          <div class="section-title">
+            <h3>Gráfica comparativa</h3>
+            <div class="hint" id="compChartHint">2024 vs 2025</div>
+          </div>
+          <canvas id="chartComp" height="320"></canvas>
+        </div>
+
+        <div class="card">
+          <div class="section-title">
+            <h3>Tabla comparativa</h3>
+            <div class="hint">Incluye diferencia ($) y semáforo</div>
+          </div>
+
+          <div class="table-wrap" style="max-height: 520px;">
+            <table id="tablaComp">
+              <thead id="theadComp"></thead>
+              <tbody id="tbodyComp"></tbody>
+            </table>
+          </div>
+
+          <div class="note">
+            Nota: en <b>Egreso</b>, una diferencia “positiva” (baja en 2025) es <b>mejor</b>.
+          </div>
+        </div>
+      </div>
+    </section>
   </div>
 
-  <!-- Firebase + lógica de datos del dashboard financiero original -->
+  <!-- Firebase + lógica -->
   <script type="module">
     import { doc, getDoc } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
     import { db } from './js/firebase-config.js';
 
-    // ====== Rutas y navegación por logo (igual al original) ======
+    // ===== Navegación por logo (igual estilo original) =====
     document.addEventListener("DOMContentLoaded", () => {
       const logo = document.getElementById("logo-accessone");
       logo.onclick = () => {
@@ -185,18 +843,20 @@
       };
     });
 
-    // ====== Estado ======
-    const COLORS = { primary:"#2E0060", secondary:"#FFD400", accent:"#00B2A9", green:"#00C48C", red:"#FF4D4F", gray:"#e0e3e8" };
-    let proyectos = {};           // { nombre: { ingresoEjercido:{meses...}, ingresoPresupuesto:{...}, egresoEjercido:{...}, egresoPresupuesto:{...} } }
-    let proyectosArray = [];      // arreglo plano para render
-    let currentView = "utilidad"; // utilidad|ingreso|egreso|todos
-    let selectedMes = "todos";    // mes seleccionado
-    let selectedZona = 'todos';
+    // ===== Constantes =====
+    const COLORS = {
+      primary:"#2E0060",
+      secondary:"#FFD400",
+      accent:"#00B2A9",
+      green:"#00C48C",
+      red:"#FF4D4F",
+      gray:"#e0e3e8"
+    };
 
-    // Mapeo de proyectos -> zona / reglas especiales (usar llaves en minúsculas y sin espacios al final)
+    // Mapa proyecto -> zona / reglas
     const PROJECT_ZONE_MAP = {
-  'walmart pirules': 'CDMX NORTE',
-  'los alamos': 'NORTE',
+      'walmart pirules': 'CDMX NORTE',
+      'los alamos': 'NORTE',
       'via san angel': 'SUR',
       'paseo akia': 'NORTE',
       'villahermosa': 'SUR',
@@ -247,29 +907,149 @@
       'tapachula': 'ELIMINAR',
       'ba apatzingan': 'NORTE',
       'plaza bella': 'SUR',
-      // si faltan proyectos, se mantendrán como vienen
     };
 
-    // Helper: suma los objetos mensuales (ingreso/egreso/presupuesto)
+    // ===== Estado global =====
+    let proyectos2025 = {};      // cleaned
+    let proyectos2024 = {};      // cleaned
+    let proyectosArray2025 = []; // [{nombre:key}]
+    let zonasDisponibles = ['todos'];
+
+    // Dashboard state
+    let currentView = "utilidad"; // utilidad|ingreso|egreso|todos
+    let selectedMes = "todos";
+    let selectedZona = "todos";
+    let ordenar = "desc";
+    let searchText = "";
+
+    // Comparativo state
+    const RUBROS = [
+      { key: 'ingresoEjercido', label: 'Ingreso Ejercido' },
+      { key: 'egresoEjercido', label: 'Egreso Ejercido' },
+      { key: 'utilidad', label: 'Utilidad' }
+    ];
+    let compZona = "todos";
+    let compProyecto = "global";
+    let compRubro = "utilidad";
+    let compMes = "global";
+    let compRend = "todos";
+    let compOrden = "desc";
+    let mesesDisponibles = [];
+
+    // ===== Reloj =====
+    const clock = document.getElementById('clock');
+    setInterval(()=>{
+      const d=new Date();
+      clock.textContent=d.toLocaleString('es-MX',{dateStyle:'medium', timeStyle:'short'});
+    },1000);
+
+    // ===== Helpers =====
+    const money = (v)=> '$ ' + Number(v||0).toLocaleString('es-MX',{minimumFractionDigits:2});
+    const pct1 = (v)=> (isFinite(v)? (Number(v).toFixed(1)+'%') : '--');
+
+    function titleCase(s){
+      return (s||'').split(' ').filter(Boolean).map(w=> w.charAt(0).toUpperCase()+w.slice(1)).join(' ');
+    }
+
     function sumaDatosMensuales(target, source){
       ['ingresoEjercido','egresoEjercido','ingresoPresupuesto','egresoPresupuesto'].forEach(key=>{
         const s = source?.[key] || {};
-        if(!s) return;
         if(!target[key]) target[key] = {};
-        Object.keys(s).forEach(m => {
+        Object.keys(s).forEach(m=>{
           const val = Number(s[m]||0);
           target[key][m] = (Number(target[key][m]||0) + val);
         });
       });
     }
 
-    // Reloj UI
-    const clock = document.getElementById('clock');
-    setInterval(()=>{ const d=new Date(); clock.textContent=d.toLocaleString('es-MX',{dateStyle:'medium', timeStyle:'short'}); },1000);
+    function cleanRawProjects(raw){
+      const cleaned = {};
+      Object.entries(raw || {}).forEach(([nombre, datos])=>{
+        const key = (nombre||'').toString().trim().toLowerCase();
+        if (!key) return;
+        if (key.includes('corporativo')) return;
 
-    // Utilidades formato
-    const money = (v)=> '$ ' + Number(v||0).toLocaleString('es-MX',{minimumFractionDigits:2});
-    const pct = (v)=> (isFinite(v)? (Number(v).toFixed(1)+'%') : '--');
+        const rule = PROJECT_ZONE_MAP[key];
+
+        if (rule && rule.startsWith('COMBINAR:')){
+          const target = rule.split(':')[1].trim().toLowerCase();
+          if (!cleaned[target]) cleaned[target] = JSON.parse(JSON.stringify(datos));
+          else sumaDatosMensuales(cleaned[target], datos);
+          return;
+        }
+        if (rule === 'ELIMINAR') return;
+
+        // normaliza a key
+        if (!cleaned[key]) cleaned[key] = JSON.parse(JSON.stringify(datos));
+        else sumaDatosMensuales(cleaned[key], datos);
+      });
+      return cleaned;
+    }
+
+    function obtenerMesesDisponibles(proyectos){
+      const mesesSet = new Set();
+      Object.values(proyectos).forEach(datos=>{
+        ['ingresoEjercido','egresoEjercido','ingresoPresupuesto','egresoPresupuesto'].forEach(tipo=>{
+          if (datos?.[tipo]) Object.keys(datos[tipo]).forEach(m=> { if(m!=="total") mesesSet.add(m); });
+        });
+      });
+      const ordenMeses=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+      return Array.from(mesesSet).sort((a,b)=> ordenMeses.indexOf(a)-ordenMeses.indexOf(b));
+    }
+
+    function getByMes(obj, mes){
+      if(!obj) return 0;
+      if(mes==="todos"||mes==="total") return obj.total||0;
+      return obj[mes]||0;
+    }
+
+    // Score (0-10) igual a tu lógica
+    function calcScore(nombreKey){
+      const datos = proyectos2025[nombreKey]||{};
+      const util = getByMes(datos.ingresoEjercido, selectedMes) - getByMes(datos.egresoEjercido, selectedMes);
+      const ie = getByMes(datos.ingresoEjercido, selectedMes);
+      const ip = getByMes(datos.ingresoPresupuesto, selectedMes);
+      const ee = getByMes(datos.egresoEjercido, selectedMes);
+      const ep = getByMes(datos.egresoPresupuesto, selectedMes);
+
+      let s=0;
+      if(util>0) s+=3;
+      if(ip>0 && ie/ip>=0.95) s+=3;
+      if(ep>0 && ee<=ep) s+=3;
+      if(ie>0 && util/ie>0.1) s+=1;
+      return s;
+    }
+
+    function statusForRow(key){
+      const datos = proyectos2025[key]||{};
+      const ie = getByMes(datos.ingresoEjercido, selectedMes);
+      const ip = getByMes(datos.ingresoPresupuesto, selectedMes);
+      const ee = getByMes(datos.egresoEjercido, selectedMes);
+      const ep = getByMes(datos.egresoPresupuesto, selectedMes);
+      const util = ie - ee;
+      const score = calcScore(key);
+
+      if(currentView === 'utilidad'){
+        if(util < 0) return {cls:'bad', txt:'❌ Riesgo'};
+        const margin = ie>0 ? util/ie : 0;
+        if(margin < 0.05) return {cls:'warn', txt:'⚠️ Atención'};
+        return {cls:'ok', txt:'✅ Bien'};
+      }
+      if(currentView === 'ingreso'){
+        if(ip>0 && (ie/ip) < 0.90) return {cls:'bad', txt:'❌ Riesgo'};
+        if(ip>0 && (ie/ip) < 0.95) return {cls:'warn', txt:'⚠️ Atención'};
+        return {cls:'ok', txt:'✅ Bien'};
+      }
+      if(currentView === 'egreso'){
+        if(ep>0 && (ee/ep) > 1.05) return {cls:'bad', txt:'❌ Riesgo'};
+        if(ep>0 && (ee/ep) > 1.00) return {cls:'warn', txt:'⚠️ Atención'};
+        return {cls:'ok', txt:'✅ Bien'};
+      }
+      // todos (calificación)
+      if(score < 5) return {cls:'bad', txt:'❌ Riesgo'};
+      if(score < 8) return {cls:'warn', txt:'⚠️ Atención'};
+      return {cls:'ok', txt:'✅ Bien'};
+    }
 
     // Donuts
     function drawDonut(instRef, canvasId, valuePct, color){
@@ -281,375 +1061,900 @@
       return new Chart(ctx, {
         type: 'doughnut',
         data: { datasets: [{ data: [val, rest], backgroundColor: [color, '#e7e9f0'], borderWidth: 0 }] },
-        options: { cutout: '70%', plugins: { legend: { display:false }, tooltip:{enabled:false} } }
+        options: { cutout: '72%', plugins: { legend: { display:false }, tooltip:{enabled:false} } }
       });
     }
-
     let donutIngreso=null, donutEgreso=null, donutCalif=null;
 
-    // Detecta meses disponibles en Firestore
-    function obtenerMesesDisponibles(proyectos){
-      const mesesSet = new Set();
-      Object.values(proyectos).forEach(datos => {
-        ['ingresoEjercido','egresoEjercido','ingresoPresupuesto','egresoPresupuesto'].forEach(tipo => {
-          if (datos?.[tipo]) Object.keys(datos[tipo]).forEach(m => { if(m!=="total") mesesSet.add(m); });
-        });
-      });
-      const ordenMeses=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
-      return Array.from(mesesSet).sort((a,b)=> ordenMeses.indexOf(a)-ordenMeses.indexOf(b));
-    }
-
-    // Carga Firestore (misma fuente del dashboard financiero)
+    // ===== Carga Firestore =====
     async function cargarDatos(){
-      const snap = await getDoc(doc(db, "estacionamientos", "datos_actuales"));
-      if(!snap.exists()){
-        alert("No hay datos guardados en la base de datos.");
+      const snap2025 = await getDoc(doc(db, "estacionamientos", "datos_actuales"));
+      if(!snap2025.exists()){
+        alert("No hay datos guardados en la base de datos (datos_actuales).");
         return;
       }
-      const raw = snap.data().proyectos || {};
-      // Aplicar reglas: eliminar o combinar
-      const cleaned = {};
-      Object.entries(raw).forEach(([nombre, datos])=>{
-        const key = (nombre||'').toString().trim().toLowerCase();
-        if (key.includes('corporativo')) return; // skip
-        const rule = PROJECT_ZONE_MAP[key];
-        if (rule && rule.startsWith('COMBINAR:')){
-          const target = rule.split(':')[1].trim().toLowerCase();
-          if (!cleaned[target]) cleaned[target] = JSON.parse(JSON.stringify(datos));
-          else sumaDatosMensuales(cleaned[target], datos);
-          return;
-        }
-        if (rule === 'ELIMINAR') return; // skip this project
-        if (rule){
-          // keep under normalized name
-          const norm = key;
-          if (!cleaned[norm]) cleaned[norm] = JSON.parse(JSON.stringify(datos));
-          else sumaDatosMensuales(cleaned[norm], datos);
-          // attach zona metadata later from PROJECT_ZONE_MAP when populating select
-        } else {
-          // keep as-is
-          cleaned[key] = JSON.parse(JSON.stringify(datos));
-        }
-      });
+      const raw2025 = snap2025.data().proyectos || {};
+      proyectos2025 = cleanRawProjects(raw2025);
 
-      proyectos = cleaned;
+      // 2024
+      const snap2024 = await getDoc(doc(db, "estacionamientos", "datos_2024"));
+      proyectos2024 = snap2024.exists() ? cleanRawProjects(snap2024.data().proyectos || {}) : {};
 
-      // Construir proyectosArray (para render) y poblar zonas detectadas
-      proyectosArray = Object.keys(proyectos).map(k=> ({ nombre: k }));
+      // Array base para dashboard (solo 2025)
+      proyectosArray2025 = Object.keys(proyectos2025).map(k=>({nombre:k}));
 
-      // Zonas dinámicas a partir del map y proyectos
-      const zonasSet = new Set(['todos']);
-      Object.keys(proyectos).forEach(k=>{
+      // Zonas disponibles desde mapa + proyectos 2025
+      const zset = new Set(['todos']);
+      Object.keys(proyectos2025).forEach(k=>{
         const z = PROJECT_ZONE_MAP[k];
-        if (z && z !== 'ELIMINAR' && !z.startsWith('COMBINAR')) zonasSet.add(z);
+        if (z && z !== 'ELIMINAR' && !z.startsWith('COMBINAR')) zset.add(z);
       });
-      // Insertar selector de zona si no existe
-      if (!document.getElementById('filtro-zona')){
-        const container = document.querySelector('.control-group');
-        const wrapper = document.createElement('div');
-        wrapper.innerHTML = `<label class="form-label">Zona</label><br/><select id="filtro-zona"></select>`;
-        container.insertBefore(wrapper, container.children[2] || null);
-      }
-      const zonaSel = document.getElementById('filtro-zona');
-      zonaSel.innerHTML = Array.from(zonasSet).map(z=>`<option value="${z}">${z}</option>`).join('');
-      zonaSel.addEventListener('change', e => { selectedZona = e.target.value; render(); });
+      zonasDisponibles = Array.from(zset);
 
-      // Meses a selector
-      const meses = obtenerMesesDisponibles(proyectos);
-      const sel = document.getElementById('filtro-mes');
-      sel.innerHTML = `<option value="todos" selected>Todos</option>` + meses.map(m=>`<option value="${m}">${m.charAt(0).toUpperCase()+m.slice(1)}</option>`).join('') + `<option value="total">Total</option>`;
-      selectedMes = 'todos';
-      render();
+      // Meses (tomamos del 2025 para comparabilidad como tu archivo)
+      mesesDisponibles = obtenerMesesDisponibles(proyectos2025);
+
+      // Poblar selects
+      initDashboardSelectors();
+      initComparativoSelectors();
+
+      // Render
+      renderDashboard();
+      renderComparativo(); // queda listo por si cambias de vista
     }
 
-    // Accesor por mes
-    function getByMes(obj, mes){ if(!obj) return 0; if(mes==="todos"||mes==="total") return obj.total||0; return obj[mes]||0; }
+    function initDashboardSelectors(){
+      // Zona
+      const zonaSel = document.getElementById('filtro-zona');
+      zonaSel.innerHTML = zonasDisponibles.map(z=>`<option value="${z}">${z}</option>`).join('');
+      zonaSel.value = 'todos';
 
-    // KPIs Macro y tablas
-    function setKPIs(rows){
-      // Ensure only one KPI container exists (in case template duplication occurred)
-      const allK = document.querySelectorAll('#kpis');
-      if(allK.length>1){
-        for(let i=1;i<allK.length;i++) allK[i].remove();
-      }
-      // Agregados por mes
-      const totIngreso = rows.reduce((a,b)=> a + getByMes(proyectos[b.nombre]?.ingresoEjercido, selectedMes), 0);
-      const totIngPres = rows.reduce((a,b)=> a + getByMes(proyectos[b.nombre]?.ingresoPresupuesto, selectedMes), 0);
-      const totEgreso  = rows.reduce((a,b)=> a + getByMes(proyectos[b.nombre]?.egresoEjercido, selectedMes), 0);
-      const totEgrPres = rows.reduce((a,b)=> a + getByMes(proyectos[b.nombre]?.egresoPresupuesto, selectedMes), 0);
+      // Mes
+      const mesSel = document.getElementById('filtro-mes');
+      mesSel.innerHTML =
+        `<option value="todos">Todos</option>` +
+        mesesDisponibles.map(m=>`<option value="${m}">${m.charAt(0).toUpperCase()+m.slice(1)}</option>`).join('') +
+        `<option value="total">Total</option>`;
+      mesSel.value = 'todos';
+    }
+
+    function initComparativoSelectors(){
+      // Zona
+      const zSel = document.getElementById('comp-zona');
+      zSel.innerHTML = zonasDisponibles.map(z=>`<option value="${z}">${z}</option>`).join('');
+      zSel.value = 'todos';
+
+      // Rubro
+      const rSel = document.getElementById('comp-rubro');
+      rSel.innerHTML = RUBROS.map(r=>`<option value="${r.key}">${r.label}</option>`).join('');
+      rSel.value = 'utilidad';
+
+      // Mes
+      const mSel = document.getElementById('comp-mes');
+      mSel.innerHTML =
+        `<option value="global">Global (hasta mes disponible)</option>` +
+        mesesDisponibles.map(m=>`<option value="${m}">${m.charAt(0).toUpperCase()+m.slice(1)}</option>`).join('');
+      mSel.value = 'global';
+
+      // Proyecto (se arma con zona)
+      rebuildComparativoProyectoSelect();
+    }
+
+    function rebuildComparativoProyectoSelect(){
+      const pSel = document.getElementById('comp-proyecto');
+
+      // Lista unificada de proyectos (presentes en 2024 o 2025) y que pasen filtros de zona (si aplica)
+      const all = Array.from(new Set([
+        ...Object.keys(proyectos2024||{}),
+        ...Object.keys(proyectos2025||{})
+      ]));
+
+      const filteredByZona = all.filter(k=>{
+        if(compZona === 'todos') return true;
+        const z = PROJECT_ZONE_MAP[k];
+        if(!z) return false; // si no está en mapa, lo ocultamos por seguridad
+        return z === compZona;
+      });
+
+      // Mostrar en select (keys)
+      const options = [
+        `<option value="global">Global (Todos)</option>`,
+        ...filteredByZona.sort().map(k=> `<option value="${k}">${titleCase(k)}</option>`)
+      ].join('');
+
+      pSel.innerHTML = options;
+
+      // conservar selección si aún existe
+      const has = Array.from(pSel.options).some(o=> o.value === compProyecto);
+      if(!has) compProyecto = 'global';
+      pSel.value = compProyecto;
+    }
+
+    // ===== DASHBOARD RENDER =====
+    let chartInstance=null;
+
+    function setHeroKPIs(rows){
+      const totIngreso = rows.reduce((a,b)=> a + getByMes(proyectos2025[b.nombre]?.ingresoEjercido, selectedMes), 0);
+      const totIngPres = rows.reduce((a,b)=> a + getByMes(proyectos2025[b.nombre]?.ingresoPresupuesto, selectedMes), 0);
+      const totEgreso  = rows.reduce((a,b)=> a + getByMes(proyectos2025[b.nombre]?.egresoEjercido, selectedMes), 0);
+      const totEgrPres = rows.reduce((a,b)=> a + getByMes(proyectos2025[b.nombre]?.egresoPresupuesto, selectedMes), 0);
       const totUtilidad = totIngreso - totEgreso;
 
       const ingresoPct = totIngPres>0 ? (totIngreso/totIngPres*100) : 0;
       const egresoPct  = totEgrPres>0 ? (totEgreso/totEgrPres*100) : 0;
 
-      const conIngPres = rows.filter(r => getByMes(proyectos[r.nombre]?.ingresoPresupuesto, selectedMes) > 0).length;
-      const conEgrPres = rows.filter(r => getByMes(proyectos[r.nombre]?.egresoPresupuesto, selectedMes) > 0).length;
-      const califProm  = rows.length? (rows.reduce((a,b)=> a + calcScore(b.nombre),0)/rows.length) : 0;
+      // riesgos
+      const isRisk = (r)=>{
+        const d = proyectos2025[r.nombre]||{};
+        const ie = getByMes(d.ingresoEjercido, selectedMes);
+        const ip = getByMes(d.ingresoPresupuesto, selectedMes);
+        const ee = getByMes(d.egresoEjercido, selectedMes);
+        const ep = getByMes(d.egresoPresupuesto, selectedMes);
+        const util = ie - ee;
+        if(currentView==='ingreso') return (ip>0) && ((ie/ip) < 0.95);
+        if(currentView==='egreso') return (ep>0) && ((ee/ep) > 1);
+        if(currentView==='utilidad') return util < 0;
+        return calcScore(r.nombre) < 5;
+      };
+      const riesgosCount = rows.filter(isRisk).length;
+      const riesgosSum = rows.reduce((acc,r)=>{
+        const d = proyectos2025[r.nombre]||{};
+        const ie = getByMes(d.ingresoEjercido, selectedMes);
+        const ip = getByMes(d.ingresoPresupuesto, selectedMes);
+        const ee = getByMes(d.egresoEjercido, selectedMes);
+        const ep = getByMes(d.egresoPresupuesto, selectedMes);
+        const util = ie - ee;
+        if(currentView==='ingreso') return acc + Math.max(0, ip - ie);
+        if(currentView==='egreso') return acc + Math.max(0, ee - ep);
+        if(currentView==='utilidad') return acc + Math.max(0, -util);
+        return acc;
+      },0);
 
-  const k=document.getElementById('kpis');
-  // clear before writing to avoid accidental duplicates
-  k.innerHTML = '';
-  // calcular proyectos en riesgo y exposición según el indicador activo
-  const isRiskRow = (r)=>{
-    const datos = proyectos[r.nombre]||{};
-    const ie = getByMes(datos.ingresoEjercido, selectedMes);
-    const ip = getByMes(datos.ingresoPresupuesto, selectedMes);
-    const ee = getByMes(datos.egresoEjercido, selectedMes);
-    const ep = getByMes(datos.egresoPresupuesto, selectedMes);
-    const util = ie - ee;
-    if(currentView==='ingreso') return (ip>0) && ((ie/ip) < 0.95);
-    if(currentView==='egreso') return (ep>0) && ((ee/ep) > 1);
-    if(currentView==='utilidad') return util < 0;
-    // todos (calificación): riesgo si puntuación baja
-    const s = calcScore(r.nombre); return s < 5;
-  };
-  const riesgosCount = rows.filter(isRiskRow).length;
-  // exposición monetaria (positivo) según indicador
-  const riesgosSum = rows.reduce((acc,r)=>{
-    const datos = proyectos[r.nombre]||{};
-    const ie = getByMes(datos.ingresoEjercido, selectedMes);
-    const ip = getByMes(datos.ingresoPresupuesto, selectedMes);
-    const ee = getByMes(datos.egresoEjercido, selectedMes);
-    const ep = getByMes(datos.egresoPresupuesto, selectedMes);
-    const util = ie - ee;
-    if(currentView==='ingreso') return acc + Math.max(0, ip - ie); // faltante de ingreso
-    if(currentView==='egreso') return acc + Math.max(0, ee - ep); // exceso de egreso
-    if(currentView==='utilidad') return acc + Math.max(0, -util); // suma de utilidades negativas
-    return acc; // para 'todos' no calculamos exposición monetaria
-  },0);
+      // chips
+      document.getElementById('chip-zona').textContent = `Zona: ${selectedZona==='todos'?'Todos':selectedZona}`;
+      document.getElementById('chip-mes').textContent = `Mes: ${selectedMes==='todos'?'Todos':(selectedMes==='total'?'Total':titleCase(selectedMes))}`;
+      const mapInd = {utilidad:'Utilidad', ingreso:'Ingreso vs Presupuesto', egreso:'Egreso vs Presupuesto', todos:'Calificación'};
+      document.getElementById('chip-indicador').textContent = `Indicador: ${mapInd[currentView]}`;
 
-  k.innerHTML = `
-        <div class="card"><h4>Ingreso Total</h4><div class="value">${money(totIngreso)}</div></div>
-        <div class="card"><h4>Egreso Total</h4><div class="value">${money(totEgreso)}</div></div>
-        <div class="card"><h4>Utilidad Total</h4><div class="value">${money(totUtilidad)}</div></div>
-        <div class="card"><h4>% Egreso vs Presupuesto</h4><div class="value">${totEgrPres>0?egresoPct.toFixed(1)+'%':'--'}</div></div>
-  <div class="card"><h4>Proyectos</h4><div class="value">${rows.length}</div></div>
-  <div class="card"><h4>Proyectos en Riesgo</h4><div class="value">${riesgosCount}</div></div>
-  <div class="card"><h4>Valor en Riesgo</h4><div class="value">${money(riesgosSum)}</div></div>
-  <div class="card"><h4>% Ingreso vs Presupuesto (Ingreso)</h4><div class="value">${totIngPres>0?ingresoPct.toFixed(1)+'%':'--'}</div></div>
+      // hero values
+      document.getElementById('hero-utilidad').textContent = money(totUtilidad);
+      document.getElementById('hero-ing-pct').textContent = (totIngPres>0? ingresoPct.toFixed(1)+'%':'--%');
+      document.getElementById('hero-riesgos').textContent = String(riesgosCount);
+      document.getElementById('hero-var').textContent = money(riesgosSum) + " valor en riesgo";
+
+      // deltas (visuales)
+      const utilDeltaEl = document.getElementById('hero-utilidad-delta');
+      if(totUtilidad >= 0){ utilDeltaEl.textContent = "✅ Positiva"; utilDeltaEl.className = "delta good"; }
+      else { utilDeltaEl.textContent = "❌ Negativa"; utilDeltaEl.className = "delta bad"; }
+
+      const ingDeltaEl = document.getElementById('hero-ing-delta');
+      if(totIngPres<=0){ ingDeltaEl.textContent = "—"; ingDeltaEl.className = "delta warn"; }
+      else if(ingresoPct >= 100){ ingDeltaEl.textContent = "✅ Sobre objetivo"; ingDeltaEl.className = "delta good"; }
+      else if(ingresoPct >= 95){ ingDeltaEl.textContent = "⚠️ Cerca del objetivo"; ingDeltaEl.className = "delta warn"; }
+      else { ingDeltaEl.textContent = "❌ Bajo objetivo"; ingDeltaEl.className = "delta bad"; }
+
+      // KPIs grid
+      const califProm = rows.length ? (rows.reduce((a,b)=> a + calcScore(b.nombre), 0)/rows.length) : 0;
+
+      const kpisEl = document.getElementById('kpis');
+      kpisEl.innerHTML = `
+        <div class="card kpi-card"><div class="kpi-title">Ingreso total</div><div class="kpi-value">${money(totIngreso)}</div><div class="kpi-sub">${rows.length} proyectos visibles</div></div>
+        <div class="card kpi-card"><div class="kpi-title">Egreso total</div><div class="kpi-value">${money(totEgreso)}</div><div class="kpi-sub">% egreso vs presupuesto: ${totEgrPres>0? egresoPct.toFixed(1)+'%':'--'}</div></div>
+        <div class="card kpi-card"><div class="kpi-title">Utilidad total</div><div class="kpi-value">${money(totUtilidad)}</div><div class="kpi-sub">${totUtilidad>=0?'✅ positiva':'❌ negativa'}</div></div>
+        <div class="card kpi-card"><div class="kpi-title">% Ingreso vs presupuesto</div><div class="kpi-value">${totIngPres>0? ingresoPct.toFixed(1)+'%':'--'}</div><div class="kpi-sub">Presupuesto: ${money(totIngPres)}</div></div>
+        <div class="card kpi-card"><div class="kpi-title">Proyectos en riesgo</div><div class="kpi-value">${riesgosCount}</div><div class="kpi-sub">Valor en riesgo: ${money(riesgosSum)}</div></div>
+        <div class="card kpi-card"><div class="kpi-title">Calificación promedio</div><div class="kpi-value">${rows.length? califProm.toFixed(1)+' / 10':'--'}</div><div class="kpi-sub">Regla: utilidad + cumplimiento + control</div></div>
+        <div class="card kpi-card"><div class="kpi-title">Con presupuesto de ingreso</div><div class="kpi-value">${rows.filter(r=> getByMes(proyectos2025[r.nombre]?.ingresoPresupuesto, selectedMes)>0).length}</div><div class="kpi-sub">Para medir cumplimiento</div></div>
+        <div class="card kpi-card"><div class="kpi-title">Con presupuesto de egreso</div><div class="kpi-value">${rows.filter(r=> getByMes(proyectos2025[r.nombre]?.egresoPresupuesto, selectedMes)>0).length}</div><div class="kpi-sub">Para medir gasto</div></div>
       `;
 
-      donutIngreso = drawDonut(donutIngreso,'kpiDonutIngreso', ingresoPct, ingresoPct>=100? '#00C48C' : (ingresoPct>=95? '#FFD400' : '#FF4D4F'));
-      donutEgreso  = drawDonut(donutEgreso,'kpiDonutEgreso', Math.min(100, egresoPct), egresoPct<=100? '#00C48C' : '#FF4D4F');
-      donutCalif   = drawDonut(donutCalif,'kpiDonutCalif', Math.min(100, califProm*10), '#00B2A9');
+      // donuts
+      donutIngreso = drawDonut(donutIngreso,'kpiDonutIngreso', ingresoPct, ingresoPct>=100? COLORS.green : (ingresoPct>=95? COLORS.secondary : COLORS.red));
+      donutEgreso  = drawDonut(donutEgreso,'kpiDonutEgreso', Math.min(100, egresoPct), egresoPct<=100? COLORS.green : COLORS.red);
+      donutCalif   = drawDonut(donutCalif,'kpiDonutCalif', Math.min(100, califProm*10), COLORS.accent);
+
       document.getElementById('kpiValIngreso').textContent = totIngPres>0? ingresoPct.toFixed(1)+'%':'--%';
       document.getElementById('kpiValEgreso').textContent  = totEgrPres>0? egresoPct.toFixed(1)+'%':'--%';
       document.getElementById('kpiValCalif').textContent   = rows.length? califProm.toFixed(1)+' / 10':'--';
     }
 
-    function calcScore(nombre){
-      const datos = proyectos[nombre]||{};
-      const util = getByMes(datos.ingresoEjercido, selectedMes) - getByMes(datos.egresoEjercido, selectedMes);
-      const ie = getByMes(datos.ingresoEjercido, selectedMes);
-      const ip = getByMes(datos.ingresoPresupuesto, selectedMes);
-      const ee = getByMes(datos.egresoEjercido, selectedMes);
-      const ep = getByMes(datos.egresoPresupuesto, selectedMes);
-      let s=0; if(util>0) s+=3; if(ip>0 && ie/ip>=0.95) s+=3; if(ep>0 && ee<=ep) s+=3; if(ie>0 && util/ie>0.1) s+=1; return s;
-    }
+    function renderDashboard(){
+      // subtitle
+      document.getElementById('subtitle-top').textContent = "Vista: 2025 (Actual)";
 
-    // Render principal
-    let chartInstance=null;
-    function render(){
-      // Zona pill con indicador actual
-      const pill = document.getElementById('zona-pill');
-      const map = {utilidad:'Utilidad', ingreso:'Ingreso vs Presupuesto', egreso:'Egreso vs Presupuesto', todos:'Calificación'};
-      pill.textContent = 'Indicador: ' + map[currentView];
+      // base rows
+      const base = [...proyectosArray2025];
 
-      const rows = [...proyectosArray];
-      const ordenar = document.getElementById('ordenar').value;
-
-      // Aplicar filtro de zona
-      const filteredRows = rows.filter(r => {
+      // filtro zona
+      let rows = base.filter(r=>{
         if(!selectedZona || selectedZona==='todos') return true;
-        const key = (r.nombre||'').toLowerCase();
-        const z = PROJECT_ZONE_MAP[key];
-        if (!z) return false; // si no está en el mapa, ocultar por seguridad
-        return (z === selectedZona);
+        const z = PROJECT_ZONE_MAP[r.nombre];
+        if(!z) return false; // seguridad
+        return z === selectedZona;
       });
 
-      // Construcción de filas + datos chart según indicador
-      let chartData=[], chartLabels=[], chartTitle='', chartColors=[];
+      // filtro búsqueda
+      if(searchText.trim()){
+        const q = searchText.trim().toLowerCase();
+        rows = rows.filter(r=> r.nombre.includes(q));
+      }
 
-      // Definir headers de tabla según indicador
-      let headers=[];
-      const body=[];
+      // construir tabla + chart
+      const headersCommon = ["Proyecto","Estado"];
+      let headers = [];
+      const body = []; // cada fila: {key, cells[]}
+
+      let chartLabels=[], chartData=[], chartColors=[], chartTitle='';
 
       if(currentView==='utilidad'){
-        headers=["Proyecto","Ingreso","Egreso","Utilidad"]; 
-        filteredRows.forEach(r=>{
-          const ie=getByMes(proyectos[r.nombre]?.ingresoEjercido, selectedMes);
-          const ee=getByMes(proyectos[r.nombre]?.egresoEjercido, selectedMes);
-          const u=ie-ee;
-          const displayName = r.nombre.split(' ').map(w=> w.charAt(0).toUpperCase()+w.slice(1)).join(' ');
-          body.push([displayName, money(ie), money(ee), money(u)]);
-          chartLabels.push(displayName); chartData.push(u); chartColors.push(u>=0?COLORS.green:COLORS.red);
+        headers = [...headersCommon, "Ingreso","Egreso","Utilidad"];
+        rows.forEach(r=>{
+          const d = proyectos2025[r.nombre]||{};
+          const ie = getByMes(d.ingresoEjercido, selectedMes);
+          const ee = getByMes(d.egresoEjercido, selectedMes);
+          const u  = ie - ee;
+          const st = statusForRow(r.nombre);
+
+          body.push({
+            key: r.nombre,
+            sortValue: u,
+            cells: [
+              titleCase(r.nombre),
+              `<span class="status ${st.cls}">${st.txt}</span>`,
+              money(ie),
+              money(ee),
+              money(u),
+            ]
+          });
+
+          chartLabels.push(titleCase(r.nombre));
+          chartData.push(u);
+          chartColors.push(u>=0? COLORS.green : COLORS.red);
         });
-        chartTitle = (selectedMes==='todos'||selectedMes==='total')? 'Utilidad por Proyecto (Total)' : `Utilidad por Proyecto (${selectedMes})`;
-        // Ordenar por utilidad
-        const idx=3; body.sort((a,b)=> (parseFloat(b[idx].replace(/[^\d.-]/g,'')) - parseFloat(a[idx].replace(/[^\d.-]/g,''))));
+
+        chartTitle = (selectedMes==='todos'||selectedMes==='total') ? 'Utilidad por Proyecto (Total)' : `Utilidad por Proyecto (${titleCase(selectedMes)})`;
+        body.sort((a,b)=> b.sortValue - a.sortValue);
       }
       else if(currentView==='ingreso'){
-        headers=["Proyecto","Ingreso Ejercido","Ingreso Presupuesto","% Cumplimiento"]; 
-        filteredRows.forEach(r=>{
-          const ie=getByMes(proyectos[r.nombre]?.ingresoEjercido, selectedMes);
-          const ip=getByMes(proyectos[r.nombre]?.ingresoPresupuesto, selectedMes);
-          const ratio = ip>0? ie/ip : 0; 
-          const displayName = r.nombre.split(' ').map(w=> w.charAt(0).toUpperCase()+w.slice(1)).join(' ');
-          body.push([displayName, money(ie), money(ip), (ip? (ratio*100).toFixed(1):'0.0')+ '%']);
-          chartLabels.push(displayName); chartData.push(ratio); chartColors.push(ratio>=1?COLORS.green:COLORS.secondary);
+        headers = [...headersCommon, "Ingreso Ejercido","Ingreso Presupuesto","% Cumplimiento"];
+        rows.forEach(r=>{
+          const d = proyectos2025[r.nombre]||{};
+          const ie = getByMes(d.ingresoEjercido, selectedMes);
+          const ip = getByMes(d.ingresoPresupuesto, selectedMes);
+          const ratio = ip>0 ? (ie/ip) : 0;
+          const st = statusForRow(r.nombre);
+
+          body.push({
+            key: r.nombre,
+            sortValue: ratio,
+            cells: [
+              titleCase(r.nombre),
+              `<span class="status ${st.cls}">${st.txt}</span>`,
+              money(ie),
+              money(ip),
+              (ip? (ratio*100).toFixed(1) : '0.0') + '%'
+            ]
+          });
+
+          chartLabels.push(titleCase(r.nombre));
+          chartData.push(ratio);
+          chartColors.push(ratio>=1? COLORS.green : (ratio>=0.95? COLORS.secondary : COLORS.red));
         });
-        chartTitle = (selectedMes==='todos'||selectedMes==='total')? 'Ingreso Ejercido vs Presupuesto (Total)' : `Ingreso Ejercido vs Presupuesto (${selectedMes})`;
-        // Ordenar por ratio desc
-        const idx=3; body.sort((a,b)=> (parseFloat(b[idx]) - parseFloat(a[idx])));
+
+        chartTitle = (selectedMes==='todos'||selectedMes==='total') ? 'Ingreso Ejercido vs Presupuesto (Total)' : `Ingreso Ejercido vs Presupuesto (${titleCase(selectedMes)})`;
+        body.sort((a,b)=> b.sortValue - a.sortValue);
       }
       else if(currentView==='egreso'){
-        headers=["Proyecto","Egreso Ejercido","Egreso Presupuesto","% Gastado"]; 
-        filteredRows.forEach(r=>{
-          const ee=getByMes(proyectos[r.nombre]?.egresoEjercido, selectedMes);
-          const ep=getByMes(proyectos[r.nombre]?.egresoPresupuesto, selectedMes);
-          const ratio = ep>0? ee/ep : 0; 
-          const displayName = r.nombre.split(' ').map(w=> w.charAt(0).toUpperCase()+w.slice(1)).join(' ');
-          body.push([displayName, money(ee), money(ep), (ep? (ratio*100).toFixed(1):'0.0')+ '%']);
-          chartLabels.push(displayName); chartData.push(ratio); chartColors.push(ratio<=1?COLORS.green:COLORS.red);
+        headers = [...headersCommon, "Egreso Ejercido","Egreso Presupuesto","% Gastado"];
+        rows.forEach(r=>{
+          const d = proyectos2025[r.nombre]||{};
+          const ee = getByMes(d.egresoEjercido, selectedMes);
+          const ep = getByMes(d.egresoPresupuesto, selectedMes);
+          const ratio = ep>0 ? (ee/ep) : 0;
+          const st = statusForRow(r.nombre);
+
+          body.push({
+            key: r.nombre,
+            sortValue: ratio,
+            cells: [
+              titleCase(r.nombre),
+              `<span class="status ${st.cls}">${st.txt}</span>`,
+              money(ee),
+              money(ep),
+              (ep? (ratio*100).toFixed(1) : '0.0') + '%'
+            ]
+          });
+
+          chartLabels.push(titleCase(r.nombre));
+          chartData.push(ratio);
+          chartColors.push(ratio<=1? COLORS.green : (ratio<=1.05? COLORS.secondary : COLORS.red));
         });
-        chartTitle = (selectedMes==='todos'||selectedMes==='total')? 'Egreso Ejercido vs Presupuesto (Total)' : `Egreso Ejercido vs Presupuesto (${selectedMes})`;
-        // Ordenar por ratio asc (menor mejor)
-        const idx=3; body.sort((a,b)=> (parseFloat(a[idx]) - parseFloat(b[idx])));
+
+        chartTitle = (selectedMes==='todos'||selectedMes==='total') ? 'Egreso Ejercido vs Presupuesto (Total)' : `Egreso Ejercido vs Presupuesto (${titleCase(selectedMes)})`;
+        // menor ratio mejor, pero para ordenar "desc/asc" lo resolvemos después
+        body.sort((a,b)=> a.sortValue - b.sortValue);
       }
-      else { // todos = calificación
-        headers=["Proyecto","Utilidad","Calificación (0-10)"]; 
-        filteredRows.forEach(r=>{
-          const ie=getByMes(proyectos[r.nombre]?.ingresoEjercido, selectedMes);
-          const ee=getByMes(proyectos[r.nombre]?.egresoEjercido, selectedMes);
-          const u=ie-ee; const s=calcScore(r.nombre);
-          const displayName = r.nombre.split(' ').map(w=> w.charAt(0).toUpperCase()+w.slice(1)).join(' ');
-          body.push([displayName, money(u), s+" / 10"]);
-          chartLabels.push(displayName); chartData.push(s); chartColors.push(s>=8?COLORS.green:(s>=5?COLORS.secondary:COLORS.red));
+      else{
+        headers = [...headersCommon, "Utilidad","Calificación (0-10)"];
+        rows.forEach(r=>{
+          const d = proyectos2025[r.nombre]||{};
+          const ie = getByMes(d.ingresoEjercido, selectedMes);
+          const ee = getByMes(d.egresoEjercido, selectedMes);
+          const u  = ie - ee;
+          const s  = calcScore(r.nombre);
+          const st = statusForRow(r.nombre);
+
+          body.push({
+            key: r.nombre,
+            sortValue: s,
+            sortValue2: u,
+            cells: [
+              titleCase(r.nombre),
+              `<span class="status ${st.cls}">${st.txt}</span>`,
+              money(u),
+              `${s} / 10`
+            ]
+          });
+
+          chartLabels.push(titleCase(r.nombre));
+          chartData.push(s);
+          chartColors.push(s>=8? COLORS.green : (s>=5? COLORS.secondary : COLORS.red));
         });
-        chartTitle = (selectedMes==='todos'||selectedMes==='total')? 'Calificación por Proyecto' : `Calificación por Proyecto (${selectedMes})`;
-        // Ordenar por calificación y utilidad
-        const idxS=2, idxU=1; body.sort((a,b)=>{
-          const sa=parseFloat(a[idxS]); const sb=parseFloat(b[idxS]);
-          if(sb!==sa) return sb-sa; // score desc
-          const ua=parseFloat(a[idxU].replace(/[^\d.-]/g,'')); const ub=parseFloat(b[idxU].replace(/[^\d.-]/g,''));
-          return ub-ua;
+
+        chartTitle = (selectedMes==='todos'||selectedMes==='total') ? 'Calificación por Proyecto' : `Calificación por Proyecto (${titleCase(selectedMes)})`;
+        body.sort((a,b)=>{
+          if(b.sortValue !== a.sortValue) return b.sortValue - a.sortValue;
+          return (b.sortValue2||0) - (a.sortValue2||0);
         });
       }
 
-      if(document.getElementById('ordenar').value==='asc') body.reverse(), chartData.reverse(), chartLabels.reverse(), chartColors.reverse();
+      // ordenar asc/desc
+      if(ordenar === 'asc'){
+        body.reverse();
+        chartLabels.reverse(); chartData.reverse(); chartColors.reverse();
+      }
+
+      // Chart auto: si hay muchos proyectos, mostramos top 12 + bottom 12
+      const N = chartLabels.length;
+      let finalLabels = chartLabels, finalData = chartData, finalColors = chartColors;
+      const LIMIT = 24;
+      if(N > 35){
+        const topCount = 12;
+        const bottomCount = 12;
+
+        // se basan en el orden actual (desc o asc ya aplicado). Para que se vea mejor:
+        // si desc: top primeros; bottom últimos
+        // si asc: top primeros son "peores" dependiendo del indicador, pero respeta tu orden actual (lo que el usuario eligió)
+        const topPart = { labels: chartLabels.slice(0, topCount), data: chartData.slice(0, topCount), colors: chartColors.slice(0, topCount) };
+        const bottomPart = { labels: chartLabels.slice(-bottomCount), data: chartData.slice(-bottomCount), colors: chartColors.slice(-bottomCount) };
+        finalLabels = [...topPart.labels, '…', ...bottomPart.labels];
+        finalData   = [...topPart.data, null, ...bottomPart.data];
+        finalColors = [...topPart.colors, 'rgba(0,0,0,0.08)', ...bottomPart.colors];
+        document.getElementById('chartHint').textContent = `Auto: mostrando Top ${topCount} + Bottom ${bottomCount} (de ${N})`;
+      } else {
+        document.getElementById('chartHint').textContent = `Mostrando ${N} proyecto(s)`;
+      }
 
       // Head + body tabla
       document.getElementById('thead').innerHTML = `<tr>${headers.map(h=>`<th>${h}</th>`).join('')}</tr>`;
-      document.getElementById('tbody').innerHTML = body.map(r=>`<tr>${r.map(c=>`<td>${c}</td>`).join('')}</tr>`).join('');
-
-  // KPIs macro + donuts (usar filas filtradas)
-  setKPIs(filteredRows);
-
-      // Panel lateral: Top y Riesgo
-      const list = document.getElementById('topList');
-      const riskList = document.getElementById('riskList');
-      // Top según indicador actual (8)
-      const parsed = body.map(row=>({ nombre: row[0], v: parseFloat(String(row[row.length-1]).replace('%','')) , util: parseFloat(String(row[1]||'0').replace(/[^\d.-]/g,'')) }));
-      let top=[];
-      if(currentView==='utilidad') top = parsed.sort((a,b)=> b.util - a.util).slice(0,8);
-      else if(currentView==='ingreso') top = parsed.sort((a,b)=> b.v - a.v).slice(0,8);
-      else if(currentView==='egreso') top = parsed.sort((a,b)=> a.v - b.v).slice(0,8); // menor % gastado mejor
-      else top = parsed.sort((a,b)=> b.v - a.v).slice(0,8);
-
-      list.innerHTML = top.map(t=>{
-        const label = (currentView==='utilidad')? money(t.util) : (isFinite(t.v)? t.v.toFixed(1)+'%':'--');
-        const meter = (currentView==='egreso')? Math.max(0, 100 - Math.min(100, t.v)) : Math.min(100, Math.max(0, t.v));
-        const cls = (currentView==='utilidad')? '' : ((currentView==='egreso')? (t.v<=100?'':'bad') : (t.v>=95?'':(t.v>=90?'warn':'bad')));
-        return `<div class="rank-item"><div class="rank-name" title="${t.nombre}">${t.nombre}</div><div class="rank-value ${cls}">${label}</div><div class="meter ${cls}"><i style="width:${meter}%"></i></div></div>`;
+      document.getElementById('tbody').innerHTML = body.map(row=>{
+        return `<tr data-key="${row.key}">${row.cells.map((c,i)=>`<td>${c}</td>`).join('')}</tr>`;
       }).join('');
 
-      // Riesgo: Ingreso <95% del presupuesto (con presupuesto)
-      const riesgos = body
-        .map(r=>({ nombre:r[0], iepct: parseFloat(String(r[r.length-1]).replace('%','')), tiene:(currentView!=='ingreso')? (getByMes(proyectos[r[0]]?.ingresoPresupuesto, selectedMes)>0) : (parseFloat(String(r[2]).replace(/[^\d.-]/g,''))>0) }))
-        .filter(x=> x.tiene && (isFinite(x.iepct) && x.iepct < 95))
-        .sort((a,b)=> a.iepct - b.iepct)
-        .slice(0,8);
-      riskList.innerHTML = riesgos.length? riesgos.map(t=> `<div class="rank-item"><div class="rank-name" title="${t.nombre}">${t.nombre}</div><div class="rank-value bad">${t.iepct.toFixed(1)}%</div><div class="meter bad"><i style="width:${Math.max(0, Math.min(100, t.iepct))}%"></i></div></div>`).join('') : '<div class="rank-item"><div class="rank-name">Sin riesgos</div></div>';
+      // Hero + KPIs + donuts (usar rows filtradas, NO body)
+      setHeroKPIs(rows);
+
+      // Panel lateral: Top y Riesgo (según indicador) + click para filtrar búsqueda
+      renderSidePanels(rows);
 
       // Chart
       const ctx = document.getElementById('chart').getContext('2d');
       if(chartInstance) chartInstance.destroy();
-      const dsLabel = chartTitle;
-      const dsData = chartData.map(v=> (currentView==='utilidad')? v : (typeof v==='number'? v : 0));
+
       chartInstance = new Chart(ctx, {
         type: 'bar',
-        data: { labels: chartLabels, datasets: [{ label: dsLabel, data: dsData, backgroundColor: chartColors, borderRadius: 8, borderSkipped:false }] },
+        data: {
+          labels: finalLabels,
+          datasets: [{
+            label: chartTitle,
+            data: finalData,
+            backgroundColor: finalColors,
+            borderRadius: 10,
+            borderSkipped:false
+          }]
+        },
         options: {
           responsive:true,
-          plugins:{ legend:{display:false}, title:{display:true, text: chartTitle, color:'#2E0060', font:{size:22, weight:'bold'}}, tooltip:{callbacks:{ label: ctx => { const val = ctx.raw; if(currentView==='utilidad') return money(val); if(currentView==='egreso'|| currentView==='ingreso') return (val*100).toFixed(1)+'%'; return val; }}}},
-          scales:{ x:{ ticks:{ color:'#2E0060', font:{weight:'bold'}}, grid:{ color:'#e0e3e8' }}, y:{ beginAtZero:true, ticks:{ color:'#2E0060', font:{weight:'bold'}}, grid:{ color:'#e0e3e8' }}}
+          plugins:{
+            legend:{ display:false },
+            title:{ display:true, text: chartTitle, color: COLORS.primary, font:{ size: 18, weight:'bold' } },
+            tooltip:{
+              callbacks:{
+                label: (c)=>{
+                  const v = c.raw;
+                  if(v===null || typeof v === 'undefined') return '';
+                  if(currentView==='utilidad') return money(v);
+                  if(currentView==='ingreso' || currentView==='egreso') return (v*100).toFixed(1)+'%';
+                  return String(v);
+                }
+              }
+            }
+          },
+          scales:{
+            x:{ ticks:{ color: COLORS.primary, font:{ weight:'bold' } }, grid:{ color: COLORS.gray } },
+            y:{
+              beginAtZero:true,
+              ticks:{ color: COLORS.primary, font:{ weight:'bold' } },
+              grid:{ color: COLORS.gray }
+            }
+          }
         }
       });
-      // Recompute Top/Risk from filteredRows to ensure filters affect these lists
-      try{
-        const list = document.getElementById('topList');
-        const riskList = document.getElementById('riskList');
-        const utilArr = filteredRows.map(r=>{
-          const key = r.nombre;
-          const datos = proyectos[key]||{};
-          const ie = getByMes(datos.ingresoEjercido, selectedMes);
-          const ip = getByMes(datos.ingresoPresupuesto, selectedMes);
-          const ee = getByMes(datos.egresoEjercido, selectedMes);
-          const ep = getByMes(datos.egresoPresupuesto, selectedMes);
-          const util = ie - ee;
-          const display = key.split(' ').map(w=> w.charAt(0).toUpperCase()+w.slice(1)).join(' ');
-          const isRisk = (currentView==='ingreso')? (ip>0 && (ie/ip)<0.95) : (currentView==='egreso')? (ep>0 && (ee/ep)>1) : (currentView==='utilidad')? (util<0) : (calcScore(key)<5);
-          return { nombre: display, util, ie, ip, ee, ep, isRisk };
-        });
-        const maxAbs = utilArr.length? Math.max(...utilArr.map(x=>Math.abs(x.util))) : 0.0001;
-        const top = utilArr.slice().sort((a,b)=> b.util - a.util).slice(0,8);
-        list.innerHTML = top.length? top.map(t=>{
-          const cls = t.util<0? 'bad' : '';
-          const pct = maxAbs? Math.min(100, Math.abs(t.util)/maxAbs*100) : 0;
-          return `<div class="rank-item"><div class="rank-name" title="${t.nombre}">${t.nombre}</div><div class="rank-value ${cls}">${money(t.util)}</div><div class="meter ${cls}"><i style="width:${pct}%"></i></div></div>`;
-        }).join('') : '<div class="rank-item"><div class="rank-name">Sin datos</div></div>';
-
-        const riesgos = utilArr.filter(x=> x.isRisk).sort((a,b)=> {
-          // order risk: by severity (for utilidad, more negative first; for ingreso/egreso by percent/absolute)
-          if(currentView==='utilidad') return a.util - b.util; // more negative first
-          if(currentView==='ingreso') return ( (a.ip? a.ip - a.ie : 0) - (b.ip? b.ip - b.ie : 0) ); // bigger missing first
-          if(currentView==='egreso') return ( (b.ee? b.ee - b.ep : 0) - (a.ee? a.ee - a.ep : 0) ); // bigger excess first
-          return a.util - b.util;
-        }).slice(0,8);
-        riskList.innerHTML = riesgos.length? riesgos.map(t=> {
-          const val = (currentView==='utilidad')? money(t.util) : (currentView==='ingreso')? ((t.ip? ((t.ie/t.ip)*100).toFixed(1)+'%':'--')) : (currentView==='egreso')? ((t.ep? ((t.ee/t.ep)*100).toFixed(1)+'%':'--')) : calcScore(t.nombre)+' / 10';
-          return `<div class="rank-item"><div class="rank-name" title="${t.nombre}">${t.nombre}</div><div class="rank-value bad">${val}</div><div class="meter bad"><i style="width:${maxAbs?Math.min(100, Math.abs(t.util)/maxAbs*100):0}%"></i></div></div>`;
-        }).join('') : '<div class="rank-item"><div class="rank-name">Sin riesgos</div></div>';
-      }catch(e){ console.warn('Top/Risk update failed', e); }
     }
 
-    // Exportar CSV de la tabla visible
+    function renderSidePanels(rows){
+      // Construimos arreglo de objetos por proyecto visible
+      const arr = rows.map(r=>{
+        const key = r.nombre;
+        const d = proyectos2025[key]||{};
+        const ie = getByMes(d.ingresoEjercido, selectedMes);
+        const ip = getByMes(d.ingresoPresupuesto, selectedMes);
+        const ee = getByMes(d.egresoEjercido, selectedMes);
+        const ep = getByMes(d.egresoPresupuesto, selectedMes);
+        const util = ie - ee;
+        const score = calcScore(key);
+
+        let metricVal = 0;
+        if(currentView==='utilidad') metricVal = util;
+        else if(currentView==='ingreso') metricVal = (ip>0? (ie/ip*100) : 0);
+        else if(currentView==='egreso') metricVal = (ep>0? (ee/ep*100) : 0);
+        else metricVal = score;
+
+        const st = statusForRow(key);
+        return { key, name: titleCase(key), ie, ip, ee, ep, util, score, metricVal, status: st };
+      });
+
+      // TOP según indicador
+      const topList = document.getElementById('topList');
+      let top = [];
+      if(currentView==='utilidad') top = arr.slice().sort((a,b)=> b.util - a.util).slice(0,8);
+      else if(currentView==='ingreso') top = arr.slice().sort((a,b)=> b.metricVal - a.metricVal).slice(0,8);
+      else if(currentView==='egreso') top = arr.slice().sort((a,b)=> a.metricVal - b.metricVal).slice(0,8); // menor % gastado mejor
+      else top = arr.slice().sort((a,b)=> b.score - a.score).slice(0,8);
+
+      document.getElementById('topHint').textContent =
+        currentView==='utilidad' ? 'mayor utilidad' :
+        currentView==='ingreso' ? 'mayor cumplimiento' :
+        currentView==='egreso' ? 'menor % gastado' :
+        'mayor calificación';
+
+      // meter: normalizamos
+      const maxAbsUtil = Math.max(1, ...arr.map(x=> Math.abs(x.util||0)));
+      const meterPct = (t)=>{
+        if(currentView==='utilidad') return Math.min(100, Math.abs(t.util)/maxAbsUtil*100);
+        if(currentView==='ingreso') return Math.min(100, Math.max(0, t.metricVal));
+        if(currentView==='egreso') return Math.min(100, Math.max(0, 100 - t.metricVal)); // mejor = más barra
+        return Math.min(100, (t.score/10)*100);
+      };
+
+      topList.innerHTML = top.length ? top.map(t=>{
+        const cls = t.status.cls;
+        const val =
+          currentView==='utilidad' ? money(t.util) :
+          currentView==='ingreso' ? t.metricVal.toFixed(1)+'%' :
+          currentView==='egreso' ? t.metricVal.toFixed(1)+'%' :
+          `${t.score} / 10`;
+
+        return `
+          <div class="rank-item" data-key="${t.key}" title="Click para buscar este proyecto">
+            <div class="rank-name">${t.name}</div>
+            <div class="rank-meta">
+              <div class="rank-value ${cls}">${val}</div>
+            </div>
+            <div class="meter ${cls}"><i style="width:${meterPct(t)}%"></i></div>
+          </div>
+        `;
+      }).join('') : `<div class="rank-item"><div class="rank-name">Sin datos</div></div>`;
+
+      // Riesgo
+      const riskList = document.getElementById('riskList');
+
+      const isRisk = (t)=>{
+        if(currentView==='utilidad') return t.util < 0;
+        if(currentView==='ingreso') return (t.ip>0) && ((t.ie/t.ip) < 0.95);
+        if(currentView==='egreso') return (t.ep>0) && ((t.ee/t.ep) > 1);
+        return t.score < 5;
+      };
+
+      let riesgos = arr.filter(isRisk);
+
+      // ordenar riesgos por severidad
+      riesgos = riesgos.sort((a,b)=>{
+        if(currentView==='utilidad') return a.util - b.util; // más negativo primero
+        if(currentView==='ingreso') return ( (b.ip? (b.ip-b.ie):0) - (a.ip? (a.ip-a.ie):0) ); // faltante mayor primero
+        if(currentView==='egreso') return ( (b.ep? (b.ee-b.ep):0) - (a.ep? (a.ee-a.ep):0) ); // exceso mayor primero
+        return a.score - b.score;
+      }).slice(0,8);
+
+      document.getElementById('risk-title').textContent =
+        currentView==='utilidad' ? 'Proyectos en Riesgo (Utilidad negativa)' :
+        currentView==='ingreso' ? 'Proyectos en Riesgo (<95% ingreso)' :
+        currentView==='egreso' ? 'Proyectos en Riesgo (>100% egreso)' :
+        'Proyectos en Riesgo (baja calificación)';
+
+      riskList.innerHTML = riesgos.length ? riesgos.map(t=>{
+        const cls = 'bad';
+        const val =
+          currentView==='utilidad' ? money(t.util) :
+          currentView==='ingreso' ? (t.ip? ((t.ie/t.ip)*100).toFixed(1)+'%':'--') :
+          currentView==='egreso' ? (t.ep? ((t.ee/t.ep)*100).toFixed(1)+'%':'--') :
+          `${t.score} / 10`;
+
+        const reason =
+          currentView==='utilidad' ? 'Utilidad negativa' :
+          currentView==='ingreso' ? 'Ingreso bajo vs presupuesto' :
+          currentView==='egreso' ? 'Egreso excedido' :
+          'Calificación baja';
+
+        return `
+          <div class="rank-item" data-key="${t.key}" title="Click para buscar este proyecto">
+            <div class="rank-name">${t.name}<div style="font-size:.75rem;color:#8b8ea3;font-weight:800;margin-top:3px;">${reason}</div></div>
+            <div class="rank-meta">
+              <div class="rank-value ${cls}">${val}</div>
+            </div>
+            <div class="meter ${cls}"><i style="width:${meterPct(t)}%"></i></div>
+          </div>
+        `;
+      }).join('') : `<div class="rank-item"><div class="rank-name">Sin riesgos</div></div>`;
+
+      // Click en panel: autollenar búsqueda
+      [...topList.querySelectorAll('.rank-item'), ...riskList.querySelectorAll('.rank-item')].forEach(el=>{
+        el.addEventListener('click', ()=>{
+          const key = el.getAttribute('data-key') || '';
+          document.getElementById('searchProyecto').value = key;
+          searchText = key;
+          renderDashboard();
+          // subir un poco al inicio de tabla
+          window.scrollTo({ top: 150, behavior:'smooth' });
+        });
+      });
+    }
+
+    // Export CSV tabla visible (dashboard)
     function exportCSV(){
       const thead = Array.from(document.querySelectorAll('#thead th')).map(th=> th.textContent.trim());
       const rows = Array.from(document.querySelectorAll('#tbody tr')).map(tr=> Array.from(tr.children).map(td=> '"'+String(td.textContent).replaceAll('"','""')+'"'));
       const csv = [thead.join(','), ...rows.map(r=> r.join(','))].join('\n');
       const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
-      const url = URL.createObjectURL(blob); const a=document.createElement('a');
-      a.href=url; a.download='dashboard_financiero_export.csv'; a.click(); URL.revokeObjectURL(url);
+      const url = URL.createObjectURL(blob);
+      const a=document.createElement('a');
+      a.href=url;
+      a.download='dashboard_financiero_export.csv';
+      a.click();
+      URL.revokeObjectURL(url);
     }
 
-    // Controles UI
-    document.getElementById('selector-rubro').addEventListener('change', e=>{ currentView = e.target.value; render(); });
-    document.getElementById('filtro-mes').addEventListener('change', e=>{ selectedMes = e.target.value; render(); });
-    document.getElementById('ordenar').addEventListener('change', render);
+    // ===== COMPARATIVO (2024 vs 2025) =====
+    let chartCompInstance = null;
+
+    function getRubroValue(datos, rubro, mes){
+      if(!datos || !datos[rubro]) return 0;
+      if(mes === "global"){
+        let total = 0;
+        mesesDisponibles.forEach(m=>{ total += (datos[rubro][m] || 0); });
+        return total;
+      }
+      return datos[rubro][mes] || 0;
+    }
+
+    function getUtilidad(datos, mes){
+      if(!datos) return 0;
+      if(mes === "global"){
+        let total = 0;
+        mesesDisponibles.forEach(m=>{
+          total += (datos.ingresoEjercido?.[m] || 0) - (datos.egresoEjercido?.[m] || 0);
+        });
+        return total;
+      }
+      return (datos.ingresoEjercido?.[mes] || 0) - (datos.egresoEjercido?.[mes] || 0);
+    }
+
+    function getRendimiento2025(datos, mes){
+      if(!datos) return "malo";
+      const utilidad = getUtilidad(datos, mes);
+      const ingresoEjercido = getRubroValue(datos, 'ingresoEjercido', mes);
+      const ingresoPresupuesto = getRubroValue(datos, 'ingresoPresupuesto', mes);
+      const egresoEjercido = getRubroValue(datos, 'egresoEjercido', mes);
+      const egresoPresupuesto = getRubroValue(datos, 'egresoPresupuesto', mes);
+
+      let score = 0;
+      if(utilidad > 0) score += 3;
+      if(ingresoPresupuesto > 0 && ingresoEjercido / ingresoPresupuesto >= 0.95) score += 3;
+      if(egresoPresupuesto > 0 && egresoEjercido <= egresoPresupuesto) score += 3;
+      if(ingresoEjercido > 0 && utilidad / ingresoEjercido > 0.1) score += 1;
+
+      return (score >= 8) ? "buen" : "malo";
+    }
+
+    function semaforoDiff(rubro, diff){
+      // Para egreso: bajar es mejor => diff positivo (2024 - 2025) es bueno
+      if(rubro === 'egresoEjercido'){
+        if(diff >= 0) return {cls:'ok', txt:'✅ Mejora'};
+        if(diff >= -50000) return {cls:'warn', txt:'⚠️ Subió'};
+        return {cls:'bad', txt:'❌ Subió'};
+      }
+      // ingreso/utilidad: subir es mejor => diff positivo (2025 - 2024) es bueno
+      if(diff >= 0) return {cls:'ok', txt:'✅ Mejora'};
+      if(diff >= -50000) return {cls:'warn', txt:'⚠️ Bajó'};
+      return {cls:'bad', txt:'❌ Bajó'};
+    }
+
+    function renderComparativo(){
+      document.getElementById('subtitle-top').textContent = "Vista: Comparativo 2024 vs 2025";
+
+      // chips
+      document.getElementById('chip-comp-zona').textContent = `Zona: ${compZona==='todos'?'Todos':compZona}`;
+      document.getElementById('chip-comp-mes').textContent = `Mes: ${compMes==='global'?'Global':titleCase(compMes)}`;
+      const rubroLabel = RUBROS.find(r=>r.key===compRubro)?.label || compRubro;
+      document.getElementById('chip-comp-rubro').textContent = `Rubro: ${rubroLabel}`;
+
+      // proyectos base (unificados)
+      const all = Array.from(new Set([
+        ...Object.keys(proyectos2024||{}),
+        ...Object.keys(proyectos2025||{})
+      ]));
+
+      // filtrar por zona
+      const byZona = all.filter(k=>{
+        if(compZona==='todos') return true;
+        const z = PROJECT_ZONE_MAP[k];
+        if(!z) return false;
+        return z === compZona;
+      });
+
+      // filtrar rendimiento (sobre 2025)
+      let proyectosFiltrados = byZona.filter(k=>{
+        if(compRend === 'todos') return true;
+        const d25 = proyectos2025[k];
+        return getRendimiento2025(d25, compMes) === compRend;
+      });
+
+      let labels=[], data24=[], data25=[], diffs=[];
+
+      if(compProyecto === "global"){
+        labels = proyectosFiltrados.slice();
+
+        data24 = labels.map(p=>{
+          return (compRubro === 'utilidad') ? getUtilidad(proyectos2024[p], compMes) : getRubroValue(proyectos2024[p], compRubro, compMes);
+        });
+        data25 = labels.map(p=>{
+          return (compRubro === 'utilidad') ? getUtilidad(proyectos2025[p], compMes) : getRubroValue(proyectos2025[p], compRubro, compMes);
+        });
+
+        // diffs para ordenar
+        diffs = labels.map((p,i)=>{
+          if(compRubro === 'egresoEjercido') return data24[i] - data25[i];  // positivo = mejora (bajó)
+          return data25[i] - data24[i]; // positivo = mejora (subió)
+        });
+
+        // ordenar
+        const idxOf = (name)=> labels.indexOf(name);
+        let sortFn = (a,b)=> diffs[idxOf(b)] - diffs[idxOf(a)];
+        if(compOrden === 'asc') sortFn = (a,b)=> diffs[idxOf(a)] - diffs[idxOf(b)];
+        labels.sort(sortFn);
+
+        // re-map
+        data24 = labels.map(p=> (compRubro==='utilidad')? getUtilidad(proyectos2024[p], compMes) : getRubroValue(proyectos2024[p], compRubro, compMes));
+        data25 = labels.map(p=> (compRubro==='utilidad')? getUtilidad(proyectos2025[p], compMes) : getRubroValue(proyectos2025[p], compRubro, compMes));
+        diffs  = labels.map((p,i)=>{
+          if(compRubro === 'egresoEjercido') return data24[i] - data25[i];
+          return data25[i] - data24[i];
+        });
+      } else {
+        // proyecto específico: comparamos por mes
+        labels = mesesDisponibles.slice();
+        data24 = labels.map(m=> (compRubro==='utilidad')? getUtilidad(proyectos2024[compProyecto], m) : getRubroValue(proyectos2024[compProyecto], compRubro, m));
+        data25 = labels.map(m=> (compRubro==='utilidad')? getUtilidad(proyectos2025[compProyecto], m) : getRubroValue(proyectos2025[compProyecto], compRubro, m));
+        diffs  = labels.map((m,i)=>{
+          if(compRubro === 'egresoEjercido') return data24[i] - data25[i];
+          return data25[i] - data24[i];
+        });
+      }
+
+      renderCompChart(labels, data24, data25);
+      renderCompTable(labels, data24, data25, diffs);
+
+      // KPIs comparativo (solo en global)
+      const total24 = data24.reduce((a,b)=>a+(b||0),0);
+      const total25 = data25.reduce((a,b)=>a+(b||0),0);
+
+      let diffTotal = 0;
+      if(compRubro === 'egresoEjercido') diffTotal = total24 - total25; // bajar = mejor
+      else diffTotal = total25 - total24;
+
+      document.getElementById('comp-kpi-2024').textContent = money(total24);
+      document.getElementById('comp-kpi-2025').textContent = money(total25);
+      document.getElementById('comp-kpi-diff').textContent = money(diffTotal);
+
+      const sem = semaforoDiff(compRubro, diffTotal);
+      const sub = (diffTotal>=0? 'Mejora neta' : 'Deterioro neto');
+      const diffSub = document.getElementById('comp-kpi-diff-sub');
+      diffSub.textContent = `${sem.txt} · ${sub}`;
+      diffSub.className = `delta ${sem.cls==='ok'?'good':(sem.cls==='warn'?'warn':'bad')}`;
+
+      document.getElementById('comp-kpi-2024-sub').textContent = (compProyecto==='global'?'Global por zona':'Por mes');
+      document.getElementById('comp-kpi-2025-sub').textContent = rubroLabel;
+    }
+
+    function renderCompChart(labels, data24, data25){
+      const ctx = document.getElementById("chartComp").getContext("2d");
+      if(chartCompInstance) chartCompInstance.destroy();
+
+      const rubroLabel = RUBROS.find(r=>r.key===compRubro)?.label || compRubro;
+      const title = (compProyecto === "global")
+        ? `Comparativo ${rubroLabel} 2024 vs 2025`
+        : `Comparativo ${titleCase(compProyecto)} (${rubroLabel})`;
+
+      chartCompInstance = new Chart(ctx, {
+        type: "bar",
+        data: {
+          labels: labels.map(l => compProyecto==="global" ? titleCase(l) : titleCase(l)),
+          datasets: [
+            { label: "2024", data: data24, backgroundColor: COLORS.secondary, borderRadius: 10, borderSkipped:false },
+            { label: "2025", data: data25, backgroundColor: COLORS.primary,   borderRadius: 10, borderSkipped:false },
+          ]
+        },
+        options: {
+          responsive:true,
+          plugins:{
+            legend:{ display:true },
+            title:{ display:true, text: title, color: COLORS.primary, font:{ size:18, weight:'bold' } },
+            tooltip:{
+              callbacks:{
+                label: (c)=> "$ " + Number(c.raw||0).toLocaleString("es-MX",{minimumFractionDigits:2})
+              }
+            }
+          },
+          scales:{
+            x:{ ticks:{ color: COLORS.primary, font:{ weight:'bold' } }, grid:{ color: COLORS.gray } },
+            y:{ beginAtZero:true, ticks:{ color: COLORS.primary, font:{ weight:'bold' } }, grid:{ color: COLORS.gray } }
+          }
+        }
+      });
+    }
+
+    function renderCompTable(labels, data24, data25, diffs){
+      const th = document.getElementById('theadComp');
+      const tb = document.getElementById('tbodyComp');
+
+      const firstCol = (compProyecto === "global") ? "Proyecto" : "Mes";
+      th.innerHTML = `<tr>
+        <th>${firstCol}</th>
+        <th>2024</th>
+        <th>2025</th>
+        <th>Diferencia</th>
+        <th>Estado</th>
+      </tr>`;
+
+      tb.innerHTML = labels.map((label,i)=>{
+        const v24 = data24[i] || 0;
+        const v25 = data25[i] || 0;
+        const diff = diffs[i] || 0;
+        const sem = semaforoDiff(compRubro, diff);
+
+        const statusHtml = `<span class="status ${sem.cls}">${sem.txt}</span>`;
+        const diffColor = (sem.cls==='ok') ? COLORS.green : (sem.cls==='warn') ? '#8a6d00' : COLORS.red;
+
+        const nameCell = (compProyecto==="global") ? titleCase(label) : titleCase(label);
+
+        return `<tr>
+          <td>${nameCell}</td>
+          <td>${money(v24)}</td>
+          <td>${money(v25)}</td>
+          <td style="color:${diffColor}; font-weight:900;">${money(diff)}</td>
+          <td>${statusHtml}</td>
+        </tr>`;
+      }).join('');
+    }
+
+    // ===== VIEW SWITCH =====
+    function showView(which){
+      const dash = document.getElementById('view-dashboard');
+      const comp = document.getElementById('view-comparativo');
+
+      if(which === 'comparativo'){
+        dash.classList.remove('active');
+        comp.classList.add('active');
+        document.getElementById('subtitle-top').textContent = "Vista: Comparativo 2024 vs 2025";
+        renderComparativo();
+        window.scrollTo({ top: 0, behavior:'smooth' });
+        return;
+      }
+
+      comp.classList.remove('active');
+      dash.classList.add('active');
+      document.getElementById('subtitle-top').textContent = "Vista: 2025 (Actual)";
+      renderDashboard();
+      window.scrollTo({ top: 0, behavior:'smooth' });
+    }
+
+    // ===== Events: Dashboard =====
+    document.getElementById('selector-rubro').addEventListener('change', e=>{ currentView = e.target.value; renderDashboard(); });
+    document.getElementById('filtro-mes').addEventListener('change', e=>{ selectedMes = e.target.value; renderDashboard(); });
+    document.getElementById('filtro-zona').addEventListener('change', e=>{ selectedZona = e.target.value; renderDashboard(); });
+    document.getElementById('ordenar').addEventListener('change', e=>{ ordenar = e.target.value; renderDashboard(); });
+    document.getElementById('searchProyecto').addEventListener('input', e=>{ searchText = e.target.value || ''; renderDashboard(); });
+
     document.getElementById('btnExport').addEventListener('click', exportCSV);
-    document.getElementById('btnComparativo').addEventListener('click', ()=> window.location.href='comparativo-corporativo.html');
+    document.getElementById('btnComparativo').addEventListener('click', ()=> showView('comparativo'));
     document.getElementById('btnReset').addEventListener('click', ()=>{
-      document.getElementById('selector-rubro').value='utilidad';
-      document.getElementById('ordenar').value='desc';
-      selectedMes='todos'; if(document.getElementById('filtro-mes')) document.getElementById('filtro-mes').value='todos';
-      selectedZona='todos'; if(document.getElementById('filtro-zona')) document.getElementById('filtro-zona').value='todos';
-      currentView='utilidad'; render();
+      currentView = 'utilidad';
+      selectedMes = 'todos';
+      selectedZona = 'todos';
+      ordenar = 'desc';
+      searchText = '';
+
+      document.getElementById('selector-rubro').value = 'utilidad';
+      document.getElementById('filtro-mes').value = 'todos';
+      document.getElementById('filtro-zona').value = 'todos';
+      document.getElementById('ordenar').value = 'desc';
+      document.getElementById('searchProyecto').value = '';
+
+      renderDashboard();
     });
 
-    // Init
+    // ===== Events: Comparativo =====
+    document.getElementById('btnBack').addEventListener('click', ()=> showView('dashboard'));
+    document.getElementById('btnCompReset').addEventListener('click', ()=>{
+      compZona = 'todos';
+      compProyecto = 'global';
+      compRubro = 'utilidad';
+      compMes = 'global';
+      compRend = 'todos';
+      compOrden = 'desc';
+
+      document.getElementById('comp-zona').value = 'todos';
+      rebuildComparativoProyectoSelect();
+      document.getElementById('comp-proyecto').value = 'global';
+      document.getElementById('comp-rubro').value = 'utilidad';
+      document.getElementById('comp-mes').value = 'global';
+      document.getElementById('comp-rend').value = 'todos';
+      document.getElementById('comp-orden').value = 'desc';
+
+      renderComparativo();
+    });
+
+    document.getElementById('comp-zona').addEventListener('change', e=>{
+      compZona = e.target.value;
+      rebuildComparativoProyectoSelect();
+      renderComparativo();
+    });
+    document.getElementById('comp-proyecto').addEventListener('change', e=>{
+      compProyecto = e.target.value;
+      renderComparativo();
+    });
+    document.getElementById('comp-rubro').addEventListener('change', e=>{
+      compRubro = e.target.value;
+      renderComparativo();
+    });
+    document.getElementById('comp-mes').addEventListener('change', e=>{
+      compMes = e.target.value;
+      renderComparativo();
+    });
+    document.getElementById('comp-rend').addEventListener('change', e=>{
+      compRend = e.target.value;
+      renderComparativo();
+    });
+    document.getElementById('comp-orden').addEventListener('change', e=>{
+      compOrden = e.target.value;
+      renderComparativo();
+    });
+
+    // ===== INIT =====
     await cargarDatos();
   </script>
+
+  <!-- Tu fix de logo si lo usas -->
+  <script src="./js/logo-fix.js"></script>
 </body>
-<script src="./js/logo-fix.js"></script>
 </html>
